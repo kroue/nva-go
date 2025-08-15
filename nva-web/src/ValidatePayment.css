@@ -1,0 +1,138 @@
+.ValidatePayment-page {
+  background: #f9f9f9;
+  min-height: 100%;
+  padding: 0;
+}
+
+.ValidatePayment-header {
+  background: #d9d9d9;
+  color: #252b55;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.ValidatePayment-section-title {
+  background: #252b55;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.ValidatePayment-container {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  margin: 0 8px 0 8px;
+  padding: 24px 18px;
+  box-sizing: border-box;
+}
+
+.ValidatePayment-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+.ValidatePayment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ValidatePayment-card {
+  background: #e5e5e5;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  text-align: left;
+}
+
+.ValidatePayment-card.active {
+  border: 2px solid #252b55;
+}
+
+.ValidatePayment-card-id {
+  float: right;
+  color: #252b55;
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 12px;
+}
+
+.ValidatePayment-card-file {
+  background: #d9d9d9;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #252b55;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ValidatePayment-card-method {
+  margin-left: 18px;
+  color: #252b55;
+  font-weight: 600;
+}
+
+.ValidatePayment-preview {
+  background: #f6f7fc;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 18px 16px;
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ValidatePayment-preview-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #252b55;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.ValidatePayment-preview-img {
+  width: 260px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+.ValidatePayment-preview-actions {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+}
+
+.ValidatePayment-btn {
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.ValidatePayment-btn.validate {
+  background: #38d959;
+  color: #fff;
+}
+
+.ValidatePayment-btn.decline {
+  background: #e53935;
+  color: #fff;
+}

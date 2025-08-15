@@ -1,0 +1,183 @@
+.SendReceipt-page {
+  background: #f9f9f9;
+  min-height: 100%;
+  padding: 0;
+}
+
+.SendReceipt-header {
+  background: #d9d9d9;
+  color: #252b55;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.SendReceipt-section-title {
+  background: #252b55;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.SendReceipt-container {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  margin: 0 8px 0 8px;
+  padding: 24px 18px;
+  box-sizing: border-box;
+}
+
+.SendReceipt-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+}
+
+.SendReceipt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.SendReceipt-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 18px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+}
+
+.SendReceipt-details-status {
+  background: #252b55;
+  color: #fff;
+  border-radius: 12px;
+  padding: 4px 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.SendReceipt-details-product {
+  font-size: 18px;
+  color: #252b55;
+  font-weight: 600;
+}
+
+.SendReceipt-details-img {
+  width: 350px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+.SendReceipt-details-card {
+  background: #fff;
+  border: 1px solid #252b55;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 15px;
+  color: #252b55;
+  margin-top: 8px;
+}
+
+.SendReceipt-details-desc {
+  color: #252b55;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.SendReceipt-details-pickup {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.SendReceipt-details-id {
+  font-size: 13px;
+  color: #252b55;
+  text-align: right;
+}
+
+.SendReceipt-summary {
+  background: #f6f7fc;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 18px 16px;
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.SendReceipt-summary-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+  margin-bottom: 12px;
+}
+
+.SendReceipt-summary-file {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  background: #fff;
+  color: #252b55;
+  font-size: 13px;
+}
+
+.SendReceipt-summary-info {
+  font-size: 15px;
+  color: #252b55;
+  margin-bottom: 8px;
+}
+.SendReceipt-summary-info > div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.SendReceipt-summary-instructions {
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 15px;
+  color: #252b55;
+}
+.SendReceipt-summary-instructions textarea {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid #aaa;
+  margin-top: 4px;
+  padding: 4px 8px;
+  resize: none;
+  font-size: 13px;
+  background: #fff;
+  color: #252b55;
+}
+
+.SendReceipt-summary-totals {
+  width: 100%;
+  font-size: 15px;
+  color: #252b55;
+  margin-top: 8px;
+}
+.SendReceipt-summary-totals > div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+.SendReceipt-summary-total {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 8px;
+}

@@ -1,0 +1,142 @@
+.Orders-header,
+.Orders-section-title,
+.Orders-list-title,
+.Orders-card-main,
+.Orders-card-footer,
+.Orders-action-card,
+.Orders-action-label {
+  text-align: left;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.Orders-page {
+  padding: 0;
+  background: #f9f9f9;
+  min-height: 100%;
+}
+
+.Orders-header {
+  background: #d9d9d9;
+  color: #252b55;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.Orders-section-title {
+  background: #252b55;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 12px 18px;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
+}
+
+.Orders-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 18px;
+  margin: 0;
+  padding: 16px 8px 8px 8px;
+}
+
+.Orders-list-container {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 0 0 18px 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.Orders-list {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 18px 12px 0 12px;
+}
+
+.Orders-list-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+  margin-bottom: 14px;
+}
+
+.Orders-card {
+  background: #e5e5e5;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.Orders-card-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #252b55;
+}
+
+.Orders-card-product {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.Orders-card-id {
+  font-size: 13px;
+  color: #252b55;
+}
+
+.Orders-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #d9d9d9;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.Orders-card-customer {
+  color: #252b55;
+}
+
+.Orders-card-status {
+  color: #252b55;
+}
+
+.Orders-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.Orders-action-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+}
+
+.Orders-action-label {
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+}

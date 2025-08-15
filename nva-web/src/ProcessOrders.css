@@ -1,0 +1,125 @@
+.ProcessOrders-section-title,
+.ProcessOrders-card-header,
+.ProcessOrders-card-product,
+.ProcessOrders-card-details,
+.ProcessOrders-card-description,
+.ProcessOrders-card-viewmore,
+.ProcessOrders-card-statuses {
+  text-align: left;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.ProcessOrders-page {
+  padding: 0;
+  background: #f9f9f9;
+  min-height: 100%;
+}
+
+.ProcessOrders-section-title {
+  background: #252b55;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 12px 12px 0 0;
+  margin-bottom: 0;
+}
+
+.ProcessOrders-container {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  margin: 0 8px 0 8px;
+  padding: 24px 18px;
+  box-sizing: border-box;
+}
+
+.ProcessOrders-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.ProcessOrders-card,
+.ProcessOrders-empty-card {
+  background: #f6f7fc;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 18px 16px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ProcessOrders-card {
+  background: #e5e5e5;
+  grid-row: 1 / span 1;
+  grid-column: 1 / span 1;
+}
+
+.ProcessOrders-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #252b55;
+}
+
+.ProcessOrders-card-product {
+  font-size: 15px;
+  color: #252b55;
+  margin-bottom: 8px;
+}
+
+.ProcessOrders-card-details {
+  font-size: 13px;
+  color: #252b55;
+  margin-bottom: 8px;
+}
+
+.ProcessOrders-card-description {
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #d9d9d9;
+  color: #252b55;
+}
+
+.ProcessOrders-card-viewmore {
+  background: #d9d9d9;
+  color: #252b55;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.ProcessOrders-card-statuses {
+  display: flex;
+  gap: 8px;
+}
+
+.ProcessOrders-status-btn {
+  background: #fff;
+  color: #252b55;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: default;
+}
+
+.ProcessOrders-status-btn.active {
+  background: #252b55;
+  color: #fff;
+  border: 1px solid #252b55;
+}
+
+.ProcessOrders-empty-card {
+  background: #f6f7fc;
+}

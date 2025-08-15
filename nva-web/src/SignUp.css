@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.SignUpPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.SignUpPage-header {
+  background-color: #252B55;
+  color: white;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.SignUpPage-logo {
+  height: 50px;
+}
+
+.SignUpPage-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.SignIn-button,
+.TryFree-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.SignIn-button {
+  background-color: transparent;
+  color: white;
+}
+
+.TryFree-button {
+  background-color: #ff0000;
+  color: white;
+}
+
+.SignUpPage-body {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.SignUpPage-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.SignUpPage-logo-large {
+  width: 400px;
+  margin-bottom: 20px;
+}
+
+.SignUpPage-description {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.SignUpPage-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.SignUpForm {
+  width: 100%;
+  max-width: 400px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.SignUpForm-title {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.SignUpForm-field {
+  display: flex;
+  flex-direction: column; /* Default: stack fields vertically */
+  margin-bottom: 15px;
+  width: 100%; /* Ensure all fields take up the full width */
+}
+
+.SignUpForm-field.double {
+  flex-direction: row; /* Arrange fields side by side */
+  gap: 10px; /* Add spacing between the fields */
+}
+
+.SignUpForm-field.double input {
+  flex: 1; /* Ensure both fields take equal width */
+}
+
+.SignUpForm-field input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #000000;
+  border-radius: 50px;
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.PasswordWrapper {
+  position: relative;
+  width: 100%; /* Match the width of other fields */
+  display: flex;
+  align-items: center;
+}
+
+.PasswordWrapper input {
+  width: 100%; /* Ensure the input takes up the full width */
+  padding: 10px;
+  border: 1px solid #000000;
+  border-radius: 50px;
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.TogglePassword-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%); /* Center the icon vertically */
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+}
+
+.TogglePassword-button:hover {
+  color: #0056b3;
+}
+
+.SignUpForm-options {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.PrivacyPolicy-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.PrivacyPolicy-link:hover {
+  text-decoration: underline;
+}
+
+.SignUpForm-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #252B55;
+  color: white;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.SignUpForm-button:hover {
+  background-color: #333;
+}
