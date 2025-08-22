@@ -1,0 +1,33 @@
+/* filepath: src/components/Header.css */
+header {
+  background-color: #252B55;
+  color: white;
+  padding: 10px;
+}
+
+.Header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #252B55; /* Dark blue background */
+  padding: 10px 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.Header-logo img {
+  height: 40px; /* Adjust the logo size */
+}
+
+.Header-search {
+  flex-grow: 1;
+  margin-left: 20px;
+}
+
+.Header-search-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+}

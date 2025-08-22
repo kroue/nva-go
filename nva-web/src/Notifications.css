@@ -1,0 +1,73 @@
+.Notifications-page {
+  background: #f9f9f9;
+  min-height: 100%;
+  padding: 0;
+}
+
+.Notifications-header {
+  background: #d9d9d9;
+  color: #252b55;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.Notifications-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  margin-left: 16px;
+}
+
+.Notifications-tab {
+  background: #fff;
+  color: #252b55;
+  border: 1px solid #252b55;
+  border-radius: 20px;
+  padding: 8px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.Notifications-tab.active {
+  background: #252b55;
+  color: #fff;
+  border: none;
+}
+
+.Notifications-section {
+  margin-bottom: 24px;
+  margin-left: 16px;
+}
+
+.Notifications-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+  margin-bottom: 12px;
+}
+
+.Notifications-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border-radius: 8px;
+  padding: 8px 0;
+  font-size: 17px;
+  color: #252b55;
+  margin-bottom: 8px;
+}
+
+.Notifications-dot {
+  width: 10px;
+  height: 10px;
+  background: #252b55;
+  border-radius: 50%;
+  margin-left: 18px;
+  display: inline-block;
+}

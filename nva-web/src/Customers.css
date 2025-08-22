@@ -1,0 +1,116 @@
+.Customers-page {
+  background: #f9f9f9;
+  min-height: 100%;
+  padding: 0;
+}
+
+.Customers-header {
+  background: #d9d9d9;
+  color: #252b55;
+  font-size: 28px;
+  font-weight: 700;
+  padding: 16px 24px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.Customers-section-title {
+  background: #252b55;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.Customers-container {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 12px;
+  margin: 0 8px 0 8px;
+  padding: 24px 18px;
+  box-sizing: border-box;
+}
+
+.Customers-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+}
+
+.Customers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.Customers-list-item {
+  background: #fff;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 18px;
+  color: #252b55;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 0;
+  transition: background 0.2s, border 0.2s;
+}
+
+.Customers-list-item.active {
+  background: #e5e5e5;
+  border: 2px solid #252b55;
+}
+
+.Customers-history {
+  background: #f6f7fc;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 18px 16px;
+  min-height: 350px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.Customers-history-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #252b55;
+  margin-bottom: 12px;
+}
+
+.Customers-history-card {
+  background: #e5e5e5;
+  border-radius: 8px;
+  border: 1.5px solid #bdbdbd;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 18px;
+  color: #252b55;
+  margin-top: 8px;
+}
+
+.Customers-history-img {
+  width: 90px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.Customers-history-product {
+  font-weight: 600;
+  margin-right: 18px;
+}
+
+.Customers-history-id {
+  font-size: 15px;
+  color: #252b55;
+  margin-left: auto;
+}

@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.LoginPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.LoginPage-header {
+  background-color: #252B55;
+  color: white;
+  padding: 50px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.LoginPage-logo {
+  height: 70px;
+}
+
+.LoginPage-body {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.LoginPage-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.LoginPage-logo-large {
+  width: 400px;
+  margin-bottom: 20px;
+}
+
+.LoginPage-description {    
+  font-optical-sizing: auto;
+  font-weight: 100; /* Adjust weight as needed */
+  font-style: normal;
+  font-size: 16px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.LoginPage-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%; /* Ensure the right section takes up full height */
+}
+
+.LoginForm {
+  width: 100%; /* Ensure it takes up the available space */
+  max-width: 400px; /* Set a maximum width for the card */
+  height: 90%; /* Set the height to 80% */
+  background-color: white;
+  padding: 20px; /* Add padding inside the card */
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.LoginForm-title {
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 600; /* Adjust weight as needed */
+  font-style: normal;
+  font-size: 24px;
+  margin-bottom: 20px;
+  margin-left: 10px;
+  text-align: left;
+}
+
+.LoginForm-field {
+  margin-bottom: 15px;
+}
+
+.LoginForm-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.LoginForm-field input {
+  width: 100%; /* Ensure inputs take up the full width */
+  padding: 10px;
+  border: 1px solid #000000;
+  border-radius: 50px;
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.LoginForm-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.ForgotPassword {
+  color: #ff0000;
+  text-decoration: none;
+  margin-right: 5px;
+}
+
+.ForgotPassword:hover {
+  text-decoration: underline;
+}
+
+.LoginForm-button {
+  width: 100%; /* Ensure the button takes up the full width */
+  padding: 10px;
+  background-color: #252B55; /* Default background color */
+  color: white; /* Default text color */
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 16px;
+  text-align: center;
+  transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+.LoginForm-button:hover {
+  background: linear-gradient(90deg, cyan, magenta, yellow, black); /* CMYK gradient for hover */
+  color: white; /* Keep the text color white */
+}
+
+.CreateAccount {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.CreateAccount-link {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.CreateAccount-link:hover {
+  color: #0056b3;
+}
+
+.LoginPage-footer {
+  text-align: center;
+  background-color: #252B55;
+  color: white;
+  padding: 10px;
+}
