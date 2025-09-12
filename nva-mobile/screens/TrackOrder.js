@@ -1,44 +1,109 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TextInput, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TextInput, ScrollView, Alert } from 'react-native';
+import { supabase } from '../SupabaseCient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 export default function TrackOrder() {
-  // Example order data (replace with real data as needed)
-  const order = {
-    product: 'Tarpaulin',
-    fileAttached: false,
-    size: '5x3',
-    pcs: '1',
-    eyelets: '4',
-    quality: 'High Quality',
-    pickupDate: '2025-05-30',
-    pickupTime: '2:00 PM',
-    instructions: '',
-    subtotal: 229,
-    layout: 150,
-    total: 379,
-  };
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch the logged-in user's order (latest)
+  useEffect(() => {
+    let subscription;
+    let userEmail = '';
+
+    const setup = async () => {
+      setLoading(true);
+      userEmail = await AsyncStorage.getItem('email');
+      if (!userEmail) {
+        setLoading(false);
+        return;
+      }
+      // Get latest order for this user
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('email', userEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data) setOrder(data);
+      else setOrder(null);
+      setLoading(false);
+
+      // Subscribe to changes in the orders table for this user
+      subscription = supabase
+        .channel('order-status')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'orders',
+          },
+          payload => {
+            console.log('Realtime payload:', payload);
+            if (payload.new && payload.new.email === userEmail) {
+              setOrder(payload.new);
+              Notifications.scheduleNotificationAsync({
+                content: {
+                  title: 'Order Status Updated',
+                  body: `Your order status changed to "${payload.new.status}"`,
+                },
+                trigger: null,
+              });
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    setup();
+
+    return () => {
+      if (subscription) supabase.removeChannel(subscription);
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading order...</Text>
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View style={styles.container}>
+        <Text>No order found.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.trackingTitle}>Order Tracking</Text>
       <View style={styles.progressRow}>
         <View style={styles.progressStep}>
-          <View style={[styles.circle, styles.circleActive]} />
+          <View style={[styles.circle, order.status === 'Validation' && styles.circleActive]} />
           <Text style={styles.progressLabel}>Validation</Text>
         </View>
         <View style={styles.progressLine} />
         <View style={styles.progressStep}>
-          <View style={styles.circle} />
+          <View style={[styles.circle, order.status === 'Layout Approval' && styles.circleActive]} />
           <Text style={styles.progressLabel}>Layout Approval</Text>
         </View>
         <View style={styles.progressLine} />
         <View style={styles.progressStep}>
-          <View style={styles.circle} />
+          <View style={[styles.circle, order.status === 'Printing' && styles.circleActive]} />
           <Text style={styles.progressLabel}>Printing</Text>
         </View>
         <View style={styles.progressLine} />
         <View style={styles.progressStep}>
-          <View style={styles.circle} />
+          <View style={[styles.circle, order.status === 'For Pickup' && styles.circleActive]} />
           <Text style={styles.progressLabel}>For Pickup</Text>
         </View>
       </View>
@@ -46,37 +111,37 @@ export default function TrackOrder() {
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Order Summary</Text>
         <View style={styles.headerRow}>
-          <Image source={order.image} style={styles.productImage} />
-          <Text style={styles.productTitle}>{order.product}</Text>
+          <Image source={{ uri: order.image_url }} style={styles.productImage} />
+          <Text style={styles.productTitle}>{order.variant || order.product}</Text>
         </View>
         <TextInput
           style={styles.fileInput}
-          value={order.fileAttached ? 'file.pdf' : 'No file attached'}
+          value={order.has_file ? 'file.pdf' : 'No file attached'}
           editable={false}
         />
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Size</Text>
-          <Text style={styles.detailValue}>{order.size}</Text>
+          <Text style={styles.detailValue}>
+            {order.height && order.width ? `${order.height} x ${order.width}` : '---'}
+          </Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>No. of pcs</Text>
-          <Text style={styles.detailValue}>{order.pcs} pcs</Text>
+          <Text style={styles.detailValue}>{order.quantity} pcs</Text>
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Eyelets</Text>
-          <Text style={styles.detailValue}>{order.eyelets}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Quality</Text>
-          <Text style={styles.detailValue}>{order.quality}</Text>
-        </View>
+        {order.eyelets && (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Eyelets</Text>
+            <Text style={styles.detailValue}>{order.eyelets}</Text>
+          </View>
+        )}
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Date to pickup</Text>
-          <Text style={styles.detailValue}>{order.pickupDate}</Text>
+          <Text style={styles.detailValue}>{order.pickup_date}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Time to pickup</Text>
-          <Text style={styles.detailValue}>{order.pickupTime}</Text>
+          <Text style={styles.detailValue}>{order.pickup_time}</Text>
         </View>
         <Text style={styles.instructionsLabel}>Instructions</Text>
         <TextInput
@@ -86,16 +151,12 @@ export default function TrackOrder() {
           multiline
         />
         <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Subtotal</Text>
-          <Text style={styles.priceValue}>₱ {order.subtotal}</Text>
-        </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Layout</Text>
-          <Text style={styles.priceValue}>₱ {order.layout}</Text>
-        </View>
-        <View style={styles.priceRow}>
           <Text style={styles.priceLabelTotal}>TOTAL</Text>
           <Text style={styles.priceValueTotal}>₱ {order.total}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Status</Text>
+          <Text style={styles.detailValue}>{order.status}</Text>
         </View>
       </View>
     </ScrollView>

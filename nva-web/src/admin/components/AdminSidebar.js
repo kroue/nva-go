@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Sidebar.css';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
@@ -30,6 +30,13 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState('');
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [adminName, setAdminName] = useState('');
+
+  useEffect(() => {
+    // Get admin username from localStorage
+    const username = localStorage.getItem('admin_username');
+    setAdminName(username || 'Admin');
+  }, []);
 
   const handleNavClick = (item) => {
     if (item.subItems) {
@@ -59,6 +66,8 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('admin_username');
+    localStorage.removeItem('admin_email');
     navigate('/adminlogin');
   };
 
@@ -125,7 +134,7 @@ const Sidebar = () => {
           <button className="Sidebar-footer-button"><HelpOutlineOutlinedIcon /></button>
         </div>
         <div className="Sidebar-profile">
-          <span className="Sidebar-profile-name">Aljohn Arranguez</span>
+          <span className="Sidebar-profile-name">{adminName}</span>
           <button
             className="Sidebar-profile-button"
             onClick={handleProfileArrowClick}

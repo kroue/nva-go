@@ -25,6 +25,9 @@ import AdminCustomers from './admin/AdminCustomers';
 import AdminRightPanel from './admin/components/AdminRightPanel';
 import ResetPassword from './ResetPassword';
 import RequestPasswordReset from './RequestPasswordReset';
+import AdminProducts from './admin/AdminProducts';
+import ProtectedRoute from './admin/ProtectedRoute';
+import OrderDetails from './OrderDetails';
 import './App.css';
 
 const App = () => {
@@ -169,48 +172,70 @@ const App = () => {
         <Route
           path="/adminhomepage"
           element={
-            <div className="App">
-              <AdminHeader />
-              <div className="MainContent">
-                <AdminSidebar />
-                <div className="PageContent">
-                  <AdminHomePage />
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <AdminHomePage />
+                  </div>
+                  <AdminRightPanel />
                 </div>
-                <AdminRightPanel />
+                {/* <AdminFooter /> if you want */}
               </div>
-              <AdminFooter />
-            </div>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/adminemployees"
           element={
-            <div className="App">
-              <AdminHeader />
-              <div className="MainContent">
-                <AdminSidebar />
-                <div className="PageContent">
-                  <AdminEmployees />
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <AdminEmployees />
+                  </div>
+                  <AdminRightPanel />
                 </div>
-                <AdminRightPanel />
               </div>
-            </div>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/admin/customers"
           element={
-            <div className="App">
-              <AdminHeader />
-              <div className="MainContent">
-                <AdminSidebar />
-                <div className="PageContent">
-                  <AdminCustomers />
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <AdminCustomers />
+                  </div>
+                  <AdminRightPanel />
                 </div>
-                <AdminRightPanel />
               </div>
-              <AdminFooter />
-            </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/products"
+          element={
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <AdminProducts />
+                  </div>
+                  <AdminRightPanel />
+                </div>
+              </div>
+            </ProtectedRoute>
           }
         />
         <Route path="/" element={<LandingPage />} />
@@ -219,6 +244,7 @@ const App = () => {
         <Route path="/adminlogin" element={<AdminLogin />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<RequestPasswordReset />} />
+        <Route path="/orders/:id" element={<OrderDetails />} />
       </Routes>
     </Router>
   );

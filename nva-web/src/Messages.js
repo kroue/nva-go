@@ -1,40 +1,127 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Messages.css';
-
-const chats = [
-  {
-    id: 1,
-    name: 'Kriz Cultura',
-    avatar: '/images/kriz-avatar.jpg',
-    lastMessage: 'Hi Kriz, Your order is ready for pick up.',
-    lastTime: '1m',
-    messages: [
-      {
-        from: 'me',
-        time: '5:16 PM',
-        text: `Hi [Buyer's Name],
-
-Thanks for letting me know. I understand you’d prefer the keyboard to be fixed. Would you like me to arrange the repairs, or would you prefer to handle the repairs yourself and I reimburse or share the cost? Please let me know what works best for you, and we’ll find a solution.
-
-I want to make sure you’re satisfied with your purchase.`,
-        color: 'purple'
-      },
-      {
-        from: 'me',
-        time: '9:18 PM',
-        text: `Hi Kriz,
-
-Your order is ready for pick up.
-
-Just let us know for any updates and have a great day ahead.`,
-        color: 'blue'
-      }
-    ]
-  }
-];
+import { supabase } from './SupabaseClient';
 
 const Messages = () => {
-  const [selectedChat, setSelectedChat] = useState(chats[0]);
+  const [userEmail, setUserEmail] = useState('');
+  const [chats, setChats] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef(null);
+
+  // Get the logged-in user's email from Supabase Auth
+  useEffect(() => {
+    const getUserEmail = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserEmail(user?.email || '');
+    };
+    getUserEmail();
+  }, []);
+
+  // Fetch all users (employees, admins, customers)
+  useEffect(() => {
+    const fetchChats = async () => {
+      // Fetch all users except yourself
+      const { data: employees } = await supabase.from('employees').select('id, first_name, last_name, email');
+      const { data: admins } = await supabase.from('admins').select('id, username, email');
+      const { data: customers } = await supabase.from('customers').select('id, first_name, last_name, email');
+      const allUsers = [
+        ...(employees || []).map(u => ({
+          id: u.id,
+          name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+          avatar: '/default-avatar.png',
+          email: u.email
+        })),
+        ...(admins || []).map(u => ({
+          id: u.id,
+          name: u.username,
+          avatar: '/default-avatar.png',
+          email: u.email
+        })),
+        ...(customers || []).map(u => ({
+          id: u.id,
+          name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+          avatar: '/default-avatar.png',
+          email: u.email
+        }))
+      ].filter(u => u.email !== userEmail); // Exclude yourself
+
+      setChats(allUsers);
+      if (allUsers.length > 0) setSelectedChat(allUsers[0]);
+    };
+    fetchChats();
+  }, [userEmail]);
+
+  // Fetch messages for selected chat
+  useEffect(() => {
+    if (!selectedChat) return;
+    const chatId = [userEmail, selectedChat.email].sort().join('-');
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('created_at', { ascending: true });
+      setMessages(data || []);
+    };
+    fetchMessages();
+
+    const channel = supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        async payload => {
+          console.log('New message received:', payload.new);
+          // Refetch messages for the current chat
+          if (payload.new.chat_id === chatId) {
+            await fetchMessages();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedChat, userEmail]);
+
+  // Scroll to bottom on new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Send message
+  const sendMessage = async () => {
+    if (!input.trim() || !selectedChat) return;
+    const chatId = [userEmail, selectedChat.email].sort().join('-');
+    const { data: employees } = await supabase.from('employees').select('email');
+    const { data: admins } = await supabase.from('admins').select('email');
+    const allowedEmails = [
+      ...(employees || []).map(e => e.email),
+      ...(admins || []).map(a => a.email)
+    ];
+    const receiver = allowedEmails[0] || userEmail;
+
+    const newMessage = {
+      chat_id: chatId,
+      sender: userEmail,
+      receiver: selectedChat.email,
+      text: input,
+      created_at: new Date(Date.now() + (8 * 60 * 60 * 1000)).toISOString(), // Philippine time
+    };
+    setInput('');
+    await supabase.from('messages').insert(newMessage);
+    // Refetch messages after sending
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: true });
+    setMessages(data || []);
+  };
 
   return (
     <div className="Messages-page">
@@ -46,36 +133,75 @@ const Messages = () => {
           {chats.map(chat => (
             <div
               key={chat.id}
-              className={`Messages-chat-item${selectedChat.id === chat.id ? ' active' : ''}`}
+              className={`Messages-chat-item${selectedChat && selectedChat.id === chat.id ? ' active' : ''}`}
               onClick={() => setSelectedChat(chat)}
             >
               <img src={chat.avatar} alt={chat.name} className="Messages-chat-avatar" />
               <div>
                 <div className="Messages-chat-name">{chat.name}</div>
                 <div className="Messages-chat-last">
-                  You: {chat.lastMessage} <span className="Messages-chat-time">{chat.lastTime}</span>
+                  {/* Show last message if available */}
+                  {messages.length > 0 && selectedChat && selectedChat.id === chat.id
+                    ? `${messages[messages.length - 1].sender === userEmail ? 'You: ' : ''}${messages[messages.length - 1].text}`
+                    : ''}
+                  <span className="Messages-chat-time">
+                    {messages.length > 0 && selectedChat && selectedChat.id === chat.id
+                      ? new Date(messages[messages.length - 1].created_at).toLocaleString('en-PH', {
+                          timeZone: 'Asia/Manila',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: true
+                        })
+                      : ''}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
         <div className="Messages-thread">
-          <div className="Messages-thread-header">
-            <img src={selectedChat.avatar} alt={selectedChat.name} className="Messages-thread-avatar" />
-            <span className="Messages-thread-name">{selectedChat.name}</span>
-          </div>
-          <div className="Messages-thread-body">
-            {selectedChat.messages.map((msg, idx) => (
-              <div key={idx} className={`Messages-message ${msg.color}`}>
-                <div className="Messages-message-time">{msg.time}</div>
-                <div className="Messages-message-text">{msg.text}</div>
+          {selectedChat && (
+            <>
+              <div className="Messages-thread-header">
+                <img src={selectedChat.avatar} alt={selectedChat.name} className="Messages-thread-avatar" />
+                <span className="Messages-thread-name">{selectedChat.name}</span>
               </div>
-            ))}
-          </div>
-          <div className="Messages-thread-inputbar">
-            <input className="Messages-input" placeholder="Aa" />
-            <button className="Messages-send-btn">Send</button>
-          </div>
+              <div className="Messages-thread-body">
+                {messages.map((msg, idx) => (
+                  <div
+                    key={msg.id || idx}
+                    className={`Messages-message ${msg.sender === userEmail ? 'me' : 'other'}`}
+                  >
+                    <div className="Messages-message-time">
+                      {new Date(msg.created_at).toLocaleString('en-PH', {
+                        timeZone: 'Asia/Manila',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                      })}
+                    </div>
+                    <div className="Messages-message-text">{msg.text}</div>
+                    <div className="Messages-message-sender">
+                      {msg.sender === userEmail ? "You" : (chats.find(u => u.email === msg.sender)?.name || msg.sender)}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+              <div className="Messages-thread-inputbar">
+                <input
+                  className="Messages-input"
+                  placeholder="Aa"
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                />
+                <button className="Messages-send-btn" onClick={sendMessage}>Send</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

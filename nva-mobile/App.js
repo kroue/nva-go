@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // If you 
 import ForgotPassword from './screens/ForgotPassword';
 import OrderHistory from './screens/OrderHistory';
 import Messaging from './screens/Messaging';
+import Profile from './screens/Profile';
 const Stack = createStackNavigator();
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = Math.min(width * 0.8, 320);
@@ -57,9 +58,10 @@ function SplashScreen({ navigation }) {
   );
 }
 
-function Sidebar({ visible, onClose, userName }) {
+function Sidebar({ visible, onClose }) {
   const navigation = useNavigation();
   const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
+  const [fullName, setFullName] = useState('');
 
   useEffect(() => {
     Animated.timing(slideAnim, {
@@ -69,6 +71,16 @@ function Sidebar({ visible, onClose, userName }) {
     }).start();
   }, [visible]);
 
+  useEffect(() => {
+    Promise.all([
+      AsyncStorage.getItem('firstName'),
+      AsyncStorage.getItem('lastName')
+    ]).then(([first, last]) => {
+      if (first || last) setFullName(`${first || ''} ${last || ''}`.trim());
+      else setFullName('');
+    });
+  }, [visible]); // re-run when sidebar opens
+
   const handleLogout = async () => {
     onClose();
     navigation.replace('Login');
@@ -77,6 +89,11 @@ function Sidebar({ visible, onClose, userName }) {
   const handleTrackOrder = () => {
     onClose();
     navigation.navigate('TrackOrder');
+  };
+
+  const handleViewProfile = () => {
+    onClose();
+    navigation.navigate('Profile');
   };
 
   return (
@@ -89,8 +106,10 @@ function Sidebar({ visible, onClose, userName }) {
         <View style={styles.sidebarHeader}>
           <View style={styles.profilePic} />
           <View>
-            <Text style={styles.profileName}>{userName || 'Guest'}</Text>
-            <Text style={styles.profileLink}>View Profile</Text>
+            <Text style={styles.profileName}>{fullName || 'Guest'}</Text>
+            <TouchableOpacity onPress={handleViewProfile}>
+              <Text style={styles.profileLink}>View Profile</Text>
+            </TouchableOpacity>
           </View>
         </View>
         {/* Blue Divider */}
@@ -247,6 +266,14 @@ export default function App() {
           children={props => (
             <ScreenWithHeaderSidebar>
               <Messaging {...props} />
+            </ScreenWithHeaderSidebar>
+          )}
+        />
+        <Stack.Screen
+          name="Profile"
+          children={props => (
+            <ScreenWithHeaderSidebar>
+              <Profile {...props} />
             </ScreenWithHeaderSidebar>
           )}
         />

@@ -52,6 +52,10 @@ const Login = () => {
       return;
     }
 
+    // After successful login
+    localStorage.setItem('admin_username', username);
+    localStorage.setItem('admin_email', adminData.email); // Store admin email
+
     navigate('/adminhomepage');
   };
 
@@ -60,7 +64,7 @@ const Login = () => {
   };
 
   const handleAdminLoginClick = () => {
-    navigate('/adminlogin'); // Redirect to the admin login page
+    navigate('/login'); // Redirect to the admin login page
   };
 
   return (
@@ -91,7 +95,7 @@ const Login = () => {
               cursor: 'pointer'
             }}
           >
-            Admin Login
+            Employee Login
           </button>
         </div>
 

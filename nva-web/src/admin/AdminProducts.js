@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './SupabaseClient';
-import './Products.css';
+import { supabase } from '../SupabaseClient';
 import ProductModal from './ProductModal';
 
-const Products = () => {
+const AdminProducts = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
@@ -27,10 +26,17 @@ const Products = () => {
   };
 
   return (
-    <div className="Products-page">
+    <div
+      className="Products-page"
+      style={{
+        minHeight: '100vh',
+        boxSizing: 'border-box',
+        paddingBottom: 120 // Increase this to match or exceed your footer height
+      }}
+    >
       <div className="Products-header">Products</div>
       <div className="Products-section-title">Product Catalog</div>
-      <div className="Products-container">
+      <div className="Products-container" style={{ paddingBottom: 32 }}>
         <div className="Products-grid">
           {products.map((item) => (
             <div
@@ -60,4 +66,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default AdminProducts;

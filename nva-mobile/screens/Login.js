@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import your supabase client
 import { supabase } from '../SupabaseCient'; // Adjust the import path as necessary
 
@@ -18,7 +19,7 @@ export default function Login() {
     // 1. Find customer by username
     const { data: custData, error: custError } = await supabase
       .from('customers')
-      .select('email')
+      .select('email,first_name,last_name')
       .eq('username', username.trim())
       .maybeSingle();
 
@@ -44,6 +45,11 @@ export default function Login() {
       }
       return;
     }
+
+    // 3. Store user info in AsyncStorage for session
+    await AsyncStorage.setItem('firstName', custData.first_name || '');
+    await AsyncStorage.setItem('lastName', custData.last_name || '');
+    await AsyncStorage.setItem('email', custData.email);
 
     navigation.replace('Home');
   };

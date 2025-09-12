@@ -24,7 +24,7 @@ const AdminRightPanel = () => (
     <div style={{ background: '#252b55', borderRadius: 12, color: '#fff', padding: 18, minHeight: 180, marginBottom: 12, width: '100%' }}>
       <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>MAY 2025</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, fontWeight: 600, marginBottom: 8 }}>
-        {['S','M','T','W','T','F','S'].map(d => <div key={d}>{d}</div>)}
+        {['S','M','T','W','T','F','S'].map((d, i) => <div key={d + i}>{d}</div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {Array.from({ length: 31 }, (_, i) => (
