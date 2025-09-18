@@ -19,17 +19,18 @@
 .Orders-header {
   background: #d9d9d9;
   color: #252b55;
-  font-size: 22px;
-  font-weight: 700;
-  padding: 16px 24px;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 18px;
   border-radius: 12px;
   margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .Orders-section-title {
   background: #252b55;
   color: #fff;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   padding: 12px 18px;
   border-radius: 12px 12px 0 0;
@@ -38,10 +39,11 @@
 
 .Orders-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 18px;
   margin: 0;
   padding: 16px 8px 8px 8px;
+  border: 1px #252b55;
 }
 
 .Orders-list-container {
@@ -122,6 +124,7 @@
   gap: 18px;
 }
 
+
 .Orders-action-card {
   background: #fff;
   border-radius: 12px;
@@ -130,13 +133,13 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
   color: #252b55;
 }
 
 .Orders-action-label {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: #252b55;
 }
