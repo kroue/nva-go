@@ -7,34 +7,62 @@ const ValidatePayment = () => {
   const [selected, setSelected] = useState(0);
 
   useEffect(() => {
-    const fetchPayments = async () => {
+    const fetchOrders = async () => {
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .not('payment_proof', 'is', null)
+        .eq('status', 'Validation')
         .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error);
+        return;
+      }
+
       if (data) setPayments(data);
     };
-    fetchPayments();
+
+    fetchOrders();
   }, []);
 
   const handleValidate = async (orderId) => {
-    await supabase
+    const { error } = await supabase
       .from('orders')
-      .update({ status: 'Validation' })
+      .update({ 
+        status: 'Layout Approval',
+        approved: 'yes'
+      })
       .eq('id', orderId);
-    // Optionally remove from list or refresh
-    setPayments(payments.filter(p => p.id !== orderId));
-    setSelected(0);
+
+    if (!error) {
+      setPayments(current =>
+        current.map(p => 
+          p.id === orderId 
+            ? { ...p, status: 'Layout Approval', approved: 'yes' }
+            : p
+        )
+      );
+    }
   };
 
   const handleDecline = async (orderId) => {
-    await supabase
+    const { error } = await supabase
       .from('orders')
-      .update({ status: 'Declined' })
+      .update({ 
+        status: 'Declined',
+        approved: 'no'
+      })
       .eq('id', orderId);
-    setPayments(payments.filter(p => p.id !== orderId));
-    setSelected(0);
+
+    if (!error) {
+      setPayments(current =>
+        current.map(p => 
+          p.id === orderId 
+            ? { ...p, status: 'Declined', approved: 'no' }
+            : p
+        )
+      );
+    }
   };
 
   if (payments.length === 0) {
@@ -60,7 +88,7 @@ const ValidatePayment = () => {
           <div className="ValidatePayment-list">
             {payments.map((p, idx) => (
               <div
-                className={`ValidatePayment-card${selected === idx ? ' active' : ''}`}
+                className={`ValidatePayment-card${selected === idx ? ' active' : ''} ${p.approved === 'yes' ? ' validated' : ''}`}
                 key={p.id}
                 onClick={() => setSelected(idx)}
               >
@@ -71,12 +99,20 @@ const ValidatePayment = () => {
                 <div className="ValidatePayment-card-file">
                   {p.payment_proof ? p.payment_proof.split('/').pop() : 'No file'}
                   <span className="ValidatePayment-card-method">Gcash</span>
+                  {p.approved === 'yes' && 
+                    <span className="ValidatePayment-card-status">✓ Validated</span>
+                  }
                 </div>
               </div>
             ))}
           </div>
           <div className="ValidatePayment-preview">
-            <div className="ValidatePayment-preview-title">Proof of Payment</div>
+            <div className="ValidatePayment-preview-title">
+              Proof of Payment
+              {selectedPayment.approved === 'yes' && 
+                <span className="ValidatePayment-status-badge">Validated</span>
+              }
+            </div>
             {selectedPayment.payment_proof ? (
               <img
                 src={selectedPayment.payment_proof}
@@ -88,18 +124,22 @@ const ValidatePayment = () => {
               <div style={{ color: '#888' }}>No payment proof uploaded.</div>
             )}
             <div className="ValidatePayment-preview-actions">
-              <button
-                className="ValidatePayment-btn validate"
-                onClick={() => handleValidate(selectedPayment.id)}
-              >
-                Validate Payment
-              </button>
-              <button
-                className="ValidatePayment-btn decline"
-                onClick={() => handleDecline(selectedPayment.id)}
-              >
-                Decline Payment
-              </button>
+              {selectedPayment.approved !== 'yes' && (
+                <>
+                  <button
+                    className="ValidatePayment-btn validate"
+                    onClick={() => handleValidate(selectedPayment.id)}
+                  >
+                    Validate Payment
+                  </button>
+                  <button
+                    className="ValidatePayment-btn decline"
+                    onClick={() => handleDecline(selectedPayment.id)}
+                  >
+                    Decline Payment
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

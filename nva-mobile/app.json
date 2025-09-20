@@ -20,11 +20,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.kroue.nvamobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "nvamobile"
+    "scheme": "nvamobile",
+    "extra": {
+      "eas": {
+        "projectId": "f0e1acb6-a21b-4504-aadc-6d439dd84337"
+      }
+    }
   }
 }

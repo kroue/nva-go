@@ -78,6 +78,11 @@
   margin-bottom: 12px;
 }
 
+.Orders-card.finished {
+  opacity: 0.8;
+  background-color: #f5f5f5;
+}
+
 .Orders-card-main {
   display: flex;
   justify-content: space-between;
@@ -97,6 +102,14 @@
   color: #252b55;
 }
 
+.Orders-card-details {
+  display: flex;
+  gap: 16px;
+  color: #666;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
 .Orders-card-footer {
   display: flex;
   justify-content: space-between;
@@ -114,6 +127,30 @@
 
 .Orders-card-status {
   color: #252b55;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.Orders-card-status.finished {
+  background: #e0e0e0;
+  color: #666;
+}
+
+.Orders-card-status.validation {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.Orders-card-status.printing {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.Orders-card-status.for.pickup {
+  background: #e8f5e9;
+  color: #388e3c;
 }
 
 .Orders-actions {
@@ -139,4 +176,10 @@
   font-size: 22px;
   font-weight: 700;
   color: #252b55;
+}
+
+.Orders-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
 }
