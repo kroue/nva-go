@@ -9,7 +9,7 @@
 .LoginPage-header {
   background-color: #252B55;
   color: white;
-  padding: 50px 20px;
+  padding: 30px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -20,25 +20,22 @@
 }
 
 .LoginPage-body {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
+  padding: 2% 5%;
+  
 }
 
 .LoginPage-left {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+  justify-content: flex-start; /* aligns content to the top */
+  align-items: flex-start; /* aligns content to the left */
 }
 
 .LoginPage-logo-large {
   width: 400px;
   margin-bottom: 20px;
+  margin-left: 0;
 }
 
 .LoginPage-description {    
@@ -46,7 +43,7 @@
   font-weight: 100; /* Adjust weight as needed */
   font-style: normal;
   font-size: 16px;
-  text-align: center;
+  text-align: left;
   line-height: 1.5;
 }
 
@@ -63,7 +60,7 @@
   max-width: 400px; /* Set a maximum width for the card */
   height: 90%; /* Set the height to 80% */
   background-color: white;
-  padding: 20px; /* Add padding inside the card */
+  padding: 30px; /* Add padding inside the card */
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   box-sizing: border-box; /* Ensure padding doesn't affect width */
@@ -72,7 +69,7 @@
 .LoginForm-title {
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
-  font-weight: 600; /* Adjust weight as needed */
+  font-weight: 700; /* Adjust weight as needed */
   font-style: normal;
   font-size: 24px;
   margin-bottom: 20px;
@@ -130,7 +127,7 @@
 }
 
 .LoginForm-button:hover {
-  background: linear-gradient(90deg, cyan, magenta, yellow, black); /* CMYK gradient for hover */
+  background: linear-gradient(90deg, cyan, magenta, yellow); /* CMYK gradient for hover */
   color: white; /* Keep the text color white */
 }
 
@@ -153,8 +150,9 @@
 }
 
 .LoginPage-footer {
-  text-align: center;
+  text-align: right;
   background-color: #252B55;
   color: white;
-  padding: 10px;
+  padding: 10px 50px;
+  font-size: 10px;
 }

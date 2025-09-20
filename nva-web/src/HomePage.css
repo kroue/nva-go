@@ -3,71 +3,108 @@ body {
   font-family: Arial, sans-serif;
 }
 
+/* --------------------
+   HomePage container
+-------------------- */
 .HomePage {
   display: flex;
   flex-direction: column;
   padding: 20px;
   background-color: #f9f9f9;
-  min-height: 0;
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
 }
 
+
 .HomePage-title {
   font-size: 15px;
-  margin-bottom: 12px;
   font-weight: 700;
   color: #252b55;
+  margin-bottom: 12px;
 }
 
+/* --------------------
+   Title bar
+-------------------- */
 .HomePage-titlebar {
   grid-area: title;
   background-color: #d9d9d9;
-  color: #252b55;
   border-radius: 12px;
-  padding: 10px 18px;
+  padding: 18px 20px;
   display: flex;
   align-items: center;
   width: 100%;
-  min-width: 0;
   box-sizing: border-box;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-size: 20px;
 }
 
 .HomePage-titlebar-text {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
   color: #252b55;
   text-align: left;
 }
 
+/* --------------------
+   Grid layout
+-------------------- */
 .HomePage-grid {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: auto auto auto;
   gap: 20px;
   grid-template-areas:
+    "titlebar pickup"
+    "welcome pickup"
+    "recent pickup"
+    "unread-sales validate";
+  overflow: hidden;
     "title     title"
     "pickup    recent"
     "messages  validate";
   height: calc(100vh - 100px);
 }
 
+/* --------------------
+   Cards / Sections
+-------------------- */
 .HomePage-pickup,
 .HomePage-recent,
 .HomePage-unread,
 .HomePage-sales,
-.HomePage-validate {
-  padding: 10px;
+.HomePage-validate,
+.Dashboard-section {
+  padding: 0px;
   border-radius: 8px;
+  box-sizing: border-box;
+  background-color: #fff;
+  border: 1px solid #000;
   min-width: 0;
   min-height: 0;
-  box-sizing: border-box;
 }
 
 .HomePage-pickup {
   grid-area: pickup;
+}
+
+.HomePage-recent {
+  grid-area: recent;
+}
+
+.HomePage-unread-sales-row {
+  grid-area: unread-sales;
+  display: flex;
+  gap: 12px;
+}
+
+.HomePage-unread,
+.HomePage-sales {
+  flex: 1;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -202,34 +239,38 @@ body {
   position: relative;
 }
 
-/* Card header/title bar */
-.Dashboard-section-title,
-.Dashboard-section-title.dark {
+/* --------------------
+   Section headers
+-------------------- */
+.Dashboard-section-title {
   font-size: 15px;
   margin-bottom: 8px;
   text-align: left;
 }
 
-.Dashboard-section-title.dark {
+.Dashboard-section-title.dark,
+.HomePage-pickup .Dashboard-section-title.dark {
   background-color: #252b55;
   color: #fff;
   border-radius: 8px 8px 0 0;
   padding: 10px 12px;
-  margin: 0; /* No negative margin */
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
-  text-align: left;
   width: 100%;
+  display: flex;
+  align-items: center;
   box-sizing: border-box;
 }
 
-/* Card content */
+/* --------------------
+   Cards content
+-------------------- */
 .Card {
   background-color: #e5e5e5;
   border-radius: 8px;
   padding: 10px 12px;
   margin-top: 12px;
-  border: none;
   text-align: left;
   font-size: 15px;
   display: flex;
@@ -241,20 +282,6 @@ body {
 
 .Card:hover {
   background: #f5f5f5;
-}
-
-.Card-button {
-  margin-top: 10px;
-  padding: 5px 10px;
-  background-color: #2c2c54;
-  color: #ffffff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.Card-button:hover {
-  background-color: #1a1a40;
 }
 
 .Card p {
@@ -272,6 +299,39 @@ body {
   text-align: left;
 }
 
+.Card-button {
+  margin-top: 10px;
+  padding: 5px 10px;
+  background-color: #2c2c54;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.Card-button:hover {
+  background-color: #1a1a40;
+}
+
+/* --------------------
+   Dashboard layout
+-------------------- */
+.Dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.Dashboard-row {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+/* --------------------
+   Media queries
+-------------------- */
+=======
 .Card-empty {
   text-align: center;
   color: #6c757d;
@@ -306,23 +366,15 @@ body {
 .HomePage-validate .Card {
   margin-bottom: 8px;
 }
-
 @media (max-height: 700px) {
   .HomePage-grid {
     grid-template-rows: 35px 30px 1fr 1fr;
-    gap: 8px;
+    gap: 10px;
   }
+
   .HomePage-titlebar-text,
   .Dashboard-section-title,
   .Dashboard-section-title.dark {
-    font-size: 13px;
-  }
-  .Card,
-  .HomePage-pickup,
-  .HomePage-recent,
-  .HomePage-unread,
-  .HomePage-sales,
-  .HomePage-validate {
-    padding: 6px;
+    font-size: 12px;
   }
 }
