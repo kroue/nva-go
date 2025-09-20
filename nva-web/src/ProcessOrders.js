@@ -14,20 +14,18 @@ const ProcessOrders = () => {
       const { data, error } = await supabase
         .from('orders')
         .select('*');
-      if (!error) setOrders(data);
+      if (!error) {
+        // Sort orders: active first, finished last
+        const sortedOrders = data.sort((a, b) => {
+          if (a.status === 'Finished' && b.status !== 'Finished') return 1;
+          if (a.status !== 'Finished' && b.status === 'Finished') return -1;
+          return new Date(b.created_at) - new Date(a.created_at);
+        });
+        setOrders(sortedOrders);
+      }
     };
     fetchOrders();
   }, []);
-
-  const handleStatusChange = async (orderId, newStatus) => {
-    await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', orderId);
-    // Refresh orders after update
-    const { data } = await supabase.from('orders').select('*');
-    setOrders(data);
-  };
 
   const handleCardClick = (order) => {
     navigate(`/orders/${order.id}`);
@@ -40,7 +38,7 @@ const ProcessOrders = () => {
         <div className="ProcessOrders-grid">
           {orders.map(order => (
             <div
-              className="ProcessOrders-card"
+              className={`ProcessOrders-card ${order.status === 'Finished' ? 'finished' : ''}`}
               key={order.id}
               onClick={() => handleCardClick(order)}
               style={{ cursor: 'pointer' }}
@@ -55,7 +53,6 @@ const ProcessOrders = () => {
               <div className="ProcessOrders-card-details">
                 <div>Size: {order.height && order.width ? `${order.height} x ${order.width}` : '---'}</div>
                 <div>Pickup: {order.pickup_date}</div>
-                <div>Date: {order.pickup_date}</div>
                 <div>Time: {order.pickup_time}</div>
               </div>
               <input
@@ -64,17 +61,14 @@ const ProcessOrders = () => {
                 value={order.instructions || ''}
                 disabled
               />
-              <button className="ProcessOrders-card-viewmore" disabled>View more</button>
-              <div className="ProcessOrders-card-statuses">
-                {statuses.map(s => (
-                  <button
-                    key={s}
-                    className={`ProcessOrders-status-btn${order.status === s ? ' active' : ''}`}
-                    onClick={() => handleStatusChange(order.id, s)}
-                    disabled={order.status === s}
+              <div className="status-tracker">
+                {statuses.map(status => (
+                  <div
+                    key={status}
+                    className={`status-pill ${order.status === status ? 'active' : ''}`}
                   >
-                    {s}
-                  </button>
+                    {status}
+                  </div>
                 ))}
               </div>
             </div>

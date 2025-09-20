@@ -13,6 +13,10 @@
   border-radius: 12px;
   margin-bottom: 10px;
   text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .Customers-section-title {
@@ -104,6 +108,13 @@
   border-radius: 8px;
 }
 
+.Customers-history-img-placeholder {
+  width: 90px;
+  height: 60px;
+  background: #eee;
+  border-radius: 8px;
+}
+
 .Customers-history-product {
   font-weight: 600;
   margin-right: 18px;
@@ -113,4 +124,75 @@
   font-size: 15px;
   color: #252b55;
   margin-left: auto;
+}
+
+.Customers-add-button {
+  background: #232b55;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Customers-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.Customers-modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.Customers-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.Customers-form input,
+.Customers-form textarea {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+}
+
+.Customers-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.Customers-modal-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.Customers-modal-actions button:first-child {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.Customers-modal-actions button:last-child {
+  background: #232b55;
+  color: white;
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './Sidebar.css';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
@@ -10,6 +10,7 @@ import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutline
 import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import ArrowForwardIosOutlinedIcon from '@mui/icons-material/ArrowForwardIosOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { supabase } from '../SupabaseClient';
 
 const navItems = [
   { label: 'Home', icon: <HomeOutlinedIcon />, path: '/homepage' },
@@ -30,7 +31,36 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState('');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const arrowRef = useRef(null);
+
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact' })
+        .eq('read', false);
+
+      if (!error) {
+        setNotificationCount(data.length);
+      }
+    };
+
+    fetchNotificationCount();
+
+    const subscription = supabase
+      .channel('notifications')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          fetchNotificationCount();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleNavClick = (item) => {
     if (item.subItems) {
@@ -107,10 +137,13 @@ const Sidebar = () => {
       <div className="Sidebar-footer">
         <div className="Sidebar-footer-buttons">
           <button
-            className="Sidebar-footer-button"
+            className="Sidebar-footer-button notification-button"
             onClick={() => navigate('/notifications')}
           >
             <NotificationsNoneOutlinedIcon />
+            {notificationCount > 0 && (
+              <span className="notification-badge">{notificationCount}</span>
+            )}
           </button>
           <button
             className="Sidebar-footer-button"
