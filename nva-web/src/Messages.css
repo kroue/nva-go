@@ -1,105 +1,117 @@
 .Messages-page {
-  background: #f9f9f9;
+  background: #ffffff;
   min-height: 100%;
-  padding: 0;
+  padding: 10px;
+  
 }
 
 .Messages-header {
   background: #d9d9d9;
   color: #252b55;
-  font-size: 28px;
-  font-weight: 700;
-  padding: 16px 24px;
-  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 18px;
+  border-radius: 8px;
   margin-bottom: 10px;
+  text-transform: uppercase;
   text-align: left;
 }
 
 .Messages-container {
-  display: flex;
+  display: grid;
   background: #fff;
-  border: 2px solid #000;
   border-radius: 12px;
-  margin: 0 8px 0 8px;
   padding: 0;
   box-sizing: border-box;
-  min-height: 500px;
+  min-height: 100%;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
 }
 
 .Messages-chats {
   width: 320px;
-  background: #f5f6ff;
-  border-radius: 12px 0 0 12px;
-  padding: 18px 0 18px 18px;
+  background: #fff;
+  border-radius: 8px 8px 0 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  border: 1px solid #252b55;
+  position: relative;
+  
 }
 
 .Messages-chats-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #252b55;
-  margin-bottom: 8px;
+  background: #252b55;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+  text-align: left;
 }
 
 .Messages-search {
-  width: 90%;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 20px;
   border: 1px solid #d9d9d9;
-  margin-bottom: 12px;
-  font-size: 16px;
+  margin: 12px;
+  font-size: 13px;
 }
 
 .Messages-chat-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: #fff;
+  background: #ffffff;
   border-radius: 12px;
-  padding: 10px;
+  padding: 5px 10px;
   cursor: pointer;
-  border: 1.5px solid #d9d9d9;
-  margin-bottom: 0;
+  margin: 0px 12px;
   transition: background 0.2s, border 0.2s;
 }
 
 .Messages-chat-item.active {
-  background: #e5e5e5;
-  border: 2px solid #252b55;
+  background: #d9d9d9;
+  text-align: left;
 }
 
 .Messages-chat-avatar {
-  width: 48px;
-  height: 48px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
   margin-right: 8px;
+  background-color: #252b55;
 }
 
 .Messages-chat-name {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: #252b55;
+  padding: 5px 5px;
 }
 
 .Messages-chat-last {
-  font-size: 15px;
+  font-size: 10px;
   color: #252b55;
+  text-align: left;
 }
 
 .Messages-chat-time {
-  font-size: 13px;
+  font-size: 8px;
   color: #252b55;
   margin-left: 8px;
+  position: absolute;
+  right: 25px;
+  padding: 5px 5px;
+
 }
 
 .Messages-thread {
   flex: 1;
-  background: #fff;
-  border-radius: 0 12px 12px 0;
-  padding: 18px 24px;
+  background: #F5F6FF;
+  border-radius: 12px;
+  padding: 12px 20px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -108,7 +120,7 @@
 .Messages-thread-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0px;
   font-size: 18px;
   font-weight: 700;
   color: #252b55;
@@ -116,16 +128,20 @@
 }
 
 .Messages-thread-avatar {
-  width: 36px;
-  height: 36px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
   object-fit: cover;
+  background: #252b55;
+  margin-right: 8px;
+
 }
 
 .Messages-thread-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #252b55;
+  padding: 5px 5px;
 }
 
 .Messages-thread-body {
@@ -152,28 +168,29 @@
   padding: 10px 18px;
   margin-right: 8px;
   text-align: right;
+  font-size: 10px;
 }
 
 .Messages-message.other {
   align-self: flex-start;
-  background: #f5f7ff;
+  background: #d9d9d9;
   color: #252b55;
   border-radius: 18px 18px 18px 4px;
   padding: 10px 18px;
   margin-left: 8px;
   text-align: left;
+  font-size: 10px;
 }
 
 .Messages-message-time {
   font-size: 11px;
   color: #888;
-  margin-bottom: 2px;
-  margin-top: -6px;
+  margin: 5px ;
   text-align: right;
 }
 
 .Messages-message-text {
-  font-size: 16px;
+  font-size: 13px;
   word-break: break-word;
 }
 

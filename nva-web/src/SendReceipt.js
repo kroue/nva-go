@@ -20,7 +20,7 @@ const order = {
 
 const SendReceipt = () => (
   <div className="SendReceipt-page">
-    <div className="SendReceipt-header">Orders</div>
+    <div className="Orders-header">Orders</div>
     <div className="SendReceipt-section-title">Order Details</div>
     <div className="SendReceipt-container">
       <div className="SendReceipt-grid">
