@@ -47,7 +47,7 @@
 .Products-card {
   background: #f6f7fc;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); 
   padding: 20px 20px;
   min-height: 0px;
   display: flex;
@@ -57,7 +57,7 @@
 }
 
 .Products-card:hover {
-  background-color: #b8b7b780;
+  background-color: #252b55;
   margin: 0px;
   color: #fff;
 }
@@ -75,6 +75,5 @@
 .Products-card-name {
   font-size: 18px;
   font-weight: 700;
-  color: #252b55;
   text-align: center;
 }

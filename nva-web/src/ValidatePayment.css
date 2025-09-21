@@ -1,7 +1,7 @@
 .ValidatePayment-page {
-  background: #f9f9f9;
+  background: #ffffff;
   min-height: 100%;
-  padding: 0;
+  padding: 10px;
 }
 
 .ValidatePayment-header {
@@ -18,8 +18,8 @@
 .ValidatePayment-section-title {
   background: #252b55;
   color: #fff;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   padding: 12px 18px;
   border-radius: 8px 8px 0 0;
   margin-bottom: 0;
@@ -28,58 +28,58 @@
 
 .ValidatePayment-container {
   background: #fff;
-  border: 2px solid #000;
-  border-radius: 12px;
-  margin: 0 8px 0 8px;
+  border: 1px solid #252b55;
+  border-radius: 0px 0px 8px 8px;
+  margin: 0px;
   padding: 24px 18px;
   box-sizing: border-box;
 }
 
 .ValidatePayment-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 24px;
 }
 
 .ValidatePayment-list {
-  display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
+  display: flex;
+  align-items: center;
 }
 
 .ValidatePayment-card {
-  background: #e5e5e5;
+  background: #f6f7fc;
+  color: #252b55;
   border-radius: 12px;
-  padding: 16px 18px;
-  margin-bottom: 0;
+  padding: 20px 15px;
+  margin-bottom: 10px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
   text-align: left;
+  font-size: 15px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ValidatePayment-card.active {
-  border: 2px solid #252b55;
-}
-
-.ValidatePayment-card.validated {
-  background-color: #f0f8f0;
-  border-color: #4CAF50;
+  color: #fff;
+  background: #252b55;
 }
 
 .ValidatePayment-card-id {
   float: right;
-  color: #252b55;
-  font-size: 13px;
-  font-weight: 400;
-  margin-left: 12px;
+  font-size: 10px;
+  font-weight: 400;;
 }
 
 .ValidatePayment-card-file {
   background: #d9d9d9;
   border-radius: 6px;
   padding: 6px 10px;
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: 15px;
+  font-size: 10px;
   color: #252b55;
   display: flex;
   justify-content: space-between;
@@ -91,38 +91,25 @@
   font-weight: 600;
 }
 
-.ValidatePayment-card-status {
-  color: #4CAF50;
-  font-weight: 500;
-  margin-left: 8px;
-}
-
-.ValidatePayment-status-badge {
-  background: #4CAF50;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
 .ValidatePayment-preview {
   background: #f6f7fc;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  padding: 18px 16px;
+  padding: 30px 20px;
   min-height: 350px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
 }
 
 .ValidatePayment-preview-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   color: #252b55;
-  margin-bottom: 12px;
   text-align: center;
+  text-transform: uppercase;
+  margin-bottom: 20px;
 }
 
 .ValidatePayment-preview-img {
@@ -134,25 +121,27 @@
 
 .ValidatePayment-preview-actions {
   display: flex;
-  gap: 18px;
-  justify-content: center;
+  gap: 20px;
+  justify-content: center
 }
 
 .ValidatePayment-btn {
-  padding: 10px 24px;
-  font-size: 16px;
+  padding: 10px 15px;
+  font-size: 15px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 20px;
   border: none;
   cursor: pointer;
+  margin-top: 20px;
+
 }
 
 .ValidatePayment-btn.validate {
-  background: #38d959;
+  background: #118C4F;
   color: #fff;
 }
 
 .ValidatePayment-btn.decline {
-  background: #e53935;
+  background: #cf2c29;
   color: #fff;
 }

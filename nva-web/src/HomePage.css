@@ -10,7 +10,7 @@ body {
   display: flex;
   flex-direction: column;
   padding: 20px;
-  background-color: #f9f9f9;
+  background-color: #ffffff;
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
@@ -28,9 +28,9 @@ body {
    Title bar
 -------------------- */
 .HomePage-titlebar {
-  grid-area: title;
+  grid-area: titlebar;
   background-color: #d9d9d9;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 18px 20px;
   display: flex;
   align-items: center;
@@ -55,19 +55,15 @@ body {
 .HomePage-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: auto auto auto;
-  gap: 20px;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 50px 40px 1fr 1fr;
+  gap: 12px;
   grid-template-areas:
     "titlebar pickup"
     "welcome pickup"
     "recent pickup"
     "unread-sales validate";
   overflow: hidden;
-    "title     title"
-    "pickup    recent"
-    "messages  validate";
-  height: calc(100vh - 100px);
 }
 
 /* --------------------
@@ -105,138 +101,6 @@ body {
 .HomePage-unread,
 .HomePage-sales {
   flex: 1;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.HomePage-recent {
-  grid-area: recent;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.HomePage-unread-sales-row {
-  grid-area: messages;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.HomePage-unread, 
-.HomePage-sales {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.HomePage-validate {
-  grid-area: validate;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  align-self: start;
-}
-
-.Card {
-  background: #f8f9fa;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.Card:hover {
-  background: #f1f3f5;
-}
-
-.Card-button {
-  margin-top: 10px;
-  padding: 5px 10px;
-  background-color: #2c2c54;
-  color: #ffffff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.Card-button:hover {
-  background-color: #1a1a40;
-}
-
-.Card p {
-  margin: 0 0 2px 0;
-  font-weight: 600;
-  font-size: 15px;
-  color: #252b55;
-}
-
-.Card-subtext,
-.Card-id {
-  font-size: 13px;
-  color: #252b55;
-  margin: 0;
-  text-align: left;
-}
-
-.Card-empty {
-  text-align: center;
-  color: #6c757d;
-}
-
-.Card-status {
-  float: right;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.Card-time {
-  float: right;
-  color: #666;
-  font-size: 12px;
-}
-
-.Badge {
-  background: #FF4B4B;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.HomePage-recent .Card,
-.HomePage-pickup .Card,
-.HomePage-validate .Card {
-  margin-bottom: 8px;
-}
-
-.Dashboard {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.Dashboard-row {
-  display: flex;
-  gap: 20px;
-  width: 100%;
-}
-
-/* Card container */
-.Dashboard-section {
-  background-color: #fff;
-  border: 1px solid #000;
-  border-radius: 8px;
-  padding: 0 12px 12px 12px; /* No top padding so header aligns with border */
-  box-sizing: border-box;
-  margin-bottom: 0;
-  position: relative;
 }
 
 /* --------------------
@@ -276,12 +140,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.Card:hover {
-  background: #f5f5f5;
 }
 
 .Card p {
@@ -331,41 +189,6 @@ body {
 /* --------------------
    Media queries
 -------------------- */
-=======
-.Card-empty {
-  text-align: center;
-  color: #6c757d;
-}
-
-.Card-status {
-  float: right;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.Card-time {
-  float: right;
-  color: #666;
-  font-size: 12px;
-}
-
-.Badge {
-  background: #FF4B4B;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.HomePage-recent .Card,
-.HomePage-pickup .Card,
-.HomePage-validate .Card {
-  margin-bottom: 8px;
-}
 @media (max-height: 700px) {
   .HomePage-grid {
     grid-template-rows: 35px 30px 1fr 1fr;

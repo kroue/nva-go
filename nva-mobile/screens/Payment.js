@@ -8,11 +8,12 @@ import axios from 'axios';
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'proofs';
 
-export default function Payment({ route }) {
-  const { order } = route.params;
-  const [paymentProof, setPaymentProof] = useState(null);
-  const [uploading, setUploading] = useState(false);
+export default function Payment() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const order = route.params?.order;
+  const [proofUri, setProofUri] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   // Pick image
   const pickImage = async () => {
@@ -22,23 +23,23 @@ export default function Payment({ route }) {
       quality: 0.7,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPaymentProof(result.assets[0]);
+      setProofUri(result.assets[0].uri);
     }
   };
 
   // Upload image to Cloudinary
   const uploadProof = async () => {
-    if (!paymentProof) return '';
+    if (!proofUri) return '';
     setUploading(true);
 
     // Get file extension
-    const fileExt = paymentProof.uri.split('.').pop();
+    const fileExt = proofUri.split('.').pop();
     const fileName = `proof_${Date.now()}.${fileExt}`;
 
     // Cloudinary expects FormData with uri, type, and name
     const formData = new FormData();
     formData.append('file', {
-      uri: paymentProof.uri,
+      uri: proofUri,
       type: `image/${fileExt}`,
       name: fileName,
     });
@@ -60,51 +61,17 @@ export default function Payment({ route }) {
   // Place order
   const handlePlaceOrder = async () => {
     let proofUrl = '';
-    if (paymentProof) {
+    if (proofUri) {
       proofUrl = await uploadProof();
     }
-
-    console.log('Order before insert:', order); // Debug log
-
-    const orderData = {
-      first_name: order.first_name,
-      last_name: order.last_name,
-      phone_number: order.phone_number,
-      address: order.address,
-      has_file: order.has_file,
-      variant: order.variant,
-      height: order.height,
-      width: order.width,
-      quantity: order.quantity,
-      eyelets: order.eyelets,
-      pickup_date: order.pickup_date,
-      pickup_time: order.pickup_time,
-      instructions: order.instructions,
-      total: order.total,
-      status: order.status,
-      email: order.email,
+    const { error } = await supabase.from('orders').insert({
+      ...order,
       payment_proof: proofUrl,
-      attached_file: order.attached_file || null, // Explicitly handle attached_file
-      approval_file: null,
-      approved: 'no',
-      created_at: new Date().toISOString()
-    };
-
-    console.log('Order data to insert:', orderData); // Debug log
-
-    const { data, error } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
-
+    });
     if (error) {
-      console.error('Insert error:', error); // Debug log
       Alert.alert('Order Error', error.message);
       return;
     }
-
-    console.log('Inserted order:', data); // Debug log
     Alert.alert('Order Placed', 'Your order has been placed!');
     navigation.replace('Home');
   };
@@ -138,15 +105,15 @@ export default function Payment({ route }) {
             <TextInput
               style={styles.attachInput}
               placeholder="Attach file"
-              value={paymentProof ? paymentProof.uri.split('/').pop() : ''}
+              value={proofUri ? proofUri.split('/').pop() : ''}
               editable={false}
             />
             <TouchableOpacity style={styles.attachPlus} onPress={pickImage}>
               <Text style={styles.attachPlusText}>+</Text>
             </TouchableOpacity>
           </View>
-          {paymentProof ? (
-            <Image source={{ uri: paymentProof.uri }} style={{ width: 120, height: 120, marginTop: 8, borderRadius: 8 }} />
+          {proofUri ? (
+            <Image source={{ uri: proofUri }} style={{ width: 120, height: 120, marginTop: 8, borderRadius: 8 }} />
           ) : null}
         </View>
         <TouchableOpacity
