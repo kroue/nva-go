@@ -575,18 +575,6 @@ export default function Messaging() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 16,
-    backgroundColor: '#252b55',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
   container: {
     padding: 18,
     backgroundColor: '#fff',

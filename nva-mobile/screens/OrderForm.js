@@ -4,7 +4,6 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../SupabaseCient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
 
 export default function OrderForm({ route }) {
   const { product } = route.params;
@@ -26,7 +25,6 @@ export default function OrderForm({ route }) {
   const [variants, setVariants] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [productData, setProductData] = useState(null);
-  const [attachedFile, setAttachedFile] = useState(null);
 
   // Date/Time picker states
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -34,33 +32,6 @@ export default function OrderForm({ route }) {
 
   // Price calculation
   const [total, setTotal] = useState(0);
-
-  // Add this list for products that don't need height/width
-  const noDimensionProducts = [
-    'CANVAS CLOTH',
-    'PP FILM MATTE',
-    '58mm BUTTON PIN',
-    'ACRYLIC RECTANGLE REF MAGNET 9.5x7 cm',
-    'ACRYLIC RECTANGLE REF MAGNET 2.5x3.25 in',
-    'BLOCK/LOT/HOUSE NO. PLATE',
-    'TRUCK/CAR PLATE',
-    'MOTORCYCLE PLATE',
-    'ACRYLIC MEDAL',
-    'ID LANYARD',
-    'DTF PRINT PER 22x39 INCHES'
-  ];
-
-  // Set pickup date/time on mount
-  useEffect(() => {
-    const now = new Date();
-    const pickupDateStr = now.toISOString().split('T')[0];
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-    const pickupTimeStr = oneHourLater
-      .toTimeString()
-      .slice(0, 5);
-    setPickupDate(pickupDateStr);
-    setPickupTime(pickupTimeStr);
-  }, []);
 
   // Fetch product and variants from Supabase
   useEffect(() => {
@@ -107,11 +78,8 @@ export default function OrderForm({ route }) {
     let price = 0;
     let qty = parseInt(quantity) || 1;
     let area = 1;
-    const skipDimension = noDimensionProducts.includes(product);
-
     if (
       selectedVariant &&
-      !skipDimension &&
       ['Tarp', 'Sticker', 'Cloth', 'Film', 'Print', 'Photopaper'].includes(productData?.category)
     ) {
       const w = parseFloat(width) || 0;
@@ -119,29 +87,20 @@ export default function OrderForm({ route }) {
       area = w * h;
       if (area === 0) area = 1;
       const unitPrice =
-        qty >= 10 && selectedVariant.wholesale_price
-          ? selectedVariant.wholesale_price
+        qty >= 10
+          ? selectedVariant.wholesale_price || selectedVariant.retail_price || 0
           : selectedVariant.retail_price || 0;
       price = unitPrice * area * qty;
     } else if (selectedVariant) {
       const unitPrice =
-        qty >= 10 && selectedVariant.wholesale_price
-          ? selectedVariant.wholesale_price
+        qty >= 10
+          ? selectedVariant.wholesale_price || selectedVariant.retail_price || 0
           : selectedVariant.retail_price || 0;
       price = unitPrice * qty;
     }
-
-    // Add layout fee if no file
     if (!hasFile) price += 150;
-
-    // Add eyelets cost for solvent tarp - 1 peso per eyelet
-    if (product === 'SOLVENT TARP' && eyelets) {
-      const eyeletCount = parseInt(eyelets) || 0;
-      price += (eyeletCount * qty * 1); // 1 peso per eyelet
-    }
-
     setTotal(price);
-  }, [selectedVariant, quantity, width, height, hasFile, productData, product]);
+  }, [selectedVariant, quantity, width, height, hasFile, productData]);
 
   // Date/time picker handlers
   const handleDateChange = (event, selectedDate) => {
@@ -164,9 +123,7 @@ export default function OrderForm({ route }) {
     if (!firstName.trim() || !lastName.trim() || !contact.trim() || !address.trim()) return false;
     if (!selectedVariant) return false;
     if (!quantity || isNaN(quantity) || parseInt(quantity) < 1) return false;
-    const skipDimension = noDimensionProducts.includes(product);
     if (
-      !skipDimension &&
       ['Tarp', 'Sticker', 'Cloth', 'Film', 'Print', 'Photopaper'].includes(productData?.category)
     ) {
       if (!height || isNaN(height) || parseFloat(height) <= 0) return false;
@@ -182,9 +139,6 @@ export default function OrderForm({ route }) {
       alert('Please fill out all required fields.');
       return;
     }
-
-    console.log('Attached file before checkout:', attachedFile); // Debug log
-
     const email = await AsyncStorage.getItem('email');
     const orderData = {
       first_name: firstName,
@@ -302,22 +256,12 @@ export default function OrderForm({ route }) {
           </TouchableOpacity>
         </View>
         <View style={styles.row}>
-          <TouchableOpacity 
-            style={styles.attachBtn}
-            onPress={pickDocument}
-          >
-            <Text style={styles.attachText}>
-              {attachedFile ? attachedFile.name : 'Attach file'}
-            </Text>
+          <TouchableOpacity style={styles.attachBtn}>
+            <Text style={styles.attachText}>Attach file</Text>
           </TouchableOpacity>
-          {attachedFile && (
-            <TouchableOpacity 
-              style={styles.plusBtn}
-              onPress={() => setAttachedFile(null)}
-            >
-              <Text style={styles.plusText}>×</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.plusBtn}>
+            <Text style={styles.plusText}>+</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Variant selection */}
@@ -343,12 +287,8 @@ export default function OrderForm({ route }) {
         )}
 
         <View style={styles.row}>
-          {!noDimensionProducts.includes(product) && (
-            <>
-              <TextInput style={styles.inputSmall} placeholder="Height (ft)" value={height} onChangeText={setHeight} keyboardType="numeric" />
-              <TextInput style={styles.inputSmall} placeholder="Width (ft)" value={width} onChangeText={setWidth} keyboardType="numeric" />
-            </>
-          )}
+          <TextInput style={styles.inputSmall} placeholder="Height (ft)" value={height} onChangeText={setHeight} keyboardType="numeric" />
+          <TextInput style={styles.inputSmall} placeholder="Width (ft)" value={width} onChangeText={setWidth} keyboardType="numeric" />
           <TextInput style={styles.inputSmall} placeholder="Quantity" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
         </View>
         {/* Eyelets only for Solvent Tarp */}

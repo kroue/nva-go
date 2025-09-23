@@ -1,7 +1,8 @@
 .Messages-page {
-  background: #f9f9f9;
+  background: #ffffff;
   min-height: 100%;
-  padding: 0;
+  padding: 10px;
+  
 }
 
 .Messages-container {

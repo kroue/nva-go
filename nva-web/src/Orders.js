@@ -8,7 +8,7 @@ import './Orders.css';
 const actionCards = [
   { label: 'Process Orders', icon: <CheckCircleOutlineIcon style={{ fontSize: 48 }} />, path: '/orders/process' },
   { label: 'Validate Payment', icon: <CheckCircleOutlineIcon style={{ fontSize: 48 }} />, path: '/orders/validate' },
-  { label: 'Send Receipt', icon: <CheckCircleOutlineIcon style={{ fontSize: 48 }} />, path: '/orders/receipt' },
+  { label: 'Send Receipt', icon: <CheckCircleOutlineIcon style={{ fontSize: 48 }} />, path: '/send-receipt' },
 ];
 
 const Orders = () => {
@@ -24,10 +24,13 @@ const Orders = () => {
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        setOrders(data);
-      } catch (err) {
-        console.error('Error fetching orders:', err);
+        if (error) {
+          console.error('Error fetching orders:', error);
+        } else {
+          setOrders(data || []);
+        }
+      } catch (error) {
+        console.error('Exception fetching orders:', error);
       } finally {
         setLoading(false);
       }
@@ -44,9 +47,7 @@ const Orders = () => {
     <div className="Orders-page">
       <div className="Orders-header">Orders</div>
       
-      <div className="Orders-section-title">
-        All Orders <FilterListIcon style={{ verticalAlign: 'middle', marginLeft: 8 }} />
-      </div>
+      <div className="Orders-section-title">All Orders</div>
       <div className="Orders-grid">
         <div className="Orders-list">
           <div className="Orders-list-title">All Orders</div>
@@ -73,8 +74,8 @@ const Orders = () => {
                   <span className="Orders-card-customer">
                     Order by: <b>{order.first_name} {order.last_name}</b>
                   </span>
-                  <span className={`Orders-card-status ${order.status.toLowerCase()}`}>
-                    {order.status}
+                  <span className={`Orders-card-status ${order.status?.toLowerCase() || 'pending'}`}>
+                    {order.status || 'Pending'}
                   </span>
                 </div>
                 <div className="Orders-card-meta">

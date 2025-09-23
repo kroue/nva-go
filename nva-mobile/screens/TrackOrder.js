@@ -20,12 +20,11 @@ export default function TrackOrder() {
         setLoading(false);
         return;
       }
-
+      // Get latest order for this user
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .eq('email', userEmail)
-        .neq('status', 'Finished')  // Exclude finished orders
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -34,7 +33,7 @@ export default function TrackOrder() {
       else setOrder(null);
       setLoading(false);
 
-      // Update subscription to handle finished status
+      // Subscribe to changes in the orders table for this user
       subscription = supabase
         .channel('order-status')
         .on(
@@ -45,19 +44,13 @@ export default function TrackOrder() {
             table: 'orders',
           },
           payload => {
+            console.log('Realtime payload:', payload);
             if (payload.new && payload.new.email === userEmail) {
-              if (payload.new.status === 'Finished') {
-                setOrder(null);
-              } else {
-                setOrder(payload.new);
-              }
-              // Show notification
+              setOrder(payload.new);
               Notifications.scheduleNotificationAsync({
                 content: {
                   title: 'Order Status Updated',
-                  body: payload.new.status === 'Finished' 
-                    ? 'Your order has been completed!'
-                    : `Your order status changed to "${payload.new.status}"`,
+                  body: `Your order status changed to "${payload.new.status}"`,
                 },
                 trigger: null,
               });
@@ -112,11 +105,6 @@ export default function TrackOrder() {
         <View style={styles.progressStep}>
           <View style={[styles.circle, order.status === 'For Pickup' && styles.circleActive]} />
           <Text style={styles.progressLabel}>For Pickup</Text>
-        </View>
-        <View style={styles.progressLine} />
-        <View style={styles.progressStep}>
-          <View style={[styles.circle, order.status === 'Finished' && styles.circleActive]} />
-          <Text style={styles.progressLabel}>Finished</Text>
         </View>
       </View>
 
@@ -194,12 +182,12 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginTop: 4,
     width: '100%',
-    maxWidth: 450,  // Increased to accommodate new step
+    maxWidth: 370,
     justifyContent: 'space-between',
   },
   progressStep: {
     alignItems: 'center',
-    width: 60,  // Adjusted width
+    width: 70,
   },
   circle: {
     width: 16,
