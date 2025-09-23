@@ -87,7 +87,8 @@ export default function Payment({ route }) {
       attached_file: order.attached_file || null, // Explicitly handle attached_file
       approval_file: null,
       approved: 'no',
-      created_at: new Date().toISOString()
+      created_at: order.created_at || new Date().toISOString(), // Use order timestamp or current time
+      employee_email: order.employee_email || null // Include employee email (null for mobile orders initially)
     };
 
     console.log('Order data to insert:', orderData); // Debug log

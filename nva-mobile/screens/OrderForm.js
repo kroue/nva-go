@@ -205,7 +205,9 @@ export default function OrderForm({ route }) {
       email,
       attached_file: attachedFile?.url || null,
       approval_file: null,
-      approved: 'no'
+      approved: 'no',
+      created_at: new Date().toISOString(), // Add timestamp for mobile orders
+      employee_email: null // Will be set when employee sends approval
     };
 
     console.log('Order data:', orderData); // Debug log

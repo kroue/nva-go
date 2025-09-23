@@ -1,3 +1,4 @@
+/* filepath: c:\Users\kmedu\Downloads\NVAGo\NVAGo\nva-web\src\HomePage.css */
 /* filepath: src/HomePage.css */
 body {
   font-family: Arial, sans-serif;
@@ -59,14 +60,10 @@ body {
   grid-template-rows: auto auto auto;
   gap: 20px;
   grid-template-areas:
-    "titlebar pickup"
-    "welcome pickup"
-    "recent pickup"
-    "unread-sales validate";
+    "title title"
+    "pickup recent"
+    "messages validate";
   overflow: hidden;
-    "title     title"
-    "pickup    recent"
-    "messages  validate";
   height: calc(100vh - 100px);
 }
 
@@ -94,24 +91,6 @@ body {
 
 .HomePage-recent {
   grid-area: recent;
-}
-
-.HomePage-unread-sales-row {
-  grid-area: unread-sales;
-  display: flex;
-  gap: 12px;
-}
-
-.HomePage-unread,
-.HomePage-sales {
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.HomePage-recent {
-  grid-area: recent;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -126,6 +105,7 @@ body {
 
 .HomePage-unread, 
 .HomePage-sales {
+  flex: 1;
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -331,41 +311,6 @@ body {
 /* --------------------
    Media queries
 -------------------- */
-=======
-.Card-empty {
-  text-align: center;
-  color: #6c757d;
-}
-
-.Card-status {
-  float: right;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.Card-time {
-  float: right;
-  color: #666;
-  font-size: 12px;
-}
-
-.Badge {
-  background: #FF4B4B;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-
-.HomePage-recent .Card,
-.HomePage-pickup .Card,
-.HomePage-validate .Card {
-  margin-bottom: 8px;
-}
 @media (max-height: 700px) {
   .HomePage-grid {
     grid-template-rows: 35px 30px 1fr 1fr;

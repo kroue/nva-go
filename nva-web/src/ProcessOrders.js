@@ -49,6 +49,18 @@ const ProcessOrders = () => {
                   No. {order.id ? order.id.slice(0, 8) : ''}
                 </span>
               </div>
+              <div className="ProcessOrders-card-meta">
+                <div className="ProcessOrders-card-time">
+                  Created: {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}
+                </div>
+                {(order.employee_first_name || order.employee_email) && (
+                  <div className="ProcessOrders-card-employee">
+                    Employee: {order.employee_first_name && order.employee_last_name 
+                      ? `${order.employee_first_name} ${order.employee_last_name}`
+                      : order.employee_email?.split('@')[0] || 'Unknown'}
+                  </div>
+                )}
+              </div>
               <div className="ProcessOrders-card-product">{order.variant}</div>
               <div className="ProcessOrders-card-details">
                 <div>Size: {order.height && order.width ? `${order.height} x ${order.width}` : '---'}</div>

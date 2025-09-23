@@ -16,6 +16,8 @@ const OrderDetails = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [employeeEmail, setEmployeeEmail] = useState(null);
+  const [employeeFirstName, setEmployeeFirstName] = useState(null);
+  const [employeeLastName, setEmployeeLastName] = useState(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -23,16 +25,33 @@ const OrderDetails = () => {
       setOrder(data);
     };
 
-    const getEmployeeEmail = async () => {
+    const getEmployeeDetails = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.email) {
         setEmployeeEmail(session.user.email);
         console.log('Employee email set:', session.user.email); // Debug log
+        
+        // Fetch employee details from employees table (not customers)
+        const { data: employee, error } = await supabase
+          .from('employees')  // Changed from 'customers' to 'employees'
+          .select('first_name, last_name')
+          .eq('email', session.user.email)
+          .single();
+        
+        if (!error && employee) {
+          setEmployeeFirstName(employee.first_name);
+          setEmployeeLastName(employee.last_name);
+          console.log('Employee details:', employee.first_name, employee.last_name);
+        } else {
+          console.error('Could not fetch employee details:', error);
+          setEmployeeFirstName('Employee');
+          setEmployeeLastName('Name');
+        }
       }
     };
 
     fetchOrder();
-    getEmployeeEmail();
+    getEmployeeDetails();
   }, [id]);
 
   const getFilenameFromUrl = (url) => {
@@ -57,7 +76,7 @@ const OrderDetails = () => {
     }
     setUploading(true);
 
-    console.log('Sending as employee:', employeeEmail); // Debug log
+    console.log('Sending as employee:', employeeEmail, employeeFirstName, employeeLastName); // Debug log
 
     try {
       // Upload to Cloudinary
@@ -68,10 +87,15 @@ const OrderDetails = () => {
       const res = await axios.post(CLOUDINARY_URL, formData);
       const fileUrl = res.data.secure_url;
 
-      // Update order in Supabase
+      // Update order in Supabase with employee assignment including names
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ approval_file: fileUrl })
+        .update({ 
+          approval_file: fileUrl,
+          employee_email: employeeEmail, // Assign employee when sending approval
+          employee_first_name: employeeFirstName, // Add employee first name
+          employee_last_name: employeeLastName    // Add employee last name
+        })
         .eq('id', id);
 
       if (updateError) throw updateError;
@@ -107,7 +131,14 @@ ${fileUrl}`;
       }
 
       alert(order.approval_file ? 'New approval version sent!' : 'Approval sent!');
-      setOrder({ ...order, approval_file: fileUrl });
+      // Update local state to reflect the changes
+      setOrder({ 
+        ...order, 
+        approval_file: fileUrl,
+        employee_email: employeeEmail,
+        employee_first_name: employeeFirstName,
+        employee_last_name: employeeLastName
+      });
     } catch (err) {
       console.error('Full error:', err);
       alert('Upload failed: ' + err.message);
@@ -248,7 +279,15 @@ Thank you for choosing NVA Go!`,
                     Date: {order.pickup_date}<br />
                     Time: {order.pickup_time}
                   </div>
-                  <div className="OrderDetails-card-id">No. {order.id ? order.id.slice(0, 7) : ''}</div>
+                  <div className="OrderDetails-card-info">
+                    Order Created: {order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A'}<br />
+                    {(order.employee_first_name || order.employee_email) && (
+                      <>Processed by: {order.employee_first_name && order.employee_last_name 
+                        ? `${order.employee_first_name} ${order.employee_last_name}`
+                        : order.employee_email || 'Unknown'}<br /></>
+                    )}
+                    Order ID: {order.id ? order.id.slice(0, 8) : 'N/A'}
+                  </div>
                 </div>
               </div>
               <div className="OrderDetails-right">

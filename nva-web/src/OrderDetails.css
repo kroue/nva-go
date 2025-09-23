@@ -103,11 +103,15 @@
   margin-bottom: 2px;
 }
 
-.OrderDetails-card-id {
-  font-size: 15px;
-  color: #252b55;
-  float: right;
-  margin-top: 18px;
+.OrderDetails-card-info {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+  margin-top: 12px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #252b55;
 }
 
 .OrderDetails-right {

@@ -13,9 +13,6 @@
   border-radius: 12px;
   margin-bottom: 10px;
   text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 20px;
 }
 
@@ -96,9 +93,15 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  font-size: 18px;
-  color: #252b55;
-  margin-top: 8px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.Customers-history-card:hover {
+  background: #d5d5d5;
+  border-color: #252b55;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(37, 43, 85, 0.1);
 }
 
 .Customers-history-img {

@@ -77,6 +77,18 @@ const Orders = () => {
                     {order.status}
                   </span>
                 </div>
+                <div className="Orders-card-meta">
+                  <span className="Orders-card-time">
+                    {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                  {(order.employee_first_name || order.employee_email) && (
+                    <span className="Orders-card-employee">
+                      Employee: {order.employee_first_name && order.employee_last_name 
+                        ? `${order.employee_first_name} ${order.employee_last_name}`
+                        : order.employee_email?.split('@')[0] || 'Unknown'}
+                    </span>
+                  )}
+                </div>
               </div>
             ))
           )}

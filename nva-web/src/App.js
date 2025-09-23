@@ -19,7 +19,7 @@ import AdminLogin from './admin/AdminLogin';
 import AdminHomePage from './admin/AdminPage';
 import AdminHeader from './admin/components/AdminHeader';
 import AdminSidebar from './admin/components/AdminSidebar';
-import AdminFooter from './admin/components/AdminFooter';
+//import AdminFooter from './admin/components/AdminFooter';
 import AdminEmployees from './admin/AdminEmployees';
 import AdminCustomers from './admin/AdminCustomers';
 import AdminRightPanel from './admin/components/AdminRightPanel';
@@ -28,6 +28,8 @@ import RequestPasswordReset from './RequestPasswordReset';
 import AdminProducts from './admin/AdminProducts';
 import ProtectedRoute from './admin/ProtectedRoute';
 import OrderDetails from './OrderDetails';
+import OrderForm from './OrderForm';
+import ToggleProductStatus from './ToggleProductStatus';
 import './App.css';
 
 const App = () => {
@@ -95,7 +97,22 @@ const App = () => {
           }
         />
         <Route
-          path="/orders/receipt"
+          path="/send-receipt"
+          element={
+            <div className="App">
+              <Header />
+              <div className="MainContent">
+                <Sidebar />
+                <div className="PageContent">
+                  <SendReceipt />
+                </div>
+              </div>
+              <Footer />
+            </div>
+          }
+        />
+        <Route
+          path="/send-receipt/:id"
           element={
             <div className="App">
               <Header />
@@ -238,6 +255,21 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/products/toggle"
+          element={
+            <div className="App">
+              <Header />
+              <div className="MainContent">
+                <Sidebar />
+                <div className="PageContent">
+                  <ToggleProductStatus />
+                </div>
+              </div>
+              <Footer />
+            </div>
+          }
+        />
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
@@ -245,6 +277,7 @@ const App = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/forgot-password" element={<RequestPasswordReset />} />
         <Route path="/orders/:id" element={<OrderDetails />} />
+        <Route path="/order-form" element={<OrderForm />} />
       </Routes>
     </Router>
   );

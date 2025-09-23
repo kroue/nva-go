@@ -93,6 +93,26 @@
   margin-bottom: 8px;
 }
 
+.ProcessOrders-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.ProcessOrders-card-time {
+  font-style: italic;
+}
+
+.ProcessOrders-card-employee {
+  font-weight: 500;
+  color: #252b55;
+}
+
 .ProcessOrders-card-id {
   font-size: 14px;
   font-weight: 500;

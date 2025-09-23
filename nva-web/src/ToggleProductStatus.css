@@ -1,0 +1,272 @@
+.ToggleProductStatus-page {
+  padding: 24px;
+  min-height: 100vh;
+  background-color: #f9f9f9;
+}
+
+.ToggleProductStatus-header {
+  font-size: 24px;
+  font-weight: bold;
+  color: #252b55;
+  margin-bottom: 24px;
+}
+
+.ToggleProductStatus-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #666;
+}
+
+.ToggleProductStatus-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ToggleProductStatus-item {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.ToggleProductStatus-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.ToggleProductStatus-item.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.ToggleProductStatus-item.unavailable:hover {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.ToggleProductStatus-item.limited {
+  border-left: 4px solid #ff9800;
+}
+
+.ToggleProductStatus-product-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ToggleProductStatus-product-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  background-color: #eee;
+}
+
+.ToggleProductStatus-product-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ToggleProductStatus-product-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #252b55;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ToggleProductStatus-product-category {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.status-tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-tag.limited {
+  background-color: #fff3e0;
+  color: #ff9800;
+  border: 1px solid #ff9800;
+}
+
+.status-tag.unavailable {
+  background-color: #ffebee;
+  color: #f44336;
+  border: 1px solid #f44336;
+}
+
+.ToggleProductStatus-status-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.status-btn {
+  padding: 8px 16px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-btn:hover {
+  border-color: #252b55;
+  color: #252b55;
+}
+
+.status-btn.active {
+  background: #252b55;
+  border-color: #252b55;
+  color: white;
+}
+
+/* Modal Styles */
+.ToggleProductStatus-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.ToggleProductStatus-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.ToggleProductStatus-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ToggleProductStatus-modal-header h2 {
+  margin: 0;
+  color: #252b55;
+  font-size: 20px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.ToggleProductStatus-modal-content {
+  padding: 20px;
+}
+
+.variant-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.variant-info h4 {
+  margin: 0 0 4px 0;
+  color: #252b55;
+  font-size: 16px;
+}
+
+.variant-info p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.variant-status-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.variant-status-btn {
+  padding: 6px 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.variant-status-btn:hover {
+  border-color: #252b55;
+  color: #252b55;
+}
+
+.variant-status-btn.active {
+  background: #252b55;
+  border-color: #252b55;
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ToggleProductStatus-item {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .ToggleProductStatus-status-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .status-btn {
+    flex: 1;
+  }
+}

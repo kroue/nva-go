@@ -78,3 +78,46 @@
   color: #252b55;
   text-align: center;
 }
+
+.Products-card.limited {
+  border: 2px solid #ff9800;
+  position: relative;
+}
+
+.Products-card.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+  position: relative;
+}
+
+.Products-card.unavailable:hover {
+  transform: none; /* Disable hover effects for unavailable products */
+  box-shadow: none;
+}
+
+.limited-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ff9800;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.unavailable-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #f44336;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
