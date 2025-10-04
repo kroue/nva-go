@@ -19,11 +19,41 @@ const endOfDayISO = (d = new Date()) => {
   return x.toISOString();
 };
 
+// NEW: helpers for inline "Right Panel"
+const monthLabel = (d) =>
+  d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+
+const buildCalendar = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const first = new Date(y, m, 1);
+  const startWeekday = first.getDay(); // 0 Sun..6 Sat
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push({ key: `b-${i}`, day: null, isToday: false });
+  const today = new Date();
+  for (let dnum = 1; dnum <= daysInMonth; dnum++) {
+    const isToday = dnum === today.getDate() && m === today.getMonth() && y === today.getFullYear();
+    cells.push({ key: `d-${dnum}`, day: dnum, isToday });
+  }
+  while (cells.length % 7 !== 0 || cells.length < 42) {
+    cells.push({ key: `t-${cells.length}`, day: null, isToday: false });
+  }
+  return cells;
+};
+
 const AdminPage = () => {
+  // ...existing code...
   const [trend, setTrend] = useState([]); // [{key,label,total}]
   const [total7Days, setTotal7Days] = useState(0);
   const [ordersToday, setOrdersToday] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // NEW: inline RightPanel state
+  const [cells, setCells] = useState(buildCalendar(new Date()));
+  const [monthText, setMonthText] = useState(monthLabel(new Date()));
+  const [todayBuckets, setTodayBuckets] = useState(Array(8).fill(0)); // 8 x 3h buckets
+  const [todayTotal, setTodayTotal] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -84,7 +114,43 @@ const AdminPage = () => {
     };
   }, []);
 
-  // Build smooth area chart path and gridlines
+  // NEW: init calendar
+  useEffect(() => {
+    const now = new Date();
+    setCells(buildCalendar(now));
+    setMonthText(monthLabel(now));
+  }, []);
+
+  // NEW: load today's sales and bucketize into 3-hour windows
+  useEffect(() => {
+    const loadToday = async () => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('total_amount,sale_date')
+        .gte('sale_date', startOfDayISO())
+        .lt('sale_date', endOfDayISO());
+
+      if (error) {
+        console.error('Failed to load today sales:', error);
+        return;
+      }
+
+      const buckets = Array(8).fill(0);
+      (data || []).forEach((r) => {
+        const dt = new Date(r.sale_date);
+        const hour = dt.getHours();
+        const idx = Math.max(0, Math.min(7, Math.floor(hour / 3)));
+        buckets[idx] += Number(r.total_amount || 0);
+      });
+
+      setTodayBuckets(buckets);
+      setTodayTotal(buckets.reduce((s, v) => s + v, 0));
+    };
+
+    loadToday();
+  }, []);
+
+  // Build smooth area chart path and gridlines (existing)
   const chart = useMemo(() => {
     const width = 640;
     const height = 220;
@@ -147,75 +213,221 @@ const AdminPage = () => {
     };
   }, [trend]);
 
+  // NEW: mini bar chart for today
+  const todayChart = useMemo(() => {
+    const width = 220;
+    const height = 100;
+    const pad = 8;
+    const innerH = height - pad * 2;
+    const max = Math.max(1, ...todayBuckets);
+    const barW = 16;
+    const gap =
+      (width - pad * 2 - barW * todayBuckets.length) /
+      (todayBuckets.length - 1 || 1);
+    const bars = todayBuckets.map((v, i) => {
+      const h = Math.round((v / max) * innerH);
+      const x = pad + i * (barW + gap);
+      const y = height - pad - h;
+      return { x, y, h, v };
+    });
+    return { width, height, pad, barW, bars, max };
+  }, [todayBuckets]);
+
   return (
     <div className="HomePage">
       <div className="HomePage-titlebar">
         <h2 className="HomePage-titlebar-text">Home</h2>
       </div>
 
-      <div className="Dashboard-section HomePage-recent">
-        <h2 className="Dashboard-section-title dark">Sales Trend</h2>
-        <div className="Card">
-          <div style={{ width: '100%', position: 'relative', marginBottom: 8 }}>
-            <svg
-              width="100%"
-              height={chart.height}
-              viewBox={`0 0 ${chart.width} ${chart.height}`}
-              role="img"
-            >
-              <defs>
-                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#252b55" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#252b55" stopOpacity="0.05" />
-                </linearGradient>
-              </defs>
+      {/* Two-column layout: left = Sales Trend, right = Reports Calendar + Today's Sales */}
+      <div
+        className="AdminHome-layout"
+        style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}
+      >
+        {/* Left/main content: Sales Trend */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="Dashboard-section HomePage-recent">
+            <h2 className="Dashboard-section-title dark">Sales Trend</h2>
+            <div className="Card">
+              <div style={{ width: '100%', position: 'relative', marginBottom: 8 }}>
+                <svg
+                  width="100%"
+                  height={chart.height}
+                  viewBox={`0 0 ${chart.width} ${chart.height}`}
+                  role="img"
+                >
+                  <defs>
+                    <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#252b55" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#252b55" stopOpacity="0.05" />
+                    </linearGradient>
+                  </defs>
 
-              {chart.gridLines.map((g, i) => (
-                <line
-                  key={i}
-                  x1={g.x1}
-                  y1={g.y1}
-                  x2={g.x2}
-                  y2={g.y2}
-                  stroke="#eaeaea"
-                  strokeWidth="1"
-                />
-              ))}
+                  {chart.gridLines.map((g, i) => (
+                    <line
+                      key={i}
+                      x1={g.x1}
+                      y1={g.y1}
+                      x2={g.x2}
+                      y2={g.y2}
+                      stroke="#eaeaea"
+                      strokeWidth="1"
+                    />
+                  ))}
 
-              {trend.length > 0 && (
-                <>
-                  <path d={chart.areaPath} fill="url(#areaFill)" stroke="none" />
-                  <path d={chart.linePath} fill="none" stroke="#22263f" strokeWidth="2.5" />
-                </>
-              )}
+                  {trend.length > 0 && (
+                    <>
+                      <path d={chart.areaPath} fill="url(#areaFill)" stroke="none" />
+                      <path d={chart.linePath} fill="none" stroke="#22263f" strokeWidth="2.5" />
+                    </>
+                  )}
 
-              <text x={chart.pad.left} y={12} fontSize="10" fill="#8a8a8a">
-                Sales (₱)
-              </text>
-              <text
-                x={chart.width - chart.pad.right}
-                y={chart.height - 6}
-                fontSize="10"
-                textAnchor="end"
-                fill="#8a8a8a"
-              >
-                Time
-              </text>
-            </svg>
-          </div>
+                  <text x={chart.pad.left} y={12} fontSize="10" fill="#8a8a8a">
+                    Sales (₱)
+                  </text>
+                  <text
+                    x={chart.width - chart.pad.right}
+                    y={chart.height - 6}
+                    fontSize="10"
+                    textAnchor="end"
+                    fill="#8a8a8a"
+                  >
+                    Time
+                  </text>
+                </svg>
+              </div>
 
-          <div className="AdminHome-metricsRow">
-            <div className="AdminHome-metric">
-              <div className="label">Total Sales (7 days)</div>
-              <div className="value">{peso(total7Days)}</div>
-            </div>
+              <div className="AdminHome-metricsRow">
+                <div className="AdminHome-metric">
+                  <div className="label">Total Sales (7 days)</div>
+                  <div className="value">{peso(total7Days)}</div>
+                </div>
 
-            <div className="AdminHome-metric">
-              <div className="label">New Orders Today</div>
-              <div className="value">{loading ? '—' : ordersToday}</div>
+                <div className="AdminHome-metric">
+                  <div className="label">New Orders Today</div>
+                  <div className="value">{loading ? '—' : ordersToday}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Right column: Reports Calendar + Today's Sales */}
+        <aside
+          className="AdminRightPanel"
+          style={{ width: 340, display: 'flex', flexDirection: 'column', gap: 12 }}
+        >
+          <div
+            style={{
+              background: '#e5e5e5',
+              borderRadius: 12,
+              padding: '12px 24px',
+              fontWeight: 700,
+              fontSize: 28,
+              color: '#252b55',
+              width: '100%',
+              textAlign: 'left',
+            }}
+          >
+            Reports Calendar
+          </div>
+
+          <div
+            style={{
+              background: '#252b55',
+              borderRadius: 12,
+              color: '#fff',
+              padding: 18,
+              minHeight: 180,
+              width: '100%',
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>{monthText}</div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: 4,
+                fontWeight: 600,
+                marginBottom: 8,
+              }}
+            >
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                <div key={d + i}>{d}</div>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+              {cells.map((c) => (
+                <div
+                  key={c.key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 28,
+                  }}
+                >
+                  {c.day ? (
+                    <div
+                      style={{
+                        background: c.isToday ? '#fff' : 'transparent',
+                        color: c.isToday ? '#252b55' : '#fff',
+                        borderRadius: '50%',
+                        width: 26,
+                        height: 26,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: c.isToday ? 700 : 400,
+                      }}
+                    >
+                      {c.day}
+                    </div>
+                  ) : (
+                    <div style={{ width: 26, height: 26 }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              border: '1px solid #252b55',
+              padding: 18,
+              width: '100%',
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 18, color: '#252b55', marginBottom: 8 }}>
+              Today's Sales
+            </div>
+            <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>
+              Sales Overview • Total {peso(todayTotal)}
+            </div>
+            <div style={{ height: 100, width: '100%', position: 'relative' }}>
+              <svg width="100%" height="100" viewBox={`0 0 ${todayChart.width} ${todayChart.height}`}>
+                {todayChart.bars.map((b, i) => (
+                  <g key={i}>
+                    <rect x={b.x} y={b.y} width={todayChart.barW} height={b.h} fill="#252b55" rx="3" />
+                  </g>
+                ))}
+                <text
+                  x={todayChart.width - 8}
+                  y={todayChart.height - 6}
+                  fontSize="12"
+                  fill="#888"
+                  textAnchor="end"
+                >
+                  Hours (3h)
+                </text>
+              </svg>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   );

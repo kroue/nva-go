@@ -22,7 +22,7 @@ import AdminSidebar from './admin/components/AdminSidebar';
 //import AdminFooter from './admin/components/AdminFooter';
 import AdminEmployees from './admin/AdminEmployees';
 import AdminCustomers from './admin/AdminCustomers';
-import AdminRightPanel from './admin/components/AdminRightPanel';
+// Removed: import AdminRightPanel from './admin/components/AdminRightPanel';
 import ResetPassword from './ResetPassword';
 import RequestPasswordReset from './RequestPasswordReset';
 import AdminProducts from './admin/AdminProducts';
@@ -204,7 +204,7 @@ const App = () => {
                     <div className="PageContent">
                       <AdminHomePage />
                     </div>
-                    <AdminRightPanel />
+                    {/* Removed <AdminRightPanel /> */}
                   </div>
                   {/* <AdminFooter /> if you want */}
                 </div>
