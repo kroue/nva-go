@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { supabase } from '../SupabaseClient';
 
 export default function SignUp({ navigation }) {
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agree, setAgree] = useState(false);
-  const [error, setError] = useState(''); // <-- Add error state
+  const [error, setError] = useState('');
 
   const handleSignUp = async () => {
-    console.log('Sign Up button pressed'); // Debug log
     setError('');
+
+    // Basic validation
     if (!firstname || !lastname || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields.');
+      setError('Please fill in all required fields.');
       return;
     }
     if (password !== confirmPassword) {
@@ -28,32 +31,35 @@ export default function SignUp({ navigation }) {
       setError('You must agree to the privacy and policy.');
       return;
     }
+
     try {
-      console.log('Sending request to backend...'); // Debug log
-      const res = await fetch('http://192.168.1.43:8000/api/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: email, // or another unique username
-          email,
-          password,
-          first_name: firstname,
-          last_name: lastname,
-        }),
+      // Send a 6-digit OTP to email and create user on verification
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          shouldCreateUser: true,
+          data: {
+            first_name: firstname.trim(),
+            last_name: lastname.trim(),
+            address: address.trim() || null,
+          },
+        },
       });
-      console.log('Received response:', res.status); // Debug log
-      if (res.ok) {
-        navigation.navigate('Verification', { email });
-      } else {
-        const data = await res.json();
-        console.log('Backend error:', data); // <-- Log backend error
-        setError(
-          (data && (data.detail || JSON.stringify(data))) ||
-          'Registration failed.'
-        );
+
+      if (otpErr) {
+        setError(otpErr.message || 'Failed to send OTP.');
+        return;
       }
+
+      // Go to OTP screen with the data we need after verification
+      navigation.navigate('Verification', {
+        email: email.trim(),
+        password, // will be set after verify
+        first_name: firstname.trim(),
+        last_name: lastname.trim(),
+        address: address.trim() || null,
+      });
     } catch (e) {
-      console.log('Error during fetch:', e); // Debug log
       setError('Network error. Please try again.');
     }
   };
@@ -62,12 +68,8 @@ export default function SignUp({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
 
-      {/* Error Message */}
-      {error ? (
-        <Text style={{ color: 'red', marginBottom: 12 }}>{error}</Text>
-      ) : null}
+      {error ? <Text style={{ color: 'red', marginBottom: 12 }}>{error}</Text> : null}
 
-      {/* Firstname & Lastname */}
       <View style={styles.row}>
         <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
           <TextInput
@@ -89,7 +91,6 @@ export default function SignUp({ navigation }) {
         </View>
       </View>
 
-      {/* Email */}
       <View style={[styles.inputContainer, { marginBottom: 16 }]}>
         <TextInput
           style={styles.input}
@@ -102,7 +103,17 @@ export default function SignUp({ navigation }) {
         />
       </View>
 
-      {/* Password */}
+      {/* NEW: Address field (optional) */}
+      <View style={[styles.inputContainer, { marginBottom: 16 }]}>
+        <TextInput
+          style={styles.input}
+          placeholder="Address (optional)"
+          value={address}
+          onChangeText={setAddress}
+          placeholderTextColor="#888"
+        />
+      </View>
+
       <View style={[styles.inputContainer, { marginBottom: 16 }]}>
         <TextInput
           style={styles.input}
@@ -117,7 +128,6 @@ export default function SignUp({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Confirm Password */}
       <View style={[styles.inputContainer, { marginBottom: 20 }]}>
         <TextInput
           style={styles.input}
@@ -132,12 +142,8 @@ export default function SignUp({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Agree to privacy and policy */}
       <View style={[styles.row, { marginBottom: 32, alignItems: 'center' }]}>
-        <TouchableOpacity
-          style={styles.customCheckbox}
-          onPress={() => setAgree(!agree)}
-        >
+        <TouchableOpacity style={styles.customCheckbox} onPress={() => setAgree(!agree)}>
           {agree ? (
             <FontAwesome name="check-square-o" size={22} color="#232B55" />
           ) : (
@@ -149,12 +155,12 @@ export default function SignUp({ navigation }) {
         </Text>
       </View>
 
-      {/* Sign Up Button */}
+      {/* Wire up the button to new OTP flow */}
       <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
         <Text style={styles.signupButtonText}>Sign Up</Text>
       </TouchableOpacity>
 
-      {/* Social Login */}
+      {/* Social Login (unchanged) */}
       <View style={{ marginTop: 40, alignItems: 'center' }}>
         <Text style={styles.orText}>Or Sign up with</Text>
         <View style={styles.socialRow}>
@@ -167,7 +173,6 @@ export default function SignUp({ navigation }) {
         </View>
       </View>
 
-      {/* Sign In */}
       <View style={styles.signinRow}>
         <Text style={styles.signinText}>Already have an account?</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -179,21 +184,9 @@ export default function SignUp({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    marginBottom: 36,
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 24, paddingTop: 60 },
+  title: { fontSize: 34, fontWeight: 'bold', marginBottom: 36 },
+  row: { flexDirection: 'row', marginBottom: 16 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,28 +198,11 @@ const styles = StyleSheet.create({
     height: 44,
     backgroundColor: '#fff',
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#222',
-  },
-  showText: {
-    color: '#222',
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  customCheckbox: {
-    marginRight: 4,
-  },
-  agreeText: {
-    color: '#555',
-    fontSize: 15,
-  },
-  linkText: {
-    color: '#D32F2F',
-    fontSize: 15,
-    fontWeight: '400',
-  },
+  input: { flex: 1, fontSize: 16, color: '#222' },
+  showText: { color: '#222', fontWeight: '500', marginLeft: 8 },
+  customCheckbox: { marginRight: 4 },
+  agreeText: { color: '#555', fontSize: 15 },
+  linkText: { color: '#D32F2F', fontSize: 15, fontWeight: '400' },
   signupButton: {
     backgroundColor: '#232B55',
     borderRadius: 20,
@@ -236,38 +212,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 8,
   },
-  signupButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-  },
-  orText: {
-    color: '#222',
-    fontSize: 15,
-    marginBottom: 12,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  socialButton: {
-    marginHorizontal: 12,
-  },
-  signinRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  signinText: {
-    color: '#222',
-    fontSize: 15,
-    marginRight: 6,
-  },
-  signinLink: {
-    color: '#D32F2F',
-    fontSize: 15,
-    fontWeight: '500',
-  },
+  signupButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  orText: { color: '#222', fontSize: 15, marginBottom: 12 },
+  socialRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
+  socialButton: { marginHorizontal: 12 },
+  signinRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 },
+  signinText: { color: '#222', fontSize: 15, marginRight: 6 },
+  signinLink: { color: '#D32F2F', fontSize: 15, fontWeight: '500' },
 });

@@ -2,20 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Animated, Text, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { NavigationContainer, useNavigation, useRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import screens
 import Login from './screens/Login';
 import SignUp from './screens/SignUp';
 import Home from './screens/Home';
-import Verification from './screens/Verification';
 import OrderForm from './screens/OrderForm';
-import TrackOrder from './screens/TrackOrder';
-import Payment from './screens/Payment';
-import { FontAwesome, Feather } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // If you want to persist user info
-import ForgotPassword from './screens/ForgotPassword';
 import OrderHistory from './screens/OrderHistory';
-import Messaging from './screens/Messaging';
+import Payment from './screens/Payment';
 import Profile from './screens/Profile';
+import TrackOrder from './screens/TrackOrder';
+import Messaging from './screens/Messaging';
+import ForgotPassword from './screens/ForgotPassword';
+import ResetPassword from './screens/ResetPassword';
+import Verification from './screens/Verification';
+
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = Math.min(width * 0.8, 320);
 
@@ -72,18 +79,36 @@ function Sidebar({ visible, onClose }) {
   }, [visible]);
 
   useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem('firstName'),
-      AsyncStorage.getItem('lastName')
-    ]).then(([first, last]) => {
-      if (first || last) setFullName(`${first || ''} ${last || ''}`.trim());
-      else setFullName('');
-    });
-  }, [visible]); // re-run when sidebar opens
+    const loadUserData = async () => {
+      try {
+        const [first, last] = await Promise.all([
+          AsyncStorage.getItem('firstName'),
+          AsyncStorage.getItem('lastName')
+        ]);
+        if (first || last) {
+          setFullName(`${first || ''} ${last || ''}`.trim());
+        } else {
+          setFullName('Guest');
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        setFullName('Guest');
+      }
+    };
+    
+    if (visible) {
+      loadUserData();
+    }
+  }, [visible]);
 
   const handleLogout = async () => {
-    onClose();
-    navigation.replace('Login');
+    try {
+      await AsyncStorage.clear();
+      onClose();
+      navigation.replace('Login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   const handleTrackOrder = () => {
@@ -104,9 +129,11 @@ function Sidebar({ visible, onClose }) {
       <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
         {/* Header */}
         <View style={styles.sidebarHeader}>
-          <View style={styles.profilePic} />
+          <View style={styles.profilePic}>
+            <FontAwesome name="user" size={24} color="#fff" />
+          </View>
           <View>
-            <Text style={styles.profileName}>{fullName || 'Guest'}</Text>
+            <Text style={styles.profileName}>{fullName}</Text>
             <TouchableOpacity onPress={handleViewProfile}>
               <Text style={styles.profileLink}>View Profile</Text>
             </TouchableOpacity>
@@ -116,15 +143,59 @@ function Sidebar({ visible, onClose }) {
         <View style={styles.sidebarBlueDivider} />
         {/* Menu Items */}
         <View style={styles.sidebarMenu}>
-          <SidebarItem icon="home" lib="FontAwesome" label="Home" color="#232B55" onPress={() => navigation.navigate('Home')} />
-          <SidebarItem icon="search" lib="FontAwesome" label="Track Order" color="#232B55" onPress={handleTrackOrder} />
-          <SidebarItem icon="history" lib="FontAwesome" label="Order History" color="#232B55" onPress={() => { onClose(); navigation.navigate('OrderHistory'); }} />
-          <SidebarItem icon="message-circle" lib="Feather" label="Messaging" color="#232B55" onPress={() => { onClose(); navigation.navigate('Messaging'); }} />
+          <SidebarItem 
+            icon="home" 
+            lib="FontAwesome" 
+            label="Home" 
+            color="#232B55" 
+            onPress={() => {
+              onClose();
+              navigation.navigate('Home');
+            }} 
+          />
+          <SidebarItem 
+            icon="search" 
+            lib="FontAwesome" 
+            label="Track Order" 
+            color="#232B55" 
+            onPress={handleTrackOrder} 
+          />
+          <SidebarItem 
+            icon="history" 
+            lib="FontAwesome" 
+            label="Order History" 
+            color="#232B55" 
+            onPress={() => { 
+              onClose(); 
+              navigation.navigate('OrderHistory'); 
+            }} 
+          />
+          <SidebarItem 
+            icon="message-circle" 
+            lib="Feather" 
+            label="Messaging" 
+            color="#232B55" 
+            onPress={() => { 
+              onClose(); 
+              navigation.navigate('Messaging'); 
+            }} 
+          />
         </View>
         {/* Bottom Actions */}
         <View style={styles.sidebarBottomBox}>
-          <SidebarItem icon="cog" lib="FontAwesome" label="Settings" color="#232B55" />
-          <SidebarItem icon="sign-out" lib="FontAwesome" label="Log out" color="#232B55" onPress={handleLogout} />
+          <SidebarItem 
+            icon="cog" 
+            lib="FontAwesome" 
+            label="Settings" 
+            color="#232B55" 
+          />
+          <SidebarItem 
+            icon="sign-out" 
+            lib="FontAwesome" 
+            label="Log out" 
+            color="#232B55" 
+            onPress={handleLogout} 
+          />
         </View>
       </Animated.View>
     </>
@@ -134,7 +205,7 @@ function Sidebar({ visible, onClose }) {
 function SidebarItem({ icon, lib, label, onPress, color }) {
   let IconComponent = FontAwesome;
   if (lib === 'Feather') IconComponent = Feather;
-  // Add more icon libraries if needed
+  if (lib === 'Ionicons') IconComponent = Ionicons;
 
   return (
     <TouchableOpacity onPress={onPress} disabled={!onPress}>
@@ -169,12 +240,21 @@ function ScreenWithHeaderSidebar({ children }) {
   const route = useRoute();
 
   useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem('firstName'),
-      AsyncStorage.getItem('lastName')
-    ]).then(([first, last]) => {
-      if (first || last) setFullName(`${first || ''} ${last || ''}`.trim());
-    });
+    const loadUserData = async () => {
+      try {
+        const [first, last] = await Promise.all([
+          AsyncStorage.getItem('firstName'),
+          AsyncStorage.getItem('lastName')
+        ]);
+        if (first || last) {
+          setFullName(`${first || ''} ${last || ''}`.trim());
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+    
+    loadUserData();
   }, []);
 
   // List of screens that should NOT have header/sidebar
@@ -183,6 +263,7 @@ function ScreenWithHeaderSidebar({ children }) {
     'SignUp',
     'Verification',
     'ForgotPassword',
+    'ResetPassword',
     'Splash'
   ];
 
@@ -201,84 +282,143 @@ function ScreenWithHeaderSidebar({ children }) {
   );
 }
 
-// Example for React Navigation
+// Main Tab Navigator (for authenticated users)
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Orders') {
+            iconName = focused ? 'list' : 'list-outline';
+          } else if (route.name === 'Messages') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#252b55',
+        tabBarInactiveTintColor: 'gray',
+        headerShown: false, // Hide default headers since we have custom ones
+      })}
+    >
+      <Tab.Screen name="Home" component={Home} />
+      <Tab.Screen name="Orders" component={OrderHistory} />
+      <Tab.Screen name="Messages" component={Messaging} />
+      <Tab.Screen name="Profile" component={Profile} />
+    </Tab.Navigator>
+  );
+}
+
+// Wrapper component for screens that need header/sidebar
+function MainTabsWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <MainTabs />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+// Deep linking configuration
 const linking = {
   prefixes: ['nvamobile://'],
   config: {
     screens: {
       ResetPassword: 'reset-password',
-      // ...other screens
+      Verification: 'verification',
     },
   },
 };
 
 export default function App() {
   return (
-    <NavigationContainer linking={linking}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="SignUp" component={SignUp} />
-        <Stack.Screen name="Verification" component={Verification} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
-        <Stack.Screen
-          name="Home"
-          children={props => (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <NavigationContainer linking={linking}>
+        <Stack.Navigator 
+          initialRouteName="Splash"
+          screenOptions={{
+            headerShown: false, // Hide all default headers
+          }}
+        >
+          {/* Splash Screen */}
+          <Stack.Screen 
+            name="Splash" 
+            component={SplashScreen}
+          />
+          
+          {/* Auth Screens */}
+          <Stack.Screen 
+            name="Login" 
+            component={Login}
+          />
+          <Stack.Screen 
+            name="SignUp" 
+            component={SignUp}
+          />
+          <Stack.Screen 
+            name="ForgotPassword" 
+            component={ForgotPassword}
+          />
+          <Stack.Screen 
+            name="ResetPassword" 
+            component={ResetPassword}
+          />
+          <Stack.Screen 
+            name="Verification" 
+            component={Verification}
+          />
+          
+          {/* Main App with custom header */}
+          <Stack.Screen 
+            name="MainTabs" 
+            component={MainTabsWithHeader}
+          />
+          
+          {/* Other Screens with custom header */}
+          <Stack.Screen name="Home" component={() => (
             <ScreenWithHeaderSidebar>
-              <Home {...props} />
+              <Home />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="OrderForm"
-          children={props => (
+          )} />
+          <Stack.Screen name="OrderForm" component={() => (
             <ScreenWithHeaderSidebar>
-              <OrderForm {...props} />
+              <OrderForm />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="Payment"
-          children={props => (
+          )} />
+          <Stack.Screen name="Payment" component={() => (
             <ScreenWithHeaderSidebar>
-              <Payment {...props} />
+              <Payment />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="TrackOrder"
-          children={props => (
+          )} />
+          <Stack.Screen name="TrackOrder" component={() => (
             <ScreenWithHeaderSidebar>
-              <TrackOrder {...props} />
+              <TrackOrder />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="OrderHistory"
-          children={props => (
+          )} />
+          <Stack.Screen name="OrderHistory" component={() => (
             <ScreenWithHeaderSidebar>
-              <OrderHistory {...props} />
+              <OrderHistory />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="Messaging"
-          children={props => (
+          )} />
+          <Stack.Screen name="Messaging" component={() => (
             <ScreenWithHeaderSidebar>
-              <Messaging {...props} />
+              <Messaging />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-        <Stack.Screen
-          name="Profile"
-          children={props => (
+          )} />
+          <Stack.Screen name="Profile" component={() => (
             <ScreenWithHeaderSidebar>
-              <Profile {...props} />
+              <Profile />
             </ScreenWithHeaderSidebar>
-          )}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+          )} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </View>
   );
 }
 
@@ -293,7 +433,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end', // <-- changed from 'space-between' to 'flex-end'
+    justifyContent: 'flex-end',
     backgroundColor: '#232B55',
     paddingTop: 36,
     paddingBottom: 12,
@@ -301,7 +441,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 4,
-    marginRight: 'auto', // <-- push everything else to the right
+    marginRight: 'auto',
   },
   logoContainer: {
     alignItems: 'center',
@@ -341,8 +481,10 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#ccc',
+    backgroundColor: '#666',
     marginRight: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileName: {
     color: '#fff',
@@ -362,6 +504,7 @@ const styles = StyleSheet.create({
   sidebarMenu: {
     paddingTop: 18,
     paddingHorizontal: 18,
+    flex: 1,
   },
   sidebarItem: {
     flexDirection: 'row',
@@ -373,14 +516,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sidebarBottomBox: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     backgroundColor: '#f5f5f5',
     paddingHorizontal: 18,
     paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: '#eee',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
 });

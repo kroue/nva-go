@@ -3,15 +3,67 @@ body {
   font-family: Arial, sans-serif;
 }
 
+/* Right panel sizing (shared across Admin pages) */
+:root {
+  --right-panel-width: 340px;   /* adjust if your AdminRightPanel differs */
+  --right-panel-gap: 16px;
+}
+
+/* Ensure columns in MainContent have spacing and don't overlap */
+.MainContent {
+  display: flex;                       /* enforce flex for layout */
+  align-items: flex-start;
+  gap: var(--right-panel-gap);         /* visible gap between content and right panel */
+}
+
+/* Fix right panel width so layout can reserve space */
+.AdminRightPanel {
+  flex: 0 0 var(--right-panel-width);
+  width: var(--right-panel-width);
+  max-width: var(--right-panel-width);
+  position: sticky;                    /* usual behavior in admin */
+  top: 80px;                           /* adjust to your header height */
+  align-self: flex-start;
+}
+
+/* CONTENT: grow and never slide under the right panel */
+.PageContent {
+  flex: 1 1 auto;
+  min-width: 0;                        /* CRUCIAL: prevent overflow that pushes under panel */
+  margin-right: var(--right-panel-gap);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* Remove page-specific hard width so it doesn't fight the layout */
 .HomePage {
   display: flex;
   flex-direction: column;
-  padding: 10px;
   background-color: #ffffff;
   min-height: 0;
   height: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  /* width calc removed: PageContent now manages room */
+}
+
+/* Stack on smaller screens: let content use full width */
+@media (max-width: 1200px) {
+  .AdminRightPanel {
+    position: static;
+    top: auto;
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+  .MainContent {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .PageContent {
+    margin-right: 0;
+    padding-right: 10px;
+  }
 }
 
 .HomePage-title {
@@ -29,10 +81,12 @@ body {
   padding: 20px 18px;
   display: flex;
   align-items: center;
+  justify-content: center;            /* center the title */
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   font-size: 15px;
+  margin-bottom: 16px;                /* add space before Sales Trend */
 }
 
 .HomePage-titlebar-text {
@@ -40,7 +94,8 @@ body {
   font-size: 18px;
   font-weight: 800;
   color: #252b55;
-  text-align: left;
+  text-align: center;                 /* ensure text is centered */
+  width: 100%;                        /* allow centering across the bar */
 }
 
 .HomePage-grid {
@@ -81,15 +136,15 @@ body {
 .HomePage-pickup .Dashboard-section-title.dark {
   background-color: #252b55;
   color: #fff;
-  border-radius: 8px 8px 0px 0px;         /* No border radius, let parent handle corners */
-  padding: 0 16px;          /* Only horizontal padding for text */
-  margin: 0;                /* No margin */
+  border-radius: 8px 8px 0px 0px;
+  padding: 0 16px;
+  margin: 0;
   font-size: 15px;
   text-align: left;
   width: 100%;
-  height: 40px;             /* Fixed height for alignment */
+  height: 40px;
   display: flex;
-  align-items: center;      /* Vertically center text */
+  align-items: center;
   box-sizing: border-box;
 }
 
@@ -137,7 +192,7 @@ body {
   background-color: #fff;
   border: 1px solid #252b55;
   border-radius: 8px;
-  padding: 0px; /* No top padding so header aligns with border */
+  padding: 0px;
   box-sizing: border-box;
   margin-bottom: 0;
   position: relative;
@@ -156,7 +211,7 @@ body {
   color: #fff;
   border-radius: 8px 8px 0 0;
   padding: 10px 12px;
-  margin: 0; /* No negative margin */
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   text-align: left;
@@ -207,6 +262,30 @@ body {
   text-align: left;
 }
 
+/* Helpers for Admin Home metrics (no inline styles) */
+.AdminHome-metricsRow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.AdminHome-metric {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  padding: 14px;
+  min-width: 180px;
+}
+.AdminHome-metric .label {
+  font-size: 12px;
+  color: #8a8a8a;
+  margin-bottom: 4px;
+}
+.AdminHome-metric .value {
+  font-weight: 700;
+  font-size: 22px;
+}
+
 @media (max-height: 700px) {
   .HomePage-grid {
     grid-template-rows: 35px 30px 1fr 1fr;
@@ -215,12 +294,5 @@ body {
   .Dashboard-section-title,
   .Dashboard-section-title.dark {
     font-size: 15px;
-  }
-  .Card,
-  .HomePage-pickup,
-  .HomePage-recent,
-  .HomePage-unread,
-  .HomePage-sales,
-  .HomePage-validate {
   }
 }

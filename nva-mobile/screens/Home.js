@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, ImageBackground, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../SupabaseCient';
+import { supabase } from '../SupabaseClient';
 
 export default function Home() {
   const navigation = useNavigation();

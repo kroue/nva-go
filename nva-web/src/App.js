@@ -30,7 +30,10 @@ import ProtectedRoute from './admin/ProtectedRoute';
 import OrderDetails from './OrderDetails';
 import OrderForm from './OrderForm';
 import ToggleProductStatus from './ToggleProductStatus';
+import AdminOrders from './admin/AdminOrders';
+import About from './About';
 import './App.css';
+import SalesReport from './admin/SalesReport';
 
 const App = () => {
   return (
@@ -256,6 +259,40 @@ const App = () => {
           }
         />
         <Route
+          path="/admin/orders"
+          element={
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <AdminOrders />
+                  </div>
+                  <AdminRightPanel />
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/sales-report"
+          element={
+            <ProtectedRoute>
+              <div className="App">
+                <AdminHeader />
+                <div className="MainContent">
+                  <AdminSidebar />
+                  <div className="PageContent">
+                    <SalesReport />
+                  </div>
+                  <AdminRightPanel />
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/products/toggle"
           element={
             <div className="App">
@@ -264,6 +301,21 @@ const App = () => {
                 <Sidebar />
                 <div className="PageContent">
                   <ToggleProductStatus />
+                </div>
+              </div>
+              <Footer />
+            </div>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <div className="App"> 
+              <Header />
+              <div className="MainContent">
+                <Sidebar />
+                <div className="PageContent">
+                  <About />
                 </div>
               </div>
               <Footer />

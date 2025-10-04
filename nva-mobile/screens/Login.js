@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-native';
-import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import your supabase client
-import { supabase } from '../SupabaseCient'; // Adjust the import path as necessary
+import { supabase } from '../SupabaseClient'; // Adjust the import path as necessary
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -111,19 +110,6 @@ export default function Login() {
       <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
         <Text style={styles.loginButtonText}>Log In</Text>
       </TouchableOpacity>
-
-      {/* Social Login */}
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={styles.orText}>Or Sign up with</Text>
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialButton}>
-            <FontAwesome name="facebook-official" size={36} color="#1877F3" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <MaterialIcons name="mail" size={36} color="#EA4335" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {/* Sign Up */}
       <View style={styles.signupRow}>

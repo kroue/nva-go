@@ -1,67 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../SupabaseClient';
-import ProductModal from './ProductModal';
+
+const pillBase = {
+  padding: '8px 14px',
+  borderRadius: 999,
+  border: '1.5px solid #252b55',
+  background: '#fff',
+  color: '#252b55',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+const pillActive = {
+  ...pillBase,
+  background: '#252b55',
+  color: '#fff',
+};
+const rowStyle = {
+  display: 'grid',
+  gridTemplateColumns: '1fr auto',
+  alignItems: 'center',
+  gap: 12,
+  padding: '12px 6px',
+  borderBottom: '1px solid #f1f1f4',
+};
+const nameStyle = { fontSize: 20, fontWeight: 800, color: '#22263f' };
 
 const AdminProducts = () => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
-    // Fetch products from the database
     const fetchProducts = async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('product_id,name,category,image_url');
-      if (!error && data) {
-        setProducts(data);
-      }
+        .select('product_id,name,status')
+        .order('name', { ascending: true });
+      if (!error && data) setProducts(data);
     };
     fetchProducts();
   }, []);
 
-  const handleCardClick = (product) => {
-    setSelectedProduct(product);
-    setModalOpen(true);
+  const updateStatus = async (product_id, status) => {
+    setUpdatingId(product_id);
+    const { error } = await supabase.from('products').update({ status }).eq('product_id', product_id);
+    if (error) {
+      console.error('Update product status failed:', error);
+      alert('Failed to update product status.');
+    } else {
+      setProducts((prev) =>
+        prev.map((p) => (p.product_id === product_id ? { ...p, status } : p))
+      );
+    }
+    setUpdatingId(null);
   };
 
   return (
-    <div
-      className="Products-page"
-      style={{
-        minHeight: '100vh',
-        boxSizing: 'border-box',
-        paddingBottom: 120 // Increase this to match or exceed your footer height
-      }}
-    >
-      <div className="Products-header">Products</div>
-      <div className="Products-section-title">Product Catalog</div>
-      <div className="Products-container" style={{ paddingBottom: 32 }}>
-        <div className="Products-grid">
-          {products.map((item) => (
-            <div
-              className="Products-card"
-              key={item.product_id}
-              onClick={() => handleCardClick(item)}
-              style={{ cursor: 'pointer' }}
-            >
-              <img
-                src={item.image_url || '/images/default-product.jpg'}
-                alt={item.name}
-                className="Products-card-img"
-              />
-              <div className="Products-card-name">{item.name}</div>
-              <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
-            </div>
-          ))}
-        </div>
+    <div style={{ padding: 12 }}>
+      <div
+        style={{
+          background: '#e5e5e5',
+          color: '#252b55',
+          fontWeight: 800,
+          fontSize: 22,
+          padding: '12px 18px',
+          borderRadius: 8,
+          marginBottom: 14,
+        }}
+      >
+        Manage Products
       </div>
-      <ProductModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        productId={selectedProduct?.product_id}
-        productName={selectedProduct?.name}
-      />
+
+      <div
+        style={{
+          background: '#fff',
+          border: '1px solid #eef0f4',
+          borderRadius: 12,
+          padding: 12,
+        }}
+      >
+        {products.map((p) => (
+          <div key={p.product_id} style={rowStyle}>
+            <div style={nameStyle}>{p.name}</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                style={p.status === 'available' ? pillActive : pillBase}
+                onClick={() => updateStatus(p.product_id, 'available')}
+                disabled={!!updatingId}
+              >
+                Available
+              </button>
+              <button
+                style={p.status === 'limited' ? pillActive : pillBase}
+                onClick={() => updateStatus(p.product_id, 'limited')}
+                disabled={!!updatingId}
+              >
+                Limited Stocks
+              </button>
+              <button
+                style={p.status === 'unavailable' ? pillActive : pillBase}
+                onClick={() => updateStatus(p.product_id, 'unavailable')}
+                disabled={!!updatingId}
+              >
+                Unavailable
+              </button>
+            </div>
+          </div>
+        ))}
+        {products.length === 0 && (
+          <div style={{ padding: 16, color: '#667085' }}>No products found.</div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { supabase } from '../SupabaseCient';
+import { supabase } from '../SupabaseClient';
 
 export default function ResetPassword({ navigation, route }) {
   const [newPassword, setNewPassword] = useState('');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './Products.css';
@@ -23,11 +23,22 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  // Group for display: available/limited first, unavailable below
+  const grouped = useMemo(() => {
+    const avail = [];
+    const unavail = [];
+    for (const p of products) {
+      if (p.status === 'unavailable') unavail.push(p);
+      else avail.push(p);
+    }
+    // Optional: sort by name for consistent order
+    avail.sort((a, b) => a.name.localeCompare(b.name));
+    unavail.sort((a, b) => a.name.localeCompare(b.name));
+    return { avail, unavail };
+  }, [products]);
+
   const handleCardClick = (product) => {
-    // Only allow clicking if product is available or limited
-    if (product.status === 'unavailable') return;
-    
-    // Navigate to OrderForm with product name as query parameter
+    if (product.status === 'unavailable') return; // disable
     navigate('/order-form?product=' + encodeURIComponent(product.name));
   };
 
@@ -35,17 +46,16 @@ const Products = () => {
     <div className="Products-page">
       <div className="Products-header">Products</div>
       <div className="Products-section-title">Product Catalog</div>
+
+      {/* Available and Limited Stocks */}
       <div className="Products-container">
         <div className="Products-grid">
-          {products.map((item) => (
+          {grouped.avail.map((item) => (
             <div
-              className={`Products-card ${item.status === 'limited' ? 'limited' : ''} ${item.status === 'unavailable' ? 'unavailable' : ''}`}
+              className={`Products-card ${item.status === 'limited' ? 'limited' : ''}`}
               key={item.product_id}
               onClick={() => handleCardClick(item)}
-              style={{ 
-                cursor: item.status === 'unavailable' ? 'not-allowed' : 'pointer',
-                opacity: item.status === 'unavailable' ? 0.5 : 1
-              }}
+              style={{ cursor: 'pointer' }}
             >
               <img
                 src={item.image_url || '/images/default-product.jpg'}
@@ -55,13 +65,44 @@ const Products = () => {
               <div className="Products-card-name">
                 {item.name}
                 {item.status === 'limited' && <span className="limited-tag">LIMITED</span>}
-                {item.status === 'unavailable' && <span className="unavailable-tag">UNAVAILABLE</span>}
               </div>
               <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Unavailable section below, not clickable */}
+      {grouped.unavail.length > 0 && (
+        <>
+          <div className="Products-section-title" style={{ marginTop: 8 }}>
+            Unavailable
+          </div>
+          <div className="Products-container">
+            <div className="Products-grid">
+              {grouped.unavail.map((item) => (
+                <div
+                  className="Products-card unavailable"
+                  key={item.product_id}
+                  style={{ cursor: 'not-allowed', opacity: 0.5 }}
+                >
+                  <img
+                    src={item.image_url || '/images/default-product.jpg'}
+                    alt={item.name}
+                    className="Products-card-img"
+                  />
+                  <div className="Products-card-name">
+                    {item.name}
+                    <span className="unavailable-tag">UNAVAILABLE</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       <ProductModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}

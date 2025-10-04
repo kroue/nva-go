@@ -14,7 +14,7 @@ import {
   Dimensions,
   Alert
 } from 'react-native';
-import { supabase } from '../SupabaseCient';
+import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -278,7 +278,33 @@ export default function Messaging() {
     }
   };
 
-  const handleApprove = async (orderId) => {
+  // NEW: robust Order ID extractor for approval messages
+  const extractOrderId = (text) => {
+    try {
+      const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+      // 1) [APPROVAL_REQUEST]|<uuid>...
+      if (text.startsWith('[APPROVAL_REQUEST]')) {
+        const after = text.replace('[APPROVAL_REQUEST]|', '');
+        const firstToken = after.split(/\s|\n/)[0]?.trim();
+        if (uuidRe.test(firstToken)) return firstToken;
+      }
+
+      // 2) A line like "Order ID: <uuid>"
+      const lineMatch = text.split('\n').find(l => l.startsWith('Order ID: '));
+      if (lineMatch) {
+        const m = lineMatch.match(uuidRe);
+        if (m) return m[0];
+      }
+
+      // 3) Fallback: any UUID in the text
+      const any = text.match(uuidRe);
+      if (any && any[0]) return any[0];
+    } catch {}
+    return null;
+  };
+
+  const handleApprove = async (orderId, employeeSenderEmail) => {
     try {
       const { error: updateError } = await supabase
         .from('orders')
@@ -290,23 +316,24 @@ export default function Messaging() {
 
       if (updateError) throw updateError;
 
-      const confirmMessage = {
-        chat_id: [userEmail, allowedEmails[0]].sort().join('-'),
-        sender: userEmail,
-        receiver: allowedEmails[0],
-        text: `✅ Order #${orderId.slice(0, 7)} has been approved. Status updated to Printing.`,
-        read: false,
-        created_at: new Date().toISOString(),
-      };
-      
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert(confirmMessage);
-
-      if (messageError) throw messageError;
+      // Confirm back to the employee who sent the approval request
+      const receiver = employeeSenderEmail || (allowedEmails[0] || null);
+      if (receiver) {
+        const confirmMessage = {
+          chat_id: [userEmail, receiver].sort().join('-'),
+          sender: userEmail,
+          receiver,
+          text: `✅ Order #${orderId.slice(0, 8)} approved by customer. Status set to Printing.`,
+          read: false,
+          created_at: new Date().toISOString(),
+        };
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert(confirmMessage);
+        if (messageError) throw messageError;
+      }
 
       Alert.alert('Success', 'Order approved and moved to printing!');
-      
     } catch (error) {
       console.error('Error approving order:', error);
       Alert.alert('Error', 'Failed to approve order: ' + error.message);
@@ -371,24 +398,8 @@ export default function Messaging() {
     // Extract image URL from different message types
     const imageUrl = extractImageUrl(msg.text);
     
-    // Get order ID if it's an approval or pickup message
-    let orderId = null;
-    if (isApproval || isPickupReady) {
-      const lines = msg.text.split('\n');
-      const orderLine = lines.find(line => line.startsWith('Order ID: ') || line.includes('243e9bb7-e686-456f-94ad-3927aed8c17'));
-      if (orderLine) {
-        // Extract order ID from different formats
-        if (orderLine.startsWith('Order ID: ')) {
-          orderId = orderLine.replace('Order ID: ', '').trim();
-        } else {
-          // Extract the UUID from the line
-          const uuidMatch = orderLine.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-          if (uuidMatch) {
-            orderId = uuidMatch[0];
-          }
-        }
-      }
-    }
+    // UPDATED: robust orderId extraction
+    const orderId = (isApproval || isPickupReady) ? extractOrderId(msg.text) : null;
 
     // Process message text - Remove image URLs from display text
     let messageText = msg.text;
@@ -457,7 +468,7 @@ export default function Messaging() {
           {isApproval && !isMe && orderId && (
             <TouchableOpacity 
               style={styles.approveButton}
-              onPress={() => handleApprove(orderId)}
+              onPress={() => handleApprove(orderId, msg.sender)}
             >
               <Text style={styles.approveButtonText}>✅ Approve Order</Text>
             </TouchableOpacity>

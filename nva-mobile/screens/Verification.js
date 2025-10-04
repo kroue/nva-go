@@ -1,51 +1,82 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { supabase } from '../SupabaseClient';
 
 export default function Verification({ navigation, route }) {
-  // Optionally get email from route.params
-  const email = route?.params?.email || 'user@example.com';
+  const email = route?.params?.email || '';
+  const desiredPassword = route?.params?.password || '';
+  const profile = {
+    first_name: route?.params?.first_name || '',
+    last_name: route?.params?.last_name || '',
+    address: route?.params?.address || null,
+  };
+
   const [otp, setOtp] = useState(['', '', '', '', '', '']); // 6 digits
-  const inputs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()]; // 6 refs
+  const inputs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   const handleChange = (text, idx) => {
     if (/^\d*$/.test(text)) {
-      const newOtp = [...otp];
-      newOtp[idx] = text;
-      setOtp(newOtp);
-      if (text && idx < 5) {
-        inputs[idx + 1].current.focus();
-      }
-      if (!text && idx > 0) {
-        inputs[idx - 1].current.focus();
-      }
+      const next = [...otp];
+      next[idx] = text;
+      setOtp(next);
+      if (text && idx < 5) inputs[idx + 1].current.focus();
+      if (!text && idx > 0) inputs[idx - 1].current.focus();
     }
   };
 
   const handleSubmit = async () => {
     Keyboard.dismiss();
-    if (otp.join('').length !== 6) {
-      // Optionally show an error message here
-      return;
-    }
+    const code = otp.join('');
+    if (code.length !== 6 || !email) return;
+
     try {
-      const res = await fetch('http://192.168.1.43:8000/api/verify/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otp.join('') }),
+      // 1) Verify OTP and create session
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: 'email', // email OTP
       });
-      if (res.ok) {
-        navigation.replace('Login');
-      } else {
-        // handle error
+      if (verifyErr) {
+        console.error('verifyOtp failed:', verifyErr);
+        return;
       }
+
+      // 2) Set the chosen password now that the user is authenticated
+      const { error: pwErr } = await supabase.auth.updateUser({ password: desiredPassword });
+      if (pwErr) {
+        console.error('updateUser(password) failed:', pwErr);
+        // continue, but inform user they may need password reset later
+      }
+
+      // 3) Create profile row in public.customers (username = email)
+      const { error: insertErr } = await supabase.from('customers').insert({
+        username: email,
+        email,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        address: profile.address,
+      });
+
+      // Ignore unique violation (23505) if already inserted by a retry
+      if (insertErr && insertErr.code !== '23505') {
+        console.error('Insert customer failed:', insertErr);
+      }
+
+      // 4) Sign out and go to Login
+      await supabase.auth.signOut();
+      navigation.replace('Login');
     } catch (e) {
-      // handle error
+      console.error('OTP submit error:', e);
     }
   };
 
-  const handleResend = () => {
-    // Handle resend OTP logic here
+  const handleResend = async () => {
+    if (!email) return;
+    await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
   };
 
   return (
@@ -66,7 +97,7 @@ export default function Verification({ navigation, route }) {
             keyboardType="number-pad"
             maxLength={1}
             value={digit}
-            onChangeText={text => handleChange(text, idx)}
+            onChangeText={(text) => handleChange(text, idx)}
             returnKeyType="next"
             autoFocus={idx === 0}
           />

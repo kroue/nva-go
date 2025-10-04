@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { supabase } from '../SupabaseCient'; // Adjust path if needed
+import { supabase } from '../SupabaseClient'; // Adjust path if needed
 
 export default function ForgotPassword({ navigation }) {
   const [email, setEmail] = useState('');

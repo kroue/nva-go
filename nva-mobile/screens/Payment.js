@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '../SupabaseCient';
+import { supabase } from '../SupabaseClient';
 import axios from 'axios';
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
@@ -17,77 +17,118 @@ export default function Payment() {
 
   // Pick image
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setProofUri(result.assets[0].uri);
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setProofUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image');
     }
   };
 
   // Upload image to Cloudinary
   const uploadProof = async () => {
     if (!proofUri) return '';
+    
     setUploading(true);
 
-    // Get file extension
-    const fileExt = proofUri.split('.').pop();
-    const fileName = `proof_${Date.now()}.${fileExt}`;
-
-    // Cloudinary expects FormData with uri, type, and name
-    const formData = new FormData();
-    formData.append('file', {
-      uri: proofUri,
-      type: `image/${fileExt}`,
-      name: fileName,
-    });
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
     try {
+      const fileExt = proofUri.split('.').pop();
+      const fileName = `proof_${Date.now()}.${fileExt}`;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: proofUri,
+        type: `image/${fileExt}`,
+        name: fileName,
+      });
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
       const cloudRes = await axios.post(CLOUDINARY_URL, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
       setUploading(false);
       return cloudRes.data.secure_url;
     } catch (err) {
       setUploading(false);
+      console.error('Upload error:', err);
       Alert.alert('Upload Error', err.response?.data?.error?.message || err.message);
       return '';
     }
   };
 
-  // Place order
+  // Place order function
   const handlePlaceOrder = async () => {
-    let proofUrl = '';
-    if (proofUri) {
-      proofUrl = await uploadProof();
+    try {
+      let proofUrl = '';
+      if (proofUri) {
+        proofUrl = await uploadProof();
+        if (!proofUrl) {
+          return;
+        }
+      }
+
+      // Fallbacks: param passed from OrderForm or attached_file on order
+      const fallbackProof = route?.params?.cloudinaryUrl || order?.attached_file || '';
+      const finalProofUrl = proofUrl || fallbackProof;
+
+      // Prepare order data with mobile source indicator
+      const orderData = {
+        first_name: order.first_name,
+        last_name: order.last_name,
+        phone_number: order.phone_number,
+        address: order.address,
+        email: order.email,
+        has_file: order.has_file,
+        variant: order.variant,
+        height: order.height,
+        width: order.width,
+        quantity: order.quantity,
+        eyelets: order.eyelets,
+        pickup_date: order.pickup_date,
+        pickup_time: order.pickup_time,
+        instructions: order.instructions,
+        total: order.total,
+        status: 'Validation',
+  attached_file: order.attached_file,
+  payment_proof: finalProofUrl, // URL of uploaded or passed payment proof
+        order_source: 'mobile',
+        created_at: order.created_at || new Date().toISOString(), // Use order timestamp or current time
+        employee_email: order.employee_email || null, // ADD: Missing comma here
+        employee_first_name: null, // Mobile orders don't have employees initially
+        employee_last_name: null
+      };
+
+      console.log('Order data to insert:', orderData); // Debug log
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        Alert.alert('Order Error', error.message);
+        return;
+      }
+
+      console.log('Order inserted successfully:', data);
+      Alert.alert('Order Placed', 'Your order has been placed successfully!');
+      navigation.replace('Home');
+      
+    } catch (error) {
+      console.error('Place order error:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
     }
-    const { error } = await supabase.from('orders').insert({
-      ...order,
-      payment_proof: proofUrl,
-      attached_file: order.attached_file || null, // Explicitly handle attached_file
-      approval_file: null,
-      approved: 'no',
-      created_at: order.created_at || new Date().toISOString(), // Use order timestamp or current time
-      employee_email: order.employee_email || null // Include employee email (null for mobile orders initially)
-    };
-
-    console.log('Order data to insert:', orderData); // Debug log
-
-    const { data, error } = await supabase
-      .from('orders')
-      .insert(orderData)
-      .select()
-      .single();
-
-    if (error) {
-      Alert.alert('Order Error', error.message);
-      return;
-    }
-    Alert.alert('Order Placed', 'Your order has been placed!');
-    navigation.replace('Home');
   };
 
   return (
@@ -111,6 +152,7 @@ export default function Payment() {
             <Text style={styles.accountDetails}>User ID: ********4HAPLZ</Text>
           </View>
         </View>
+        
         <View style={styles.attachBox}>
           <Text style={styles.attachLabel}>
             Attach proof payment here for validation purposes.
@@ -127,15 +169,24 @@ export default function Payment() {
             </TouchableOpacity>
           </View>
           {proofUri ? (
-            <Image source={{ uri: proofUri }} style={{ width: 120, height: 120, marginTop: 8, borderRadius: 8 }} />
+            <Image 
+              source={{ uri: proofUri }} 
+              style={styles.previewImage}
+            />
           ) : null}
         </View>
+        
         <TouchableOpacity
-          style={styles.placeOrderBtn}
+          style={[
+            styles.placeOrderBtn, 
+            uploading && styles.disabledBtn
+          ]}
           onPress={handlePlaceOrder}
           disabled={uploading}
         >
-          <Text style={styles.placeOrderText}>{uploading ? 'Uploading...' : 'Place Order'}</Text>
+          <Text style={styles.placeOrderText}>
+            {uploading ? 'Uploading...' : 'Place Order'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -252,6 +303,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  previewImage: {
+    width: 120,
+    height: 120,
+    marginTop: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
   placeOrderBtn: {
     backgroundColor: '#232B55',
     borderRadius: 24,
@@ -260,6 +319,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     width: '100%',
     maxWidth: 370,
+  },
+  disabledBtn: {
+    backgroundColor: '#666',
+    opacity: 0.7,
   },
   placeOrderText: {
     color: '#fff',

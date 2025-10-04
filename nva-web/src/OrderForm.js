@@ -5,6 +5,64 @@ import './OrderForm.css';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 
+// === helpers to build a sale from an order ===
+const toNumber = (v, d = 0) => {
+  if (v === null || v === undefined) return d;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  try {
+    const cleaned = String(v).replace(/[^0-9.-]/g, '');
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : d;
+  } catch {
+    return d;
+  }
+};
+const isFalseyBool = (val) => {
+  if (typeof val === 'boolean') return val === false;
+  const s = String(val).trim().toLowerCase();
+  return s === 'false' || s === '0' || s === 'no';
+};
+const getMonthText = (date = new Date()) =>
+  date.toLocaleString('en-US', { month: 'long' });
+
+const buildSaleFromOrderRow = (o) => {
+  const qty = Math.max(1, toNumber(o.quantity, 1));
+  const total = toNumber(o.total ?? o.total_amount ?? o.total_price, 0);
+
+  // Business rule: add layout fee when customer has no file
+  const layoutFee = isFalseyBool(o.has_file) ? 150 : 0;
+
+  const subtotalRaw = total - layoutFee;
+  const subtotal = subtotalRaw > 0 ? Number(subtotalRaw.toFixed(2)) : 0;
+  const unit_price = qty > 0 ? Number((subtotal / qty).toFixed(2)) : 0;
+
+  const width = toNumber(o.width, 0);
+  const height = toNumber(o.height, 0);
+  const variantDims = (width > 0 || height > 0) ? `${width}x${height} ft` : null;
+
+  const saleDate = new Date();
+
+  return {
+    order_id: o.id,
+    customer_email: o.email ?? 'unknown@local',
+    customer_name: [o.first_name, o.last_name].filter(Boolean).join(' ') || 'Customer',
+    product_name: o.variant || o.product_name || 'Order',
+    variant: variantDims,
+    quantity: qty,
+    unit_price,
+    subtotal,
+    layout_fee: layoutFee,
+    total_amount: Number(total.toFixed(2)),
+    sale_date: saleDate.toISOString(),
+    sale_month: getMonthText(saleDate),
+    sale_year: saleDate.getFullYear(),
+    employee_email: o.employee_email ?? null,
+    employee_name: [o.employee_first_name, o.employee_last_name].filter(Boolean).join(' ') || null,
+    order_source: o.order_source || (o.email?.includes('walkin_') ? 'walk-in' : 'web'),
+    status: 'completed'
+  };
+};
+
 const OrderForm = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -319,8 +377,10 @@ const OrderForm = () => {
         attached_file: cloudinaryUrl,
         created_at: new Date().toISOString(),
         employee_email: employeeEmail,
-        employee_first_name: employeeFirstName, // Add employee first name
-        employee_last_name: employeeLastName    // Add employee last name
+        employee_first_name: employeeFirstName,
+        employee_last_name: employeeLastName,
+        // NEW: set order source so sales rows inherit it
+        order_source: localStorage.getItem('userEmail') ? 'web' : 'walk-in'
       };
 
       const { data: order, error: orderError } = await supabase
@@ -337,8 +397,6 @@ const OrderForm = () => {
 
       console.log('Order created:', order);
       setOrderId(order.id);
-      
-      // Show payment summary
       setShowPaymentSummary(true);
     } catch (error) {
       console.error('Error:', error);
@@ -353,24 +411,58 @@ const OrderForm = () => {
         return;
       }
 
-      // Update the order status to 'Layout Approval' to match ValidatePayment.js
-      const { error } = await supabase
+      // 1) Mark order as paid (and keep consistency with ValidatePayment page)
+      const { error: updErr } = await supabase
         .from('orders')
         .update({ 
-          status: 'Layout Approval', // Changed to match ValidatePayment.js status
-          payment_proof: 'walk_in_payment' // Mark as walk-in payment
+          status: 'Layout Approval',
+          payment_proof: 'walk_in_payment'
         })
         .eq('id', orderId);
 
-      if (error) {
-        console.error('Error updating order:', error);
-        alert('Error updating order status: ' + error.message);
+      if (updErr) {
+        console.error('Error updating order:', updErr);
+        alert('Error updating order status: ' + updErr.message);
         return;
       }
 
-      alert('Payment confirmed! Your order has been sent for layout approval.');
-      
-      // For walk-ins, redirect to products; logged-in users go to orders
+      // 2) Fetch the fresh order row to build the sale payload
+      const { data: orderRow, error: fetchErr } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (fetchErr || !orderRow) {
+        console.error('Error fetching order for sale:', fetchErr);
+        alert('Error fetching order for sale: ' + (fetchErr?.message || 'Unknown error'));
+        return;
+      }
+
+      // 3) Skip if a sale already exists for this order
+      const { data: existing, error: existErr } = await supabase
+        .from('sales')
+        .select('id')
+        .eq('order_id', orderId)
+        .limit(1);
+
+      if (existErr) {
+        console.error('Error checking existing sale:', existErr);
+        alert('Error checking existing sale: ' + existErr.message);
+        return;
+      }
+
+      if (!existing || existing.length === 0) {
+        const saleRow = buildSaleFromOrderRow(orderRow);
+        const { error: saleErr } = await supabase.from('sales').insert([saleRow]);
+        if (saleErr) {
+          console.error('Error inserting sale:', saleErr, 'Payload:', saleRow);
+          alert('Error recording sale: ' + saleErr.message);
+          // continue navigation anyway
+        }
+      }
+
+      alert('Payment confirmed! Recorded as sale and sent for layout approval.');
       if (!localStorage.getItem('userEmail')) {
         navigate('/products');
       } else {

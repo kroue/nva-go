@@ -74,38 +74,54 @@ const OrderDetails = () => {
     setFile(e.target.files[0]);
   };
 
-  const handleSendApproval = async () => {
-    if (!file) return alert('Please select a file.');
-    if (!order) return alert('Order not loaded.');
-    
+const handleSendApproval = async () => {
+  if (!order) return;
+  try {
     setUploading(true);
 
-    console.log('Sending as employee:', employeeEmail, employeeFirstName, employeeLastName);
+    let fileUrl = order.approval_file || null;
 
-    try {
-      // Upload to Cloudinary
+    if (file) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-      const res = await axios.post(CLOUDINARY_URL, formData);
-      const fileUrl = res.data.secure_url;
+      const { data: uploadRes } = await axios.post(CLOUDINARY_URL, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-      // Update order in Supabase with employee assignment including names
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ 
-          approval_file: fileUrl,
-          employee_email: employeeEmail,
-          employee_first_name: employeeFirstName,
-          employee_last_name: employeeLastName
-        })
-        .eq('id', id);
+      fileUrl = uploadRes.secure_url;
+    }
 
-      if (updateError) throw updateError;
-      
-      // Create approval message
-      const messageText = `[APPROVAL_REQUEST]|${order.id}
+    if (!fileUrl) {
+      alert('Please select a layout file to send for approval.');
+      setUploading(false);
+      return;
+    }
+
+    // Write approval file + stamp the employee who processed it
+    const updatePayload = {
+      approval_file: fileUrl,
+      approved: 'no',
+      employee_email: employeeEmail || order.employee_email || null,
+      employee_first_name: employeeFirstName || order.employee_first_name || null,
+      employee_last_name: employeeLastName || order.employee_last_name || null
+    };
+
+    const { error: updErr } = await supabase
+      .from('orders')
+      .update(updatePayload)
+      .eq('id', order.id);
+
+    if (updErr) {
+      console.error('Error updating order with approval file:', updErr);
+      alert('Failed to update order with approval file.');
+      setUploading(false);
+      return;
+    }
+
+    const messageText = `[APPROVAL_REQUEST]|${order.id}
+Order ID: ${order.id}
 Product: ${order.variant}
 Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
 Quantity: ${order.quantity} pcs
@@ -114,48 +130,39 @@ Total: ₱${order.total}
 ${order.approval_file ? '⚠️ This is a revised layout. Please review the new version.' : 'Please review and approve the layout:'}
 ${fileUrl}`;
 
-      // Create message with employee as sender
-      const messageData = {
-        sender: employeeEmail,
-        receiver: order.email,
-        text: messageText,
-        chat_id: [employeeEmail, order.email].sort().join('-'),
-        created_at: new Date().toISOString(),
-        read: false
-      };
+    const messageData = {
+      sender: employeeEmail,
+      receiver: order.email,
+      text: messageText,
+      chat_id: [employeeEmail, order.email].sort().join('-'),
+      created_at: new Date().toISOString(),
+      read: false
+    };
 
-      console.log('Sending message:', messageData);
-
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert(messageData);
-
-      if (messageError) {
-        console.error('Message error:', messageError);
-        throw messageError;
-      }
-
-      alert(order.approval_file ? 'New approval version sent!' : 'Approval sent!');
-      
-      // Update local state to reflect the changes
-      setOrder({ 
-        ...order, 
-        approval_file: fileUrl,
-        employee_email: employeeEmail,
-        employee_first_name: employeeFirstName,
-        employee_last_name: employeeLastName
-      });
-      
-      // Clear the file input
-      setFile(null);
-      
-    } catch (err) {
-      console.error('Upload error:', err);
-      alert('Upload failed: ' + (err.message || 'Unknown error'));
-    } finally {
-      setUploading(false);
+    const { error: msgErr } = await supabase.from('messages').insert(messageData);
+    if (msgErr) {
+      console.error('Error sending approval message:', msgErr);
+      alert('Failed to send approval message.');
     }
-  };
+
+    // Reflect locally, including employee who processed it
+    setOrder((prev) => ({
+      ...prev,
+      approval_file: fileUrl,
+      approved: 'no',
+      employee_email: updatePayload.employee_email,
+      employee_first_name: updatePayload.employee_first_name,
+      employee_last_name: updatePayload.employee_last_name
+    }));
+    setFile(null);
+    alert('Layout sent for approval.');
+  } catch (e) {
+    console.error('Error sending approval:', e);
+    alert('Error sending approval. Please try again.');
+  } finally {
+    setUploading(false);
+  }
+};
 
   if (!order) return <div>Loading...</div>;
 
