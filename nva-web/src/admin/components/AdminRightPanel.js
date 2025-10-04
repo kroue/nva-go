@@ -95,7 +95,7 @@ const AdminRightPanel = () => {
   }, [todayBuckets]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minWidth: 320 }}>
+    <div className="AdminRightPanel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Reports Calendar Title */}
       <div
         style={{
