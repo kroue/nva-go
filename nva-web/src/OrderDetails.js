@@ -74,53 +74,86 @@ const OrderDetails = () => {
     setFile(e.target.files[0]);
   };
 
-const handleSendApproval = async () => {
-  if (!order) return;
-  try {
-    setUploading(true);
+  // NEW: Walk-in approve -> set status to "Printing"
+  const handleWalkInApprove = async () => {
+    if (!order) return;
+    try {
+      setUploading(true);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'Printing', approved: 'yes' })
+        .eq('id', order.id);
 
-    let fileUrl = order.approval_file || null;
+      if (error) {
+        console.error('Failed to mark as Printing:', error);
+        alert('Failed to update order status.');
+        setUploading(false);
+        return;
+      }
 
-    if (file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-      const { data: uploadRes } = await axios.post(CLOUDINARY_URL, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      fileUrl = uploadRes.secure_url;
-    }
-
-    if (!fileUrl) {
-      alert('Please select a layout file to send for approval.');
+      setOrder((prev) => ({ ...prev, status: 'Printing', approved: 'yes' }));
+      alert('Order marked as Printing.');
+    } catch (e) {
+      console.error('Error updating order status:', e);
+      alert('Error updating order status.');
+    } finally {
       setUploading(false);
+    }
+  };
+
+  const handleSendApproval = async () => {
+    if (!order) return;
+    // Do not send approval for walk-in orders (no customer email / walk-in source)
+    const isWalkIn = !order.email || order.order_source === 'walk-in';
+    if (isWalkIn) {
+      alert('Approval is not required for walk-in orders.');
       return;
     }
+    try {
+      setUploading(true);
 
-    // Write approval file + stamp the employee who processed it
-    const updatePayload = {
-      approval_file: fileUrl,
-      approved: 'no',
-      employee_email: employeeEmail || order.employee_email || null,
-      employee_first_name: employeeFirstName || order.employee_first_name || null,
-      employee_last_name: employeeLastName || order.employee_last_name || null
-    };
+      let fileUrl = order.approval_file || null;
 
-    const { error: updErr } = await supabase
-      .from('orders')
-      .update(updatePayload)
-      .eq('id', order.id);
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
-    if (updErr) {
-      console.error('Error updating order with approval file:', updErr);
-      alert('Failed to update order with approval file.');
-      setUploading(false);
-      return;
-    }
+        const { data: uploadRes } = await axios.post(CLOUDINARY_URL, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
 
-    const messageText = `[APPROVAL_REQUEST]|${order.id}
+        fileUrl = uploadRes.secure_url;
+      }
+
+      if (!fileUrl) {
+        alert('Please select a layout file to send for approval.');
+        setUploading(false);
+        return;
+      }
+
+      // Write approval file + stamp the employee who processed it
+      const updatePayload = {
+        approval_file: fileUrl,
+        approved: 'no',
+        employee_email: employeeEmail || order.employee_email || null,
+        employee_first_name: employeeFirstName || order.employee_first_name || null,
+        employee_last_name: employeeLastName || order.employee_last_name || null
+      };
+
+      const { error: updErr } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', order.id);
+
+      if (updErr) {
+        console.error('Error updating order with approval file:', updErr);
+        alert('Failed to update order with approval file.');
+        setUploading(false);
+        return;
+      }
+
+      const messageText = `[APPROVAL_REQUEST]|${order.id}
 Order ID: ${order.id}
 Product: ${order.variant}
 Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
@@ -130,45 +163,46 @@ Total: ₱${order.total}
 ${order.approval_file ? '⚠️ This is a revised layout. Please review the new version.' : 'Please review and approve the layout:'}
 ${fileUrl}`;
 
-    const messageData = {
-      sender: employeeEmail,
-      receiver: order.email,
-      text: messageText,
-      chat_id: [employeeEmail, order.email].sort().join('-'),
-      created_at: new Date().toISOString(),
-      read: false
-    };
+      const messageData = {
+        sender: employeeEmail,
+        receiver: order.email,
+        text: messageText,
+        chat_id: [employeeEmail, order.email].sort().join('-'),
+        created_at: new Date().toISOString(),
+        read: false
+      };
 
-    const { error: msgErr } = await supabase.from('messages').insert(messageData);
-    if (msgErr) {
-      console.error('Error sending approval message:', msgErr);
-      alert('Failed to send approval message.');
+      const { error: msgErr } = await supabase.from('messages').insert(messageData);
+      if (msgErr) {
+        console.error('Error sending approval message:', msgErr);
+        alert('Failed to send approval message.');
+      }
+
+      // Reflect locally, including employee who processed it
+      setOrder((prev) => ({
+        ...prev,
+        approval_file: fileUrl,
+        approved: 'no',
+        employee_email: updatePayload.employee_email,
+        employee_first_name: updatePayload.employee_first_name,
+        employee_last_name: updatePayload.employee_last_name
+      }));
+      setFile(null);
+      alert('Layout sent for approval.');
+    } catch (e) {
+      console.error('Error sending approval:', e);
+      alert('Error sending approval. Please try again.');
+    } finally {
+      setUploading(false);
     }
-
-    // Reflect locally, including employee who processed it
-    setOrder((prev) => ({
-      ...prev,
-      approval_file: fileUrl,
-      approved: 'no',
-      employee_email: updatePayload.employee_email,
-      employee_first_name: updatePayload.employee_first_name,
-      employee_last_name: updatePayload.employee_last_name
-    }));
-    setFile(null);
-    alert('Layout sent for approval.');
-  } catch (e) {
-    console.error('Error sending approval:', e);
-    alert('Error sending approval. Please try again.');
-  } finally {
-    setUploading(false);
-  }
-};
+  };
 
   if (!order) return <div>Loading...</div>;
 
   // Calculate subtotal and layout fee
   const subtotal = order.has_file ? order.total : (order.total - 150);
   const layoutFee = order.has_file ? 0 : 150;
+  const isWalkIn = !order.email || order.order_source === 'walk-in';
 
   return (
     <div className="App">
@@ -177,7 +211,26 @@ ${fileUrl}`;
         <Sidebar />
         <div className="PageContent">
           <div className="OrderDetails-root">
-            <div className="OrderDetails-header">Order Details</div>
+            <div className="OrderDetails-header">
+              Order Details
+              {isWalkIn && (
+                <span
+                  style={{
+                    marginLeft: 10,
+                    fontSize: 12,
+                    padding: '4px 8px',
+                    borderRadius: 12,
+                    background: '#FFF7CC',
+                    color: '#8A6D3B',
+                    border: '1px solid #F3E59A',
+                    verticalAlign: 'middle',
+                    fontWeight: 600
+                  }}
+                >
+                  Walk-in Order
+                </span>
+              )}
+            </div>
             <div className="OrderDetails-main">
               <div className="OrderDetails-left">
                 <div className="OrderDetails-customer-row">
@@ -281,39 +334,65 @@ ${fileUrl}`;
                 
                 {/* Approval section */}
                 <div style={{ marginTop: 18 }}>
-                  <div>
-                    <b>Approved:</b> {order.approved || 'no'}
-                  </div>
-                  <div>
-                    <b>Approval File:</b>{' '}
-                    {order.approval_file ? (
-                      <a href={order.approval_file} target="_blank" rel="noopener noreferrer">View Layout</a>
-                    ) : 'None'}
-                  </div>
-                  <input 
-                    type="file" 
-                    onChange={handleFileChange} 
-                    style={{ marginTop: 8 }}
-                    accept="image/*,.pdf"
-                  />
-                  <button
-                    onClick={handleSendApproval}
-                    disabled={uploading || order.approved === 'yes'}
-                    style={{
-                      marginTop: 8,
-                      background: uploading || order.approved === 'yes' ? '#ccc' : '#252b55',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '8px 18px',
-                      fontWeight: 600,
-                      fontSize: 16,
-                      cursor: uploading || order.approved === 'yes' ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {uploading ? 'Uploading...' : 
-                     order.approval_file ? 'Send New Version' : 'Send Layout for Approval'}
-                  </button>
+                  {(!order.email || order.order_source === 'walk-in') ? (
+                    <div>
+                      <div style={{ fontStyle: 'italic', color: '#667085', marginBottom: 8 }}>
+                        Approval is not required for walk-in orders.
+                      </div>
+                      <button
+                        onClick={handleWalkInApprove}
+                        disabled={uploading || order.status === 'Printing'}
+                        style={{
+                          background: uploading || order.status === 'Printing' ? '#ccc' : '#252b55',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 8,
+                          padding: '8px 18px',
+                          fontWeight: 600,
+                          fontSize: 16,
+                          cursor: uploading || order.status === 'Printing' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {order.status === 'Printing' ? 'Already Printing' : 'Approved'}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <b>Approved:</b> {order.approved || 'no'}
+                      </div>
+                      <div>
+                        <b>Approval File:</b>{' '}
+                        {order.approval_file ? (
+                          <a href={order.approval_file} target="_blank" rel="noopener noreferrer">View Layout</a>
+                        ) : 'None'}
+                      </div>
+                      <input 
+                        type="file" 
+                        onChange={handleFileChange} 
+                        style={{ marginTop: 8 }}
+                        accept="image/*,.pdf"
+                      />
+                      <button
+                        onClick={handleSendApproval}
+                        disabled={uploading || order.approved === 'yes'}
+                        style={{
+                          marginTop: 8,
+                          background: uploading || order.approved === 'yes' ? '#ccc' : '#252b55',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 8,
+                          padding: '8px 18px',
+                          fontWeight: 600,
+                          fontSize: 16,
+                          cursor: uploading || order.approved === 'yes' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {uploading ? 'Uploading...' : 
+                         order.approval_file ? 'Send New Version' : 'Send Layout for Approval'}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -85,31 +85,31 @@ const OrderForm = () => {
   const [variants, setVariants] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [productData, setProductData] = useState(null);
-  const [attachedFile, setAttachedFile] = useState(null);
   const [showPaymentSummary, setShowPaymentSummary] = useState(false);
   const [orderId, setOrderId] = useState(null); // Store order ID for updates
 
   // Price calculation
   const [total, setTotal] = useState(0);
 
-  // Cloudinary configuration - replace with your actual cloud name and upload preset
-  const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/upload';
-  const CLOUDINARY_UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET';
+  // NEW: validation/warnings
+  const [dtfWarning, setDtfWarning] = useState('');
+  const [dimError, setDimError] = useState('');
 
-  // Add this list for products that don't need height/width
-  const noDimensionProducts = [
-    'CANVAS CLOTH',
-    'PP FILM MATTE',
-    '58mm BUTTON PIN',
-    'ACRYLIC RECTANGLE REF MAGNET 9.5x7 cm',
-    'ACRYLIC RECTANGLE REF MAGNET 2.5x3.25 in',
-    'BLOCK/LOT/HOUSE NO. PLATE',
-    'TRUCK/CAR PLATE',
-    'MOTORCYCLE PLATE',
-    'ACRYLIC MEDAL',
-    'ID LANYARD',
-    'DTF PRINT PER 22x39 INCHES'
-  ];
+  // Helper to normalize names for robust matching
+  const normalize = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Product identity + flags (use URL product or fetched productData)
+  const productNameRaw = product || (productData?.name || '');
+  const normalizedProduct = normalize(productNameRaw);
+  const isDTFPrint = normalizedProduct.includes('dtf') && normalizedProduct.includes('print');
+  const isSolventTarp = normalizedProduct.includes('solvent') && normalizedProduct.includes('tarp');
+  const isSintra = normalizedProduct.includes('sintra'); // matches 'sintraboard' or 'sintra board'
+  const isDimProduct = isSintra || isSolventTarp; // Only these require dimensions per spec
 
   // Set pickup date/time on mount
   useEffect(() => {
@@ -158,33 +158,22 @@ const OrderForm = () => {
     fetchProductAndVariants();
   }, [product]);
 
-  // Fetch customer info from localStorage and Supabase
+  // Walk-in flow: no customer lookup
   useEffect(() => {
-    const fetchCustomer = async () => {
-      try {
-        const userEmail = localStorage.getItem('userEmail');
-        if (userEmail) {
-          const { data, error } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('email', userEmail)
-            .single();
-          
-          if (!error && data) {
-            setFirstName(data.first_name || '');
-            setLastName(data.last_name || '');
-            setContact(data.phone_number || '');
-            setAddress(data.address || '');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching customer:', error);
-      }
-    };
-    fetchCustomer();
+    // Intentionally left blank. This form is for employee-created walk-in orders.
   }, []);
 
-  // Calculate price
+  // DTF minimum quantity validation
+  useEffect(() => {
+    const qty = parseInt(quantity) || 0;
+    if (isDTFPrint && qty > 0 && qty < 10) {
+      setDtfWarning('Minimum quantity for DTF Print is 10.');
+    } else {
+      setDtfWarning('');
+    }
+  }, [isDTFPrint, quantity]);
+
+  // Calculate price with rules
   useEffect(() => {
     let price = 0;
     
@@ -192,89 +181,70 @@ const OrderForm = () => {
       const basePrice = parseFloat(selectedVariant.retail_price || 0);
       const qtyInt = parseInt(quantity) || 1;
       
-      if (noDimensionProducts.includes(product)) {
-        // For products without dimensions, use base price * quantity
-        price = basePrice * qtyInt;
-      } else {
-        // For products with dimensions, calculate based on area
+      if (isDimProduct) {
         const heightFloat = parseFloat(height) || 0;
         const widthFloat = parseFloat(width) || 0;
-        const area = heightFloat * widthFloat;
+        const area = Math.max(1, heightFloat * widthFloat);
         price = basePrice * area * qtyInt;
+      } else {
+        price = basePrice * qtyInt;
       }
       
-      // Add layout fee if no file
       if (!hasFile) {
         price += 150;
       }
       
-      // Add eyelet fee for SOLVENT TARP
-      if (product === 'SOLVENT TARP') {
+      if (isSolventTarp) {
         const eyeletsInt = parseInt(eyelets) || 0;
-        if (eyeletsInt > 4) {
-          price += (eyeletsInt - 4) * 10;
-        }
+        price += eyeletsInt * 4 * qtyInt;
       }
     } else if (productData && quantity) {
-      // Fallback to product price if no variant selected
       const basePrice = parseFloat(productData.price || 0);
       const qtyInt = parseInt(quantity) || 1;
       
-      if (noDimensionProducts.includes(product)) {
-        price = basePrice * qtyInt;
-      } else {
+      if (isDimProduct) {
         const heightFloat = parseFloat(height) || 0;
         const widthFloat = parseFloat(width) || 0;
-        const area = heightFloat * widthFloat;
+        const area = Math.max(1, heightFloat * widthFloat);
         price = basePrice * area * qtyInt;
+      } else {
+        price = basePrice * qtyInt;
       }
       
       if (!hasFile) {
         price += 150;
+      }
+
+      if (isSolventTarp) {
+        const eyeletsInt = parseInt(eyelets) || 0;
+        price += eyeletsInt * 4 * qtyInt;
       }
     }
     
     setTotal(Math.round(price * 100) / 100);
-  }, [selectedVariant, quantity, width, height, hasFile, productData, product, eyelets]);
-
-  // Upload file to Cloudinary
-  const uploadToCloudinary = async (file) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-      formData.append('folder', 'order_attachments'); // Optional: organize files in folders
-
-      const response = await fetch(CLOUDINARY_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload to Cloudinary');
-      }
-
-      const data = await response.json();
-      return data.secure_url; // This is the Cloudinary URL
-    } catch (error) {
-      console.error('Error uploading to Cloudinary:', error);
-      throw error;
-    }
-  };
+  }, [selectedVariant, quantity, width, height, hasFile, productData, eyelets, isDimProduct, isSolventTarp]);
 
   const isFormValid = () => {
     if (!firstName || !lastName || !contact || !address || !quantity || !pickupDate || !pickupTime) {
       return false;
     }
-    
-    if (!noDimensionProducts.includes(product) && (!height || !width)) {
-      return false;
+    if (isDTFPrint && (parseInt(quantity) || 0) < 10) return false;
+    if (isDimProduct) {
+      if (!height || !width) return false;
+      const h = parseFloat(height);
+      const w = parseFloat(width);
+      if (!Number.isFinite(h) || !Number.isFinite(w)) return false;
+      const small = Math.min(h, w);
+      const large = Math.max(h, w);
+      if (small < 2 || large < 3) return false;
     }
-    
     if (variants.length > 0 && !selectedVariant) {
       return false;
     }
-    
+    if (isSolventTarp) {
+      const e = parseInt(eyelets);
+      if (isNaN(e) || e < 0) return false;
+    }
     return true;
   };
 
@@ -282,54 +252,14 @@ const OrderForm = () => {
     if (!isFormValid()) return;
 
     try {
-      let userEmail = localStorage.getItem('userEmail');
-      let cloudinaryUrl = null;
+      // No attachment/upload flow
+      const cloudinaryUrl = null;
 
-      // Upload file to Cloudinary if attached
-      if (attachedFile) {
-        try {
-          cloudinaryUrl = await uploadToCloudinary(attachedFile);
-        } catch (error) {
-          alert('Error uploading file. Please try again.');
-          return;
-        }
-      }
-      
-      // If not logged in, use temporary email for walk-in customers
-      if (!userEmail) {
-        userEmail = `walkin_${Date.now()}@temp.com`;
-      }
-
-      // For walk-in customers, check if customer already exists by phone number
-      if (!localStorage.getItem('userEmail')) {
-        const { data: existingCustomer, error: checkError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('phone_number', contact)
-          .single();
-
-        if (checkError && !existingCustomer) {
-          // Create new customer record for walk-in customer
-          const { error: createError } = await supabase
-            .from('customers')
-            .insert([{
-              username: `walkin_${Date.now()}`,
-              first_name: firstName,
-              last_name: lastName,
-              phone_number: contact,
-              address: address,
-              email: userEmail,
-              is_barred: false
-            }]);
-
-          if (createError) {
-            console.error('Error creating customer:', createError);
-          }
-        }
-      }
-
-      // Get employee details for web orders
-      const employeeEmail = localStorage.getItem('employeeEmail') || localStorage.getItem('userEmail') || 'walk_in_counter';
+      // Get employee details for walk-in orders (employee is logged in to admin)
+      const employeeEmail =
+        localStorage.getItem('employeeEmail') ||
+        localStorage.getItem('userEmail') ||
+        'walk_in_counter';
       let employeeFirstName = 'Walk-in';
       let employeeLastName = 'Counter';
 
@@ -337,18 +267,17 @@ const OrderForm = () => {
       if (localStorage.getItem('userEmail')) {
         const storedFirstName = localStorage.getItem('employeeFirstName');
         const storedLastName = localStorage.getItem('employeeLastName');
-        
+
         if (storedFirstName && storedLastName) {
           employeeFirstName = storedFirstName;
           employeeLastName = storedLastName;
         } else {
-          // Fetch employee details from database if not in localStorage
           const { data: employee } = await supabase
-            .from('customers') // or 'employees' table if you have one
+            .from('customers') // or 'employees' table if available
             .select('first_name, last_name')
             .eq('email', employeeEmail)
             .single();
-          
+
           if (employee) {
             employeeFirstName = employee.first_name || 'Employee';
             employeeLastName = employee.last_name || 'Name';
@@ -356,31 +285,29 @@ const OrderForm = () => {
         }
       }
 
-      // Create order with data that matches your orders schema
       const orderData = {
         first_name: firstName,
         last_name: lastName,
         phone_number: contact,
         address: address,
-        email: userEmail,
+        email: null, // No customer account for walk-ins
         has_file: hasFile,
         variant: selectedVariant ? (selectedVariant.description || selectedVariant.size || product) : product,
-        height: noDimensionProducts.includes(product) ? null : parseFloat(height),
-        width: noDimensionProducts.includes(product) ? null : parseFloat(width),
+        height: isDimProduct ? (height ? parseFloat(height) : null) : null,
+        width: isDimProduct ? (width ? parseFloat(width) : null) : null,
         quantity: parseInt(quantity),
-        eyelets: product === 'SOLVENT TARP' ? parseInt(eyelets) : null,
+        eyelets: isSolventTarp ? (parseInt(eyelets) || 0) : null,
         pickup_date: pickupDate,
         pickup_time: pickupTime,
         instructions: instructions || null,
         total: total,
         status: 'Validation',
-        attached_file: cloudinaryUrl,
+        attached_file: cloudinaryUrl, // always null (no attach)
         created_at: new Date().toISOString(),
         employee_email: employeeEmail,
         employee_first_name: employeeFirstName,
         employee_last_name: employeeLastName,
-        // NEW: set order source so sales rows inherit it
-        order_source: localStorage.getItem('userEmail') ? 'web' : 'walk-in'
+        order_source: 'walk-in'
       };
 
       const { data: order, error: orderError } = await supabase
@@ -395,7 +322,6 @@ const OrderForm = () => {
         return;
       }
 
-      console.log('Order created:', order);
       setOrderId(order.id);
       setShowPaymentSummary(true);
     } catch (error) {
@@ -474,19 +400,6 @@ const OrderForm = () => {
     }
   };
 
-  const pickDocument = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png,.ai,.psd';
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setAttachedFile(file);
-      }
-    };
-    input.click();
-  };
-
   const renderContent = () => {
     if (showPaymentSummary) {
       return (
@@ -514,10 +427,16 @@ const OrderForm = () => {
                 <span>Quantity:</span>
                 <span>{quantity}</span>
               </div>
-              {!noDimensionProducts.includes(product) && (
+              {isDimProduct && (
                 <div className="summary-row">
                   <span>Dimensions:</span>
                   <span>{height} x {width} ft</span>
+                </div>
+              )}
+              {isSolventTarp && (
+                <div className="summary-row">
+                  <span>Eyelets:</span>
+                  <span>{eyelets}</span>
                 </div>
               )}
               {selectedVariant && (
@@ -646,17 +565,6 @@ const OrderForm = () => {
                   </div>
                 </div>
 
-                <div className="file-upload">
-                  <button className="attach-btn" onClick={pickDocument}>
-                    {attachedFile ? attachedFile.name : 'Attach file'}
-                  </button>
-                  {attachedFile && (
-                    <button className="remove-file" onClick={() => setAttachedFile(null)}>
-                      ×
-                    </button>
-                  )}
-                </div>
-
                 {/* Variants */}
                 {variants.length > 0 && (
                   <div className="variants-section">
@@ -680,7 +588,7 @@ const OrderForm = () => {
 
                 {/* Size and Quantity */}
                 <div className="form-row">
-                  {!noDimensionProducts.includes(product) && (
+                  {isDimProduct && (
                     <>
                       <input
                         type="number"
@@ -707,8 +615,8 @@ const OrderForm = () => {
                   />
                 </div>
 
-                {/* Eyelets for SOLVENT TARP */}
-                {product === 'SOLVENT TARP' && (
+                {/* Eyelets for Solvent Tarp */}
+                {isSolventTarp && (
                   <input
                     type="number"
                     placeholder="Eyelets"
@@ -717,6 +625,17 @@ const OrderForm = () => {
                     className="form-input third"
                   />
                 )}
+
+                {/* Validation messages */}
+                {!!dtfWarning && (
+                  <div className="error-text" style={{ color: '#D32F2F', marginTop: 6 }}>{dtfWarning}</div>
+                )}
+                {isDimProduct && (
+                  <div className="helper-text" style={{ color: '#556', fontSize: 12, marginTop: 6 }}>
+                    Minimum size: 2 × 3 ft (either 2×3 or 3×2).
+                  </div>
+                )}
+                {/* End validation messages */}
 
                 {/* Date to Pickup */}
                 <div className="form-row">

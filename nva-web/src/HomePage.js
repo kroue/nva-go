@@ -39,12 +39,93 @@ const HomePage = () => {
   const [salesTodayTotal, setSalesTodayTotal] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('User');
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
       setLoading(true);
+
+      // Get logged-in user's name
+      try {
+        // Check localStorage for name
+        const firstName = localStorage.getItem('firstName');
+        const userFirstName = localStorage.getItem('userFirstName');
+        const employeeFirstName = localStorage.getItem('employeeFirstName');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        console.log('Available localStorage data:');
+        console.log('firstName:', firstName);
+        console.log('userFirstName:', userFirstName);
+        console.log('employeeFirstName:', employeeFirstName);
+        console.log('userEmail:', userEmail);
+        
+        // Try localStorage first
+        let foundName = firstName || userFirstName || employeeFirstName;
+        
+        if (foundName) {
+          console.log('Found name in localStorage:', foundName);
+          if (mounted) setUserName(foundName);
+        } else {
+          console.log('No name in localStorage, trying database...');
+          
+          // Get current session
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          console.log('Current session:', session);
+          console.log('Session error:', sessionError);
+          
+          const emailToSearch = session?.user?.email || userEmail;
+          console.log('Email to search:', emailToSearch);
+          
+          if (emailToSearch) {
+            // Try to get employee info from employees table (not customers)
+            const { data: employee, error: employeeError } = await supabase
+              .from('employees')
+              .select('first_name, last_name, email')
+              .eq('email', emailToSearch)
+              .maybeSingle();
+            
+            console.log('Employee query result:', employee);
+            console.log('Employee error details:', employeeError);
+            
+            if (employee?.first_name && mounted) {
+              console.log('Setting userName from employees table:', employee.first_name);
+              setUserName(employee.first_name);
+            } else {
+              // Fallback: try customers table in case it's a customer accessing admin
+              const { data: customer, error: customerError } = await supabase
+                .from('customers')
+                .select('first_name, last_name, email')
+                .eq('email', emailToSearch)
+                .maybeSingle();
+              
+              console.log('Customer fallback query result:', customer);
+              console.log('Customer fallback error details:', customerError);
+              
+              if (customer?.first_name && mounted) {
+                console.log('Setting userName from customers table:', customer.first_name);
+                setUserName(customer.first_name);
+              } else if (emailToSearch && mounted) {
+                // Final fallback: use part of email as name
+                const emailName = emailToSearch.split('@')[0];
+                const capitalizedName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+                console.log('Using email-based name:', capitalizedName);
+                setUserName(capitalizedName);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user name:', error);
+        // Try to use email as fallback even in error case
+        const userEmail = localStorage.getItem('userEmail');
+        if (userEmail && mounted) {
+          const emailName = userEmail.split('@')[0];
+          const capitalizedName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
+          setUserName(capitalizedName);
+        }
+      }
 
       // Recent order
       const { data: recent } = await supabase
@@ -113,11 +194,13 @@ const HomePage = () => {
 
   return (
     <div className="HomePage">
-      <div className="HomePage-grid">
-        <div className="HomePage-titlebar">
-          <h2 className="HomePage-titlebar-text">Home</h2>
-        </div>
+      <div className="HomePage-titlebar">
+        <h2 className="HomePage-titlebar-text">
+          Welcome back, {userName}! Here's what's happening today.
+        </h2>
+      </div>
 
+      <div className="HomePage-grid">
         <div className="HomePage-pickup">
           <h2 className="Dashboard-section-title dark">To be picked up</h2>
           <div
@@ -138,16 +221,9 @@ const HomePage = () => {
               </span>
             )}
           </div>
-          <div className="Card"></div>
         </div>
 
-        <div className="HomePage-welcome">
-          <h1 className="HomePage-title">
-            Welcome back, Aljohn! Here's what's happening today.
-          </h1>
-        </div>
-
-        <div className="Dashboard-section HomePage-recent">
+        <div className="HomePage-recent">
           <h2 className="Dashboard-section-title dark">Recent Transactions</h2>
           <div
             className="Card"
@@ -170,7 +246,7 @@ const HomePage = () => {
         </div>
 
         <div className="HomePage-unread-sales-row">
-          <div className="Dashboard-section HomePage-unread">
+          <div className="HomePage-unread">
             <h2 className="Dashboard-section-title dark">Unread Messages</h2>
             <div
               className="Card"
@@ -182,7 +258,7 @@ const HomePage = () => {
             </div>
           </div>
 
-          <div className="Dashboard-section HomePage-sales">
+          <div className="HomePage-sales">
             <h2 className="Dashboard-section-title dark">Sales Today</h2>
             <div
               className="Card"
@@ -210,7 +286,7 @@ const HomePage = () => {
           </div>
         </div>
 
-        <div className="Dashboard-section HomePage-validate">
+        <div className="HomePage-validate">
           <h2 className="Dashboard-section-title dark">Validate Payment</h2>
           <div
             className="Card"
