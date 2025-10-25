@@ -142,7 +142,8 @@ export default function Payment() {
           <Text style={styles.acceptedText}>ACCEPTED HERE</Text>
           <View style={styles.qrBox}>
             <Image
-              source={require('../assets/gcash-qr.png')}
+              source={require('../assets/gcash-qrgit pull origin main --rebase
+.png')}
               style={styles.qrImage}
               resizeMode="contain"
             />
