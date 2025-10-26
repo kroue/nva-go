@@ -215,6 +215,15 @@ body {
 }
 
 /* --------------------
+   Extra Card spacing
+-------------------- */
+.HomePage-recent .Card,
+.HomePage-pickup .Card,
+.HomePage-validate .Card {
+  margin-bottom: 8px;
+}
+
+/* --------------------
    Dashboard layout
 -------------------- */
 .Dashboard {

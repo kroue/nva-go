@@ -17,13 +17,13 @@ const pillActive = {
 };
 const rowStyle = {
   display: 'grid',
-  gridTemplateColumns: '1fr auto',
+  gridTemplateColumns: '1.5fr 1fr',
   alignItems: 'center',
-  gap: 12,
+  gap: 15,
   padding: '12px 6px',
   borderBottom: '1px solid #f1f1f4',
 };
-const nameStyle = { fontSize: 20, fontWeight: 800, color: '#22263f' };
+const nameStyle = { fontSize: 15, fontWeight: 700, color: '#22263f', textAlign: 'left', textTransform: 'lower'};
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -57,15 +57,17 @@ const AdminProducts = () => {
   return (
     <div style={{ padding: 12 }}>
       <div
-        style={{
-          background: '#e5e5e5',
-          color: '#252b55',
-          fontWeight: 800,
-          fontSize: 22,
-          padding: '12px 18px',
-          borderRadius: 8,
-          marginBottom: 14,
-        }}
+         style={{
+            background: '#d9d9d9',
+            color: '#252b55',
+            fontSize: 15,
+            fontWeight: 800,
+            padding: '10px 18px',
+            borderRadius: 8,
+            marginBottom: 10,
+            textTransform: 'uppercase',
+            textAlign: 'left',
+         }}
       >
         Manage Products
       </div>

@@ -327,7 +327,7 @@ export default function OrderForm() {
         <TextInput style={styles.inputFull} placeholder="Contact Number" value={contact} onChangeText={setContact} />
         <TextInput style={styles.inputFull} placeholder="Address" value={address} onChangeText={setAddress} />
 
-        <Text style={styles.sectionTitle}>Order Details <Text style={styles.note}>NOTE: Additional fee for layout ₱150</Text></Text>
+        <Text style={styles.sectionTitle}>Order Details<Text style={styles.note}>  NOTE: Additional fee for layout ₱150</Text></Text>
         <View style={styles.row}>
           <Text style={styles.label}>Already have file?</Text>
           <TouchableOpacity onPress={() => setHasFile(true)} style={styles.radioRow}>
@@ -341,11 +341,9 @@ export default function OrderForm() {
         </View>
         <View style={styles.row}>
           <TouchableOpacity style={styles.attachBtn} onPress={pickDocument}>
-            <Text style={styles.attachText}>{attachedFile ? 'Replace file' : 'Attach file'}</Text>
+            <Text style={styles.attachText}>{attachedFile ? 'Replace file' : 'Attach file'} + </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.plusBtn}>
-            <Text style={styles.plusText}>+</Text>
-          </TouchableOpacity>
+         
         </View>
 
         {/* Variant selection */}
@@ -451,37 +449,204 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
 
   // New styles to enable scrolling properly
-  scroll: { flex: 1, backgroundColor: '#fff' },
-  contentContainer: { padding: 16, paddingBottom: 32 },
-
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 24, elevation: 2 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  productImage: { width: 80, height: 60, borderRadius: 8, marginRight: 12 },
-  productTitle: { fontSize: 22, fontWeight: 'bold', color: '#232B55' },
-  divider: { height: 1, backgroundColor: '#ccc', marginVertical: 8 },
-  sectionTitle: { fontWeight: 'bold', fontSize: 16, color: '#232B55', marginTop: 8, marginBottom: 6 },
-  note: { fontWeight: 'normal', fontSize: 12, color: '#222' },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  inputHalf: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginRight: 8, backgroundColor: '#fff', justifyContent: 'center' },
-  inputFull: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginBottom: 8, backgroundColor: '#fff' },
-  inputSmall: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginRight: 8, backgroundColor: '#fff' },
-  label: { fontSize: 14, color: '#232B55', marginRight: 8 },
-  radioRow: { flexDirection: 'row', alignItems: 'center', marginRight: 8 },
-  radio: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: '#232B55', marginRight: 4 },
-  radioSelected: { backgroundColor: '#2196F3' },
-  radioLabel: { fontSize: 14, color: '#232B55' },
-  attachBtn: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, backgroundColor: '#fff', marginRight: 8 },
-  attachText: { color: '#232B55', fontWeight: '500' },
-  plusBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#232B55', alignItems: 'center', justifyContent: 'center' },
-  plusText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  instructions: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, minHeight: 60, backgroundColor: '#fff', marginBottom: 8 },
-  summaryBox: { backgroundColor: '#eee', borderRadius: 8, padding: 12, marginVertical: 12 },
-  summaryText: { color: '#232B55', fontWeight: 'bold', fontSize: 16 },
-  checkoutBtn: { backgroundColor: '#232B55', borderRadius: 24, padding: 16, alignItems: 'center', marginTop: 12 },
-  checkoutText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  variantBtn: { padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#232B55', marginBottom: 6, backgroundColor: '#fff' },
-  variantBtnSelected: { backgroundColor: '#232B55', borderColor: '#2196F3' },
-  variantText: { color: '#232B55', fontSize: 15 },
-  helperText: { color: '#556', fontSize: 12, marginTop: 4, marginBottom: 8 },
-  errorText: { color: '#D32F2F', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: '600' },
+  scroll: { 
+    flex: 1,
+    backgroundColor: '#ffffff' 
+  },
+  contentContainer: { 
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 20, 
+    backgroundColor: '#ffffff'
+  },
+  card: { 
+    backgroundColor: '#EDEDED', 
+    borderRadius: 12, 
+    padding: 16, 
+    marginBottom: 24, 
+    elevation: 2 
+  },
+  headerRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  productImage: { 
+    width: 80, 
+    height: 60, 
+    borderRadius: 8, 
+    marginRight: 12 
+  },
+  productTitle: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#232B55' 
+  },
+  divider: { 
+    height: 1, 
+    backgroundColor: '#ccc', 
+    marginVertical: 8 
+  },
+  sectionTitle: { 
+    fontWeight: 800, 
+    textTransform: "uppercase",
+    fontSize: 15, 
+    color: '#232B55', 
+    marginTop: 10, 
+    marginBottom: 10 
+  },
+  note: { 
+    fontWeight: 'normal', 
+    fontSize: 10, 
+    color: '#222', 
+    textTransform: 'lowercase', 
+    paddingLeft: 20
+  },
+  row: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 8 
+  },
+  inputHalf: { 
+    flex: 1, 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    padding: 8, 
+    marginRight: 8, 
+    backgroundColor: '#fff', 
+    justifyContent: 'center' 
+  },
+  inputFull: { 
+    width: '100%', 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    padding: 8, 
+    marginBottom: 8, 
+    backgroundColor: '#fff'
+  },
+  inputSmall: { 
+    flex: 1, 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    padding: 8, 
+    marginRight: 8, 
+    backgroundColor: '#fff' 
+  },
+  label: { 
+    fontSize: 14, 
+    color: '#232B55', 
+    marginRight: 8, 
+    marginTop: 10,
+  },
+  radioRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 8 
+  },
+  radio: { 
+    width: 16, 
+    height: 16, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: '#232B55', 
+    marginRight: 4 
+  },
+  radioSelected: { 
+    backgroundColor: '#2196F3' 
+  },
+  radioLabel: { 
+    fontSize: 14, 
+    color: '#232B55' 
+  },
+  attachBtn: { 
+    flex: 1, 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    padding: 8, 
+    backgroundColor: '#fff', 
+    marginRight: 8 
+  },
+  attachText: { 
+    color: '#232B55', 
+    fontWeight: '500' 
+  },
+  plusBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: '#232B55', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  plusText: { 
+    color: '#fff',
+    fontSize: 20, 
+    fontWeight: 'bold'
+   },
+  instructions: { 
+    width: '100%', 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    padding: 8, 
+    minHeight: 60, 
+    backgroundColor: '#fff', 
+    marginBottom: 8 
+  },
+  summaryBox: { 
+    backgroundColor: '#eee', 
+    borderRadius: 8, 
+    padding: 12, 
+    marginVertical: 12 
+  },
+  summaryText: { 
+    color: '#232B55', 
+    fontWeight: 'bold', 
+    fontSize: 16 
+  },
+  checkoutBtn: {
+    backgroundColor: '#232B55', 
+    borderRadius: 24, 
+    padding: 16, 
+    alignItems: 'center', 
+    marginTop: 12 
+  },
+  checkoutText: { 
+    color: '#fff', 
+    fontSize: 18, 
+    fontWeight: 'bold' 
+  },
+  variantBtn: { 
+    padding: 10, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    marginBottom: 6, 
+    backgroundColor: '#fff', 
+  },
+  variantBtnSelected: { 
+    backgroundColor: '#232B55', 
+    borderColor: '#2196F3' 
+  },
+  variantText: { 
+    color: '#232B55', 
+    fontSize: 15 
+  },
+  helperText: { 
+    color: '#556', 
+    fontSize: 12, 
+    marginTop: 4, 
+    marginBottom: 8
+   },
+  errorText: { 
+    color: '#D32F2F', 
+    fontSize: 12, 
+    marginTop: 4, 
+    marginBottom: 8, 
+    fontWeight: '600'
+   },
 });

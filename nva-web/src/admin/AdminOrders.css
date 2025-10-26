@@ -1,12 +1,14 @@
 .AdminOrders { padding: 12px; }
 .AdminOrders-title {
-  background: #e5e5e5;
+  background: #d9d9d9;
   color: #252b55;
+  font-size: 15px;
   font-weight: 800;
-  font-size: 22px;
-  padding: 12px 18px;
+  padding: 10px 18px;
   border-radius: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  text-align: left;
 }
 .AdminOrders-tableWrap {
   background: #fff;
@@ -23,15 +25,19 @@
 .AdminOrders-table thead th {
   text-align: left;
   color: #344054;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 13px;
   padding: 14px 16px;
   border-bottom: 1px solid #eef0f4;
   background: #fafbff;
+  text-transform: uppercase;
 }
 .AdminOrders-table tbody td {
   padding: 14px 16px;
   border-bottom: 1px solid #f1f1f1;
   color: #101828;
+  text-align: left;
+
 }
 .AdminOrders-row { cursor: pointer; }
 .AdminOrders-row:hover { background: #fafafa; }
@@ -41,7 +47,10 @@
   color: #667085;
 }
 
-.muted { color: #475467; }
+.muted {
+  color: #475467; 
+  text-align: left;
+}
 
 .badge {
   display: inline-block;

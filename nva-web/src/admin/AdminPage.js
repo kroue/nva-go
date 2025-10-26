@@ -234,18 +234,20 @@ const AdminPage = () => {
   }, [todayBuckets]);
 
   return (
-    <div className="HomePage">
-      <div className="HomePage-titlebar">
-        <h2 className="HomePage-titlebar-text">Home</h2>
-      </div>
+    <div className="AdminHomePage-Header">
+
 
       {/* Two-column layout: left = Sales Trend, right = Reports Calendar + Today's Sales */}
+    
       <div
         className="AdminHome-layout"
         style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}
       >
         {/* Left/main content: Sales Trend */}
         <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="AdminHomePage-titlebar">
+          <h2 className="HomePage-titlebar-text">Home</h2>
+        </div>
           <div className="Dashboard-section HomePage-recent">
             <h2 className="Dashboard-section-title dark">Sales Trend</h2>
             <div className="Card">
@@ -319,14 +321,14 @@ const AdminPage = () => {
         >
           <div
             style={{
-              background: '#e5e5e5',
-              borderRadius: 12,
-              padding: '12px 24px',
-              fontWeight: 700,
-              fontSize: 28,
+              background: '#d9d9d9',
               color: '#252b55',
-              width: '100%',
+              fontSize: 15,
+              fontWeight: 800,
+              padding: '10px 18px',
+              borderRadius: 8,
               textAlign: 'left',
+              textTransform: 'uppercase'
             }}
           >
             Reports Calendar
@@ -335,14 +337,12 @@ const AdminPage = () => {
           <div
             style={{
               background: '#252b55',
-              borderRadius: 12,
+              borderRadius: 8,
               color: '#fff',
-              padding: 18,
-              minHeight: 180,
-              width: '100%',
+              padding: '10px 15px',
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>{monthText}</div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 20, marginTop: 10, textAlign: 'left' }}>{monthText}</div>
 
             <div
               style={{
@@ -350,7 +350,10 @@ const AdminPage = () => {
                 gridTemplateColumns: 'repeat(7, 1fr)',
                 gap: 4,
                 fontWeight: 600,
-                marginBottom: 8,
+                marginBottom: 10,
+                borderTop: '.5px solid #585c7dff',
+                borderBottom: '.5px solid #585c7dff',
+                padding: 5,
               }}
             >
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
@@ -381,6 +384,7 @@ const AdminPage = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: c.isToday ? 700 : 400,
+                        fontSize: 15,
                       }}
                     >
                       {c.day}
@@ -399,7 +403,6 @@ const AdminPage = () => {
               borderRadius: 12,
               border: '1px solid #252b55',
               padding: 18,
-              width: '100%',
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 18, color: '#252b55', marginBottom: 8 }}>

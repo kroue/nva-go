@@ -11,7 +11,6 @@ const emptyForm = {
   first_name: '',
   last_name: '',
   phone_number: '',
-  address: '',
   position: '',
 };
 
@@ -53,7 +52,6 @@ const AdminEmployees = () => {
           first_name: form.first_name,
           last_name: form.last_name,
           phone_number: form.phone_number,
-          address: form.address,
         },
       },
     });
@@ -70,7 +68,6 @@ const AdminEmployees = () => {
       first_name: form.first_name,
       last_name: form.last_name,
       phone_number: form.phone_number,
-      address: form.address,
       position: form.position,
       department: form.department,
       is_active: true,
@@ -93,7 +90,6 @@ const AdminEmployees = () => {
       first_name: emp.first_name,
       last_name: emp.last_name,
       phone_number: emp.phone_number,
-      address: emp.address,
       position: emp.position,
       department: emp.department,
       password: '', // leave blank
@@ -111,7 +107,6 @@ const AdminEmployees = () => {
       first_name: form.first_name,
       last_name: form.last_name,
       phone_number: form.phone_number,
-      address: form.address,
       position: form.position,
       department: form.department,
     }).eq('id', editingId);
@@ -140,7 +135,9 @@ const AdminEmployees = () => {
   };
 
   return (
+    
     <div className="AdminEmployees-container">
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 className="AdminEmployees-title">Employees</h2>
         <button
@@ -154,7 +151,7 @@ const AdminEmployees = () => {
       <table className="AdminEmployees-table">
         <thead>
           <tr>
-            <th>Email</th><th>Username</th><th>Name</th><th>Phone</th><th>Address</th><th>Position</th><th>Actions</th>
+            <th>Email</th><th>Username</th><th>Name</th><th>Phone</th><th>Position</th><th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -164,7 +161,6 @@ const AdminEmployees = () => {
               <td>{emp.username}</td>
               <td>{emp.first_name} {emp.last_name}</td>
               <td>{emp.phone_number}</td>
-              <td>{emp.address}</td>
               <td>{emp.position}</td>
               <td>
                 <button onClick={() => handleEdit(emp)}>Edit</button>
@@ -191,7 +187,6 @@ const AdminEmployees = () => {
               <input name="first_name" placeholder="First Name" value={form.first_name} onChange={handleChange} required />
               <input name="last_name" placeholder="Last Name" value={form.last_name} onChange={handleChange} required />
               <input name="phone_number" placeholder="Phone Number" value={form.phone_number} onChange={handleChange} />
-              <input name="address" placeholder="Address" value={form.address} onChange={handleChange} />
               <input name="position" placeholder="Position" value={form.position} onChange={handleChange} />
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                 <button type="submit">{editingId ? 'Update' : 'Add'} Employee</button>

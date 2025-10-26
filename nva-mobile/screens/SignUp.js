@@ -142,7 +142,7 @@ export default function SignUp({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.row, { marginBottom: 32, alignItems: 'center' }]}>
+      <View style={[styles.Agreerow, { marginBottom: 32, alignItems: 'center' }]}>
         <TouchableOpacity style={styles.customCheckbox} onPress={() => setAgree(!agree)}>
           {agree ? (
             <FontAwesome name="check-square-o" size={22} color="#232B55" />
@@ -160,19 +160,6 @@ export default function SignUp({ navigation }) {
         <Text style={styles.signupButtonText}>Sign Up</Text>
       </TouchableOpacity>
 
-      {/* Social Login (unchanged) */}
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={styles.orText}>Or Sign up with</Text>
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialButton}>
-            <FontAwesome name="facebook-official" size={36} color="#1877F3" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <MaterialIcons name="mail" size={36} color="#EA4335" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <View style={styles.signinRow}>
         <Text style={styles.signinText}>Already have an account?</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -184,9 +171,29 @@ export default function SignUp({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 24, paddingTop: 60 },
-  title: { fontSize: 34, fontWeight: 'bold', marginBottom: 36 },
-  row: { flexDirection: 'row', marginBottom: 16 },
+  container: { 
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingTop: 100 
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 800,
+    marginTop: 20,
+    marginBottom: 30,
+    color: '#252B55',
+    textTransform: "uppercase"
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 16 
+  },
+  Agreerow: {
+    flexDirection: 'row',
+    marginBottom: 16, 
+    paddingHorizontal: 10,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,11 +205,29 @@ const styles = StyleSheet.create({
     height: 44,
     backgroundColor: '#fff',
   },
-  input: { flex: 1, fontSize: 16, color: '#222' },
-  showText: { color: '#222', fontWeight: '500', marginLeft: 8 },
-  customCheckbox: { marginRight: 4 },
-  agreeText: { color: '#555', fontSize: 15 },
-  linkText: { color: '#D32F2F', fontSize: 15, fontWeight: '400' },
+  input: { 
+    flex: 1,
+    fontSize: 16, 
+    color: '#222'
+  },
+  showText: { 
+    color: '#222', 
+    fontWeight: '500', 
+    marginLeft: 8 
+  },
+  customCheckbox: { 
+    marginRight: 4 
+  },
+  agreeText: { 
+    color: '#555', 
+    fontSize: 15, 
+    paddingHorizontal: 10,
+  },
+  linkText: { 
+    color: '#D32F2F', 
+    fontSize: 15, 
+    fontWeight: '400'
+   },
   signupButton: {
     backgroundColor: '#232B55',
     borderRadius: 20,
@@ -212,11 +237,46 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     marginTop: 8,
   },
-  signupButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
-  orText: { color: '#222', fontSize: 15, marginBottom: 12 },
-  socialRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
-  socialButton: { marginHorizontal: 12 },
-  signinRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 },
-  signinText: { color: '#222', fontSize: 15, marginRight: 6 },
-  signinLink: { color: '#D32F2F', fontSize: 15, fontWeight: '500' },
+  signupButtonText: { 
+    color: '#fff', 
+    fontSize: 17, 
+    fontWeight: 'bold' 
+  },
+  orText: { 
+    color: '#222', 
+    fontSize: 15, 
+    marginBottom: 12 
+  },
+  socialRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    marginBottom: 24 
+  },
+  socialButton: { 
+    marginHorizontal: 12 
+  },
+  signinRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 32,
+  },
+  signinText: { 
+    color: '#222', 
+    fontSize: 15, 
+    marginRight: 6 
+  },
+  signinLink: { 
+    color: '#D32F2F', 
+    fontSize: 15, 
+    fontWeight: '500' 
+  },
+  footer: {
+  justifyContent: 'flex-end',
+  alignItems: 'center',
+  paddingBottom: 24,
+  }
+
+  
+
 });
