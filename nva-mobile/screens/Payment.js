@@ -142,7 +142,8 @@ export default function Payment() {
           <Text style={styles.acceptedText}>ACCEPTED HERE</Text>
           <View style={styles.qrBox}>
             <Image
-              source={require('../assets/gcash-qr.png')}
+              source={require('../assets/gcash-qrgit pull origin main --rebase
+.png')}
               style={styles.qrImage}
               resizeMode="contain"
             />
@@ -196,9 +197,11 @@ export default function Payment() {
 const styles = StyleSheet.create({
   scrollContainer: {
     padding: 12,
+    flex: 1, 
     backgroundColor: '#f5f5f5',
     alignItems: 'center',
-    flexGrow: 1,
+    display: 'flex',
+    justifyContent: 'center',
   },
   container: {
     width: '100%',
@@ -210,27 +213,29 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 16,
     width: '100%',
+    height: '70%',
     maxWidth: 370,
-    alignItems: 'center',
+
   },
   gcashLogo: {
     color: '#fff',
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginTop: 10,
+    marginBottom: 20,
     textAlign: 'center',
   },
   policyText: {
     color: '#fff',
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 20,
   },
   acceptedText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 17,
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
   },
   qrBox: {
@@ -240,29 +245,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     width: '100%',
+    height: '68%',
+    justifyContent: 'center'
   },
   qrImage: {
     width: 160,
     height: 160,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   transferNote: {
     color: '#888',
     fontSize: 12,
-    marginBottom: 2,
+    marginBottom: 10,
     textAlign: 'center',
   },
   accountName: {
     color: '#1877F3',
     fontWeight: 'bold',
     fontSize: 16,
-    marginBottom: 2,
+    marginBottom: 10,
     textAlign: 'center',
   },
   accountDetails: {
     color: '#222',
     fontSize: 13,
     textAlign: 'center',
+    marginBottom: 5
   },
   attachBox: {
     backgroundColor: '#eee',
@@ -275,7 +283,8 @@ const styles = StyleSheet.create({
   attachLabel: {
     color: '#222',
     fontSize: 13,
-    marginBottom: 6,
+    marginBottom: 10,
+    fontWeight: 600
   },
   attachRow: {
     flexDirection: 'row',

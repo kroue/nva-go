@@ -54,6 +54,7 @@
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid #eef0f4;
+  text-align: left;
 }
 .SalesReport-company .name { font-weight: 800; color: #252b55; }
 .SalesReport-company .addr { font-size: 12px; color: #667085; }
@@ -63,7 +64,7 @@
 .SalesReport-summary {
   display: flex;
   gap: 18px;
-  padding: 10px 16px;
+  padding: 20px 16px;
   font-size: 14px;
   color: #344054;
   border-bottom: 1px solid #f1f1f1;

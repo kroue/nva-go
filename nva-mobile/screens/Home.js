@@ -39,7 +39,8 @@ export default function Home() {
             <Text style={styles.italicBoldUnderline}>Fast Picks</Text>
           </Text>
           <Text style={styles.headerLine}>
-            <Text style={styles.italicBoldUnderline}>for Fast Prints.</Text>
+            <Text style={styles.italicBoldUnderline}>for</Text>
+            <Text style={styles.italicBoldUnderlineBold}> Fast Prints</Text>
           </Text>
         </View>
 
@@ -55,7 +56,7 @@ export default function Home() {
                   onPress={() => handleProductPress(item)}
                 >
                   <Image
-                    source={item.image_url ? { uri: item.image_url } : require('../assets/nvago-icon.png')}
+                    source={item.image_url ? { uri: item.image_url } : require('../assets/Dashboard.png')}
                     style={styles.productImage}
                     resizeMode="cover"
                   />
@@ -77,7 +78,7 @@ export default function Home() {
 }
 
 const { width } = Dimensions.get('window');
-const gridItemSize = (width - 64) / 3;
+const gridItemSize = (width - 50) / 2;
 
 const styles = StyleSheet.create({
   container: {
@@ -90,14 +91,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerLine: {
-    fontSize: 28,
-    marginBottom: 2,
+    fontSize: 30,
+    marginBottom: 3,
   },
   italicBoldUnderline: {
     fontStyle: 'italic',
-    fontWeight: 'bold',
+    fontWeight: 800,
     color: '#3A4286',
-    textDecorationColor: '#2196F3',
+    textDecorationStyle: 'solid',
+  },
+  italicBoldUnderlineBold: {
+    fontStyle: 'italic',
+    fontWeight: 800,
+    color: '#252B55',
     textDecorationStyle: 'solid',
   },
   gridContainer: {

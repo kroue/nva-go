@@ -127,12 +127,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 100,
   },
   title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    marginBottom: 36,
+    fontSize: 32,
+    fontWeight: 800,
+    marginTop: 20,
+    marginBottom: 30,
+    color: '#232B55',
+    textTransform: 'uppercase'
   },
   inputContainer: {
     flexDirection: 'row',
@@ -162,6 +165,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
+    paddingHorizontal: 10,
   },
   customCheckbox: {
     marginRight: 4,

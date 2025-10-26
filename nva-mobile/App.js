@@ -435,9 +435,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     backgroundColor: '#232B55',
-    paddingTop: 36,
+    paddingTop: 50,
     paddingBottom: 12,
     paddingHorizontal: 18,
+    height: '13%',
   },
   menuButton: {
     padding: 4,
@@ -471,11 +472,12 @@ const styles = StyleSheet.create({
   },
   sidebarHeader: {
     backgroundColor: '#232B55',
-    paddingTop: 36,
+    paddingTop: 50,
     paddingBottom: 18,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    height: '13%',
   },
   profilePic: {
     width: 54,
