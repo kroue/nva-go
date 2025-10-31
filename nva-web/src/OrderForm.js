@@ -88,6 +88,11 @@ const OrderForm = () => {
   const [showPaymentSummary, setShowPaymentSummary] = useState(false);
   const [orderId, setOrderId] = useState(null); // Store order ID for updates
 
+  // For Other Products
+  const [customProductName, setCustomProductName] = useState('');
+  const [customVariant, setCustomVariant] = useState('');
+  const [customVariantPrice, setCustomVariantPrice] = useState('');
+
   // Price calculation
   const [total, setTotal] = useState(0);
 
@@ -109,6 +114,7 @@ const OrderForm = () => {
   const isDTFPrint = normalizedProduct.includes('dtf') && normalizedProduct.includes('print');
   const isSolventTarp = normalizedProduct.includes('solvent') && normalizedProduct.includes('tarp');
   const isSintra = normalizedProduct.includes('sintra'); // matches 'sintraboard' or 'sintra board'
+  const isOtherProducts = normalizedProduct.includes('other products');
   const isDimProduct = isSintra || isSolventTarp; // Only these require dimensions per spec
 
   // Set pickup date/time on mount
@@ -124,8 +130,8 @@ const OrderForm = () => {
   // Fetch product and variants from Supabase
   useEffect(() => {
     const fetchProductAndVariants = async () => {
-      if (!product) return;
-      
+      if (!product || isOtherProducts) return;
+
       try {
         // Fetch product data
         const { data: productData, error: productError } = await supabase
@@ -133,12 +139,12 @@ const OrderForm = () => {
           .select('*')
           .eq('name', product)
           .single();
-        
+
         if (productError) {
           console.error('Error fetching product:', productError);
           return;
         }
-        
+
         setProductData(productData);
 
         // Fetch variants
@@ -156,7 +162,7 @@ const OrderForm = () => {
     };
 
     fetchProductAndVariants();
-  }, [product]);
+  }, [product, isOtherProducts]);
 
   // Walk-in flow: no customer lookup
   useEffect(() => {
@@ -176,11 +182,18 @@ const OrderForm = () => {
   // Calculate price with rules
   useEffect(() => {
     let price = 0;
-    
-    if (selectedVariant && quantity) {
+
+    if (isOtherProducts) {
+      const customPrice = parseFloat(customVariantPrice) || 0;
+      const qtyInt = parseInt(quantity) || 1;
+      price = customPrice * qtyInt;
+      if (!hasFile) {
+        price += 150;
+      }
+    } else if (selectedVariant && quantity) {
       const basePrice = parseFloat(selectedVariant.retail_price || 0);
       const qtyInt = parseInt(quantity) || 1;
-      
+
       if (isDimProduct) {
         const heightFloat = parseFloat(height) || 0;
         const widthFloat = parseFloat(width) || 0;
@@ -189,11 +202,11 @@ const OrderForm = () => {
       } else {
         price = basePrice * qtyInt;
       }
-      
+
       if (!hasFile) {
         price += 150;
       }
-      
+
       if (isSolventTarp) {
         const eyeletsInt = parseInt(eyelets) || 0;
         price += eyeletsInt * 4 * qtyInt;
@@ -201,7 +214,7 @@ const OrderForm = () => {
     } else if (productData && quantity) {
       const basePrice = parseFloat(productData.price || 0);
       const qtyInt = parseInt(quantity) || 1;
-      
+
       if (isDimProduct) {
         const heightFloat = parseFloat(height) || 0;
         const widthFloat = parseFloat(width) || 0;
@@ -210,7 +223,7 @@ const OrderForm = () => {
       } else {
         price = basePrice * qtyInt;
       }
-      
+
       if (!hasFile) {
         price += 150;
       }
@@ -220,9 +233,9 @@ const OrderForm = () => {
         price += eyeletsInt * 4 * qtyInt;
       }
     }
-    
+
     setTotal(Math.round(price * 100) / 100);
-  }, [selectedVariant, quantity, width, height, hasFile, productData, eyelets, isDimProduct, isSolventTarp]);
+  }, [selectedVariant, quantity, width, height, hasFile, productData, eyelets, isDimProduct, isSolventTarp, isOtherProducts, customVariantPrice]);
 
   const isFormValid = () => {
     if (!firstName || !lastName || !contact || !address || !quantity || !pickupDate || !pickupTime) {
@@ -238,8 +251,12 @@ const OrderForm = () => {
       const large = Math.max(h, w);
       if (small < 2 || large < 3) return false;
     }
-    if (variants.length > 0 && !selectedVariant) {
-      return false;
+    if (isOtherProducts) {
+      if (!customProductName || !customVariant || !customVariantPrice) return false;
+    } else {
+      if (variants.length > 0 && !selectedVariant) {
+        return false;
+      }
     }
     if (isSolventTarp) {
       const e = parseInt(eyelets);
@@ -292,8 +309,8 @@ const OrderForm = () => {
         address: address,
         email: null, // No customer account for walk-ins
         has_file: hasFile,
-        product_name: productData?.name || product,
-        variant: selectedVariant ? (selectedVariant.description || selectedVariant.size || product) : product,
+        product_name: isOtherProducts ? customProductName : (productData?.name || product),
+        variant: isOtherProducts ? customVariant : (selectedVariant ? (selectedVariant.description || selectedVariant.size || product) : product),
         height: isDimProduct ? (height ? parseFloat(height) : null) : null,
         width: isDimProduct ? (width ? parseFloat(width) : null) : null,
         quantity: parseInt(quantity),
@@ -341,7 +358,7 @@ const OrderForm = () => {
       // 1) Mark order as paid (and keep consistency with ValidatePayment page)
       const { error: updErr } = await supabase
         .from('orders')
-        .update({ 
+        .update({
           status: 'Layout Approval',
           payment_proof: 'walk_in_payment'
         })
@@ -410,7 +427,7 @@ const OrderForm = () => {
             <div className="order-summary">
               <div className="summary-row">
                 <span>Product:</span>
-                <span>{product}</span>
+                <span>{isOtherProducts ? customProductName : product}</span>
               </div>
               <div className="summary-row">
                 <span>Customer:</span>
@@ -440,7 +457,13 @@ const OrderForm = () => {
                   <span>{eyelets}</span>
                 </div>
               )}
-              {selectedVariant && (
+              {isOtherProducts && (
+                <div className="summary-row">
+                  <span>Variant:</span>
+                  <span>{customVariant} - ₱{customVariantPrice}</span>
+                </div>
+              )}
+              {selectedVariant && !isOtherProducts && (
                 <div className="summary-row">
                   <span>Variant:</span>
                   <span>{selectedVariant.description || selectedVariant.size}</span>
@@ -479,17 +502,18 @@ const OrderForm = () => {
         <div className="order-form-content">
           {/* Left Side - Product Display */}
           <div className="product-display">
-            <img 
-              src={productData?.image_url || '/images/default-product.jpg'} 
+            <img
+              src={productData?.image_url || '/images/default-product.jpg'}
               alt={product}
               className="product-image"
             />
             <div className="product-info">
-              <h2 className="product-title">{product}</h2>
+              <h2 className="product-title">{isOtherProducts ? 'Other Products' : product}</h2>
               <p className="product-description">
-                {productData?.category === 'Tarpaulin' && 
+                {productData?.category === 'Tarpaulin' &&
                   'High-quality, durable tarpaulin prints perfect for events, promotions, and advertisements. Available in various sizes with vibrant, weather-resistant colors—ideal for indoor or outdoor use.'
                 }
+                {isOtherProducts && 'Custom order for products not listed in our catalog.'}
               </p>
             </div>
           </div>
@@ -538,10 +562,10 @@ const OrderForm = () => {
 
               {/* Order Details */}
               <div className="form-group">
-                <h4>Order Details 
+                <h4>Order Details
                   <span className="note">NOTE: Additional fee for layout ₱150</span>
                 </h4>
-                
+
                 <div className="radio-group">
                   <span className="radio-label">Already have file?</span>
                   <div className="radio-options">
@@ -566,8 +590,38 @@ const OrderForm = () => {
                   </div>
                 </div>
 
+                {/* Custom Product Details for Other Products */}
+                {isOtherProducts && (
+                  <div className="custom-product-section">
+                    <h5>Product Details</h5>
+                    <input
+                      type="text"
+                      placeholder="Product Name"
+                      value={customProductName}
+                      onChange={(e) => setCustomProductName(e.target.value)}
+                      className="form-input full"
+                    />
+                    <div className="form-row">
+                      <input
+                        type="text"
+                        placeholder="Variant"
+                        value={customVariant}
+                        onChange={(e) => setCustomVariant(e.target.value)}
+                        className="form-input half"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Variant Price"
+                        value={customVariantPrice}
+                        onChange={(e) => setCustomVariantPrice(e.target.value)}
+                        className="form-input half"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Variants */}
-                {variants.length > 0 && (
+                {!isOtherProducts && variants.length > 0 && (
                   <div className="variants-section">
                     <h5>Choose Variant</h5>
                     {variants.map((variant, idx) => (
@@ -672,7 +726,7 @@ const OrderForm = () => {
               </div>
 
               {/* Place Order Button */}
-              <button 
+              <button
                 className={`place-order-btn ${!isFormValid() ? 'disabled' : ''}`}
                 onClick={handleCheckout}
                 disabled={!isFormValid()}

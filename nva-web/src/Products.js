@@ -69,6 +69,20 @@ const Products = () => {
               <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
             </div>
           ))}
+          {/* Other Products Card */}
+          <div
+            className="Products-card"
+            onClick={() => navigate('/order-form?product=Other Products')}
+            style={{ cursor: 'pointer' }}
+          >
+            <img
+              src="/images/default-product.jpg"
+              alt="Other Products"
+              className="Products-card-img"
+            />
+            <div className="Products-card-name">Other Products</div>
+            <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>Custom Order</div>
+          </div>
         </div>
       </div>
 
