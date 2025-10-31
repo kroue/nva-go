@@ -1,22 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  StyleSheet, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  KeyboardAvoidingView,
   Platform,
   Image,
   Modal,
   ActivityIndicator,
   Dimensions,
-  Alert
+  Alert,
+  Keyboard
 } from 'react-native';
 import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'proofs';
@@ -77,8 +79,7 @@ export default function Messaging() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 0.7,
       });
 
@@ -244,6 +245,14 @@ export default function Messaging() {
         async payload => {
           if (payload.new.sender === userEmail || payload.new.receiver === userEmail) {
             await fetchMessages();
+            // Send push notification for new message
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: 'New Message',
+                body: `You have a new message from ${userLookup[payload.new.sender] || payload.new.sender}`,
+              },
+              trigger: null,
+            });
           }
         }
       )
@@ -252,7 +261,7 @@ export default function Messaging() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userEmail]);
+  }, [userEmail, userLookup]);
 
   // Send text message
   const sendMessage = async () => {
@@ -487,58 +496,19 @@ export default function Messaging() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 80} // <-- Increase this value!
     >
-      {/* ENHANCED: Full Screen Image Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={() => setModalVisible(false)}
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-          
-          <ScrollView
-            contentContainerStyle={styles.modalScrollContainer}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-          >
-            <TouchableOpacity 
-              activeOpacity={1}
-              onPress={() => setModalVisible(false)}
-            >
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.fullScreenImage}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </ScrollView>
-          
-          <View style={styles.modalInfo}>
-            <Text style={styles.modalInfoText}>Pinch to zoom • Tap to close</Text>
-          </View>
-        </View>
-      </Modal>
-
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>
-          Messages ({messages.length})
-        </Text>
+        <Text style={styles.headerText}>Messages ({messages.length})</Text>
       </View>
 
+      {/* Messages */}
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[styles.container, { flexGrow: 1 }]} // <-- Ensure flexGrow is set!
         ref={scrollViewRef}
+        keyboardShouldPersistTaps="handled"
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -581,6 +551,37 @@ export default function Messaging() {
           <Text style={styles.sendBtnText}>Send</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Full Screen Image Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={styles.closeButtonText}>×</Text>
+          </TouchableOpacity>
+          <ScrollView
+            style={styles.modalScrollContainer}
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+          >
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          </ScrollView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -773,8 +774,6 @@ const styles = StyleSheet.create({
   },
   modalScrollContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   fullScreenImage: {
     width: Dimensions.get('window').width,
@@ -793,5 +792,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     padding: 8,
     borderRadius: 15,
+  },
+  header: {
+    height: 56, // match keyboardVerticalOffset
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  headerText: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#252b55',
   },
 });

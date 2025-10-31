@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import Login from './Login';
 import SignUp from './SignUp';
+import Verification from './Verification';
 import HomePage from './HomePage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -329,6 +330,7 @@ const App = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/verification" element={<Verification />} />
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/forgot-password" element={<RequestPasswordReset />} />

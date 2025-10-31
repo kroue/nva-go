@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import CustomerDetails from '../components/CustomerDetails';
+import OrderDetailsComponent from '../components/OrderDetailsComponent';
+import VariantSelector from '../components/VariantSelector';
+import OrderSummary from '../components/OrderSummary';
+import useOrderCalculation from '../hooks/useOrderCalculation';
+import useFormValidation from '../hooks/useFormValidation';
+import useProductData from '../hooks/useProductData';
 
 export default function OrderForm() {
   // Safely access route params
@@ -21,173 +27,46 @@ export default function OrderForm() {
   const [hasFile, setHasFile] = useState(true);
   const [height, setHeight] = useState('');
   const [width, setWidth] = useState('');
-  const [dimError, setDimError] = useState(null);
-  // NEW: live warning text shown above inputs
-  const [dimWarning, setDimWarning] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [eyelets, setEyelets] = useState('4');
   const [pickupDate, setPickupDate] = useState('');
   const [pickupTime, setPickupTime] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [variants, setVariants] = useState([]);
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [productData, setProductData] = useState(null);
   const [attachedFile, setAttachedFile] = useState(null);
 
   // Date/Time picker states
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // Price calculation
-  const [total, setTotal] = useState(0);
+  // Normalization + product flags
+  const normalize = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const productNameRaw = product || productData?.name || '';
+  const normalizedProduct = normalize(productNameRaw);
+  const isDTFPrint = normalizedProduct.includes('dtf') && normalizedProduct.includes('print');
+  const isSolventTarp = normalizedProduct.includes('solvent') && normalizedProduct.includes('tarp');
+  const isSintra = normalizedProduct.includes('sintra');
+  const requiresDimensions = isSintra || isSolventTarp; // only these two per spec
 
-  const requiresDimensions = ['Tarp', 'Sticker', 'Cloth', 'Film', 'Print', 'Photopaper'].includes(productData?.category);
-
-  // helper to parse numeric inputs safely
-  const parseNum = (v) => {
-    const n = parseFloat(String(v ?? '').toString().replace(',', '.'));
-    return Number.isFinite(n) ? n : NaN;
-  };
-
-  // Fetch product and variants from Supabase
-  useEffect(() => {
-    const fetchProductAndVariants = async () => {
-      if (!product) return;
-      const { data: products, error: pErr } = await supabase
-        .from('products')
-        .select('*')
-        .eq('name', product)
-        .limit(1);
-
-      if (pErr) {
-        console.warn('Product fetch error:', pErr.message);
-        return;
-      }
-
-      if (products && products.length > 0) {
-        const prod = products[0];
-        setProductData(prod);
-
-        const { data: vdata, error: vErr } = await supabase
-          .from('product_variants')
-          .select('*')
-          .eq('product_id', prod.product_id);
-
-        if (vErr) {
-          console.warn('Variants fetch error:', vErr.message);
-        }
-
-        const list = vdata || [];
-        setVariants(list);
-
-        // Auto-select first variant if none selected
-        if (list.length > 0 && !selectedVariant) {
-          setSelectedVariant(list[0]);
-        }
-      }
-    };
-    fetchProductAndVariants();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product]);
+  // Custom hooks
+  const { variants, selectedVariant, setSelectedVariant, productData, fetchCustomer } = useProductData(product);
+  const { total, dimWarning } = useOrderCalculation(selectedVariant, quantity, width, height, hasFile, requiresDimensions, isSolventTarp, eyelets);
+  const { isFormValid, dtfWarning } = useFormValidation(
+    firstName, lastName, contact, address, variants, selectedVariant, quantity, isDTFPrint, requiresDimensions, height, width, isSolventTarp, eyelets, pickupDate, pickupTime, hasFile, attachedFile
+  );
 
   // Fetch customer info from AsyncStorage and Supabase
   useEffect(() => {
-    const fetchCustomer = async () => {
-      try {
-        const email = await AsyncStorage.getItem('email');
-        if (!email) return;
-        const { data, error } = await supabase
-          .from('customers')
-          .select('first_name,last_name,phone_number,address')
-          .eq('email', email)
-          .single();
-        if (error) {
-          console.warn('Customer fetch error:', error.message);
-        }
-        if (data) {
-          setFirstName(data.first_name || '');
-          setLastName(data.last_name || '');
-          setContact(data.phone_number || '');
-          setAddress(data.address || '');
-        }
-      } catch (e) {
-        console.warn('AsyncStorage error:', e.message);
+    const loadCustomer = async () => {
+      const customerData = await fetchCustomer();
+      if (customerData) {
+        setFirstName(customerData.first_name || '');
+        setLastName(customerData.last_name || '');
+        setContact(customerData.phone_number || '');
+        setAddress(customerData.address || '');
       }
     };
-    fetchCustomer();
-  }, []);
-
-  // Calculate price + dimension validation + live warning
-  useEffect(() => {
-    // LIVE WARNING: runs on every change to width/height
-    if (requiresDimensions) {
-      const h = parseNum(height);
-      const w = parseNum(width);
-
-      const parts = [];
-      if (Number.isFinite(w) && w < 2) parts.push('Width is below 2"');
-      if (Number.isFinite(h) && h < 2) parts.push('Height is below 2"');
-
-      if (Number.isFinite(h) && Number.isFinite(w)) {
-        const small = Math.min(h, w);
-        const large = Math.max(h, w);
-        if (small < 2 || large < 3) {
-          // orientation-agnostic 2×3 rule
-          if (!parts.length) parts.push('Minimum size is 2 × 3 inches (any orientation)');
-        }
-      }
-
-      setDimWarning(parts.length ? `Minimum size: 2 × 3 inches. ${parts.join('. ')}` : '');
-    } else {
-      setDimWarning('');
-    }
-
-    // PRICE + FORM VALIDATION (kept from your previous logic)
-    if (requiresDimensions) {
-      const h = parseNum(height);
-      const w = parseNum(width);
-      if (!Number.isFinite(h) || !Number.isFinite(w)) {
-        setDimError(null);
-        setTotal(0);
-        return;
-      }
-      const small = Math.min(h, w);
-      const large = Math.max(h, w);
-      if (small < 2 || large < 3) {
-        setDimError('Minimum size is 2 × 3 inches (either 2×3 or 3×2).');
-        setTotal(0);
-        return;
-      }
-      setDimError(null);
-    } else {
-      setDimError(null);
-    }
-
-    let price = 0;
-    const qty = parseInt(quantity) || 1;
-    let area = 1;
-
-    if (selectedVariant && requiresDimensions) {
-      const w = parseFloat(width) || 0;
-      const h = parseFloat(height) || 0;
-      area = w * h;
-      if (area === 0) area = 1;
-      const unitPrice =
-        qty >= 10
-          ? selectedVariant.wholesale_price || selectedVariant.retail_price || 0
-          : selectedVariant.retail_price || 0;
-      price = unitPrice * area * qty;
-    } else if (selectedVariant) {
-      const unitPrice =
-        qty >= 10
-          ? selectedVariant.wholesale_price || selectedVariant.retail_price || 0
-          : selectedVariant.retail_price || 0;
-      price = unitPrice * qty;
-    }
-
-    if (!hasFile) price += 150;
-    setTotal(price);
-  }, [selectedVariant, quantity, width, height, hasFile, requiresDimensions]);
+    loadCustomer();
+  }, [fetchCustomer]);
 
   // Date/time picker handlers
   const handleDateChange = (event, selectedDate) => {
@@ -206,24 +85,6 @@ export default function OrderForm() {
     }
   };
 
-  const isFormValid = () => {
-    if (!firstName.trim() || !lastName.trim() || !contact.trim() || !address.trim()) return false;
-    // Only require variant when there are variants
-    if (variants.length > 0 && !selectedVariant) return false;
-    if (!quantity || isNaN(quantity) || parseInt(quantity) < 1) return false;
-
-    if (requiresDimensions) {
-      const h = parseNum(height);
-      const w = parseNum(width);
-      if (!Number.isFinite(h) || !Number.isFinite(w)) return false;
-      if (w < 2 || h < 2) return false;               // both sides must be >= 2
-      if (w < 3 && h < 3) return false;               // at least one side must be >= 3
-    }
-    if (product === 'SOLVENT TARP' && (!eyelets || isNaN(eyelets) || parseInt(eyelets) < 0)) return false;
-    if (!pickupDate || !pickupTime) return false;
-    return true;
-  };
-
   const handleCheckout = async () => {
     if (!isFormValid()) {
       alert('Please fill out all required fields.');
@@ -236,11 +97,12 @@ export default function OrderForm() {
       phone_number: contact,
       address,
       has_file: hasFile,
+      product_name: product || productData?.name || '',
       variant: selectedVariant?.description || selectedVariant?.size || '',
       height: requiresDimensions ? (height ? parseFloat(height) : null) : null,
       width: requiresDimensions ? (width ? parseFloat(width) : null) : null,
       quantity: parseInt(quantity) || 1,
-      eyelets: product === 'SOLVENT TARP' ? (parseInt(eyelets) * (parseInt(quantity) || 1)) : null,
+      eyelets: isSolventTarp ? (parseInt(eyelets) || 0) : null,
       pickup_date: pickupDate,
       pickup_time: pickupTime,
       instructions,
@@ -254,9 +116,9 @@ export default function OrderForm() {
       employee_email: null
     };
 
-  console.log('Order data:', orderData);
-  // Pass attached file URL for compatibility as cloudinaryUrl
-  navigation.navigate('Payment', { order: orderData, cloudinaryUrl: attachedFile?.url || null });
+    console.log('Order data:', orderData);
+    // Pass attached file URL for compatibility as cloudinaryUrl
+    navigation.navigate('Payment', { order: orderData, cloudinaryUrl: attachedFile?.url || null });
   };
 
   const pickDocument = async () => {
@@ -319,129 +181,42 @@ export default function OrderForm() {
         </View>
         <View style={styles.divider} />
 
-        <Text style={styles.sectionTitle}>Customer Details</Text>
-        <View style={styles.row}>
-          <TextInput style={styles.inputHalf} placeholder="First Name" value={firstName} onChangeText={setFirstName} />
-          <TextInput style={styles.inputHalf} placeholder="Last Name" value={lastName} onChangeText={setLastName} />
-        </View>
-        <TextInput style={styles.inputFull} placeholder="Contact Number" value={contact} onChangeText={setContact} />
-        <TextInput style={styles.inputFull} placeholder="Address" value={address} onChangeText={setAddress} />
-
-        <Text style={styles.sectionTitle}>Order Details <Text style={styles.note}>NOTE: Additional fee for layout ₱150</Text></Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Already have file?</Text>
-          <TouchableOpacity onPress={() => setHasFile(true)} style={styles.radioRow}>
-            <View style={[styles.radio, hasFile && styles.radioSelected]} />
-            <Text style={styles.radioLabel}>YES</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setHasFile(false)} style={styles.radioRow}>
-            <View style={[styles.radio, !hasFile && styles.radioSelected]} />
-            <Text style={styles.radioLabel}>NO</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.attachBtn} onPress={pickDocument}>
-            <Text style={styles.attachText}>{attachedFile ? 'Replace file' : 'Attach file'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.plusBtn}>
-            <Text style={styles.plusText}>+</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Variant selection */}
-        {variants.length > 0 && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>Choose Variant</Text>
-            {variants.map((variant, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.variantBtn,
-                  selectedVariant === variant && styles.variantBtnSelected
-                ]}
-                onPress={() => setSelectedVariant(variant)}
-              >
-                <Text style={[styles.variantText, selectedVariant === variant && { color: '#fff' }]}>
-                  {variant.description || variant.size || 'Variant'} - Retail: ₱{variant.retail_price}
-                  {variant.wholesale_price ? ` / Wholesale: ₱${variant.wholesale_price}` : ''}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.row}>
-          <TextInput style={styles.inputSmall} placeholder="Height (ft)" value={height} onChangeText={setHeight} keyboardType="numeric" />
-          <TextInput style={styles.inputSmall} placeholder="Width (ft)" value={width} onChangeText={setWidth} keyboardType="numeric" />
-          <TextInput style={styles.inputSmall} placeholder="Quantity" value={quantity} onChangeText={setQuantity} keyboardType="numeric" />
-        </View>
-        {/* Eyelets only for Solvent Tarp */}
-        {product === 'SOLVENT TARP' && (
-          <TextInput style={styles.inputSmall} placeholder="Eyelets" value={eyelets} onChangeText={setEyelets} keyboardType="numeric" />
-        )}
-
-        {/* Date and Time Pickers */}
-        <View style={styles.row}>
-          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowDatePicker(true)}>
-            <Text style={{ color: pickupDate ? '#222' : '#888' }}>
-              {pickupDate ? pickupDate : 'Date to Pickup'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowTimePicker(true)}>
-            <Text style={{ color: pickupTime ? '#222' : '#888' }}>
-              {pickupTime ? pickupTime : 'Time to Pickup'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {showDatePicker && (
-          <DateTimePicker
-            value={pickupDate ? new Date(pickupDate) : new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-          />
-        )}
-        {showTimePicker && (
-          <DateTimePicker
-            value={pickupTime ? new Date(`1970-01-01T${pickupTime}:00`) : new Date()}
-            mode="time"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleTimeChange}
-          />
-        )}
-
-        <TextInput
-          style={styles.instructions}
-          placeholder="Instructions"
-          value={instructions}
-          onChangeText={setInstructions}
-          multiline
+        <CustomerDetails
+          firstName={firstName} setFirstName={setFirstName}
+          lastName={lastName} setLastName={setLastName}
+          contact={contact} setContact={setContact}
+          address={address} setAddress={setAddress}
         />
 
-        <View style={styles.summaryBox}>
-          <Text style={styles.summaryText}>Order Summary</Text>
-          <Text style={styles.summaryText}>Total: ₱{total}</Text>
-        </View>
-        <TouchableOpacity
-          style={[
-            styles.checkoutBtn,
-            { opacity: isFormValid() ? 1 : 0.5 }
-          ]}
-          onPress={handleCheckout}
-          disabled={!isFormValid()}
-        >
-          <Text style={styles.checkoutText}>Check Out</Text>
-        </TouchableOpacity>
+        <OrderDetailsComponent
+          hasFile={hasFile} setHasFile={setHasFile}
+          attachedFile={attachedFile} setAttachedFile={setAttachedFile}
+          requiresDimensions={requiresDimensions}
+          height={height} setHeight={setHeight}
+          width={width} setWidth={setWidth}
+          quantity={quantity} setQuantity={setQuantity}
+          isSolventTarp={isSolventTarp}
+          eyelets={eyelets} setEyelets={setEyelets}
+          pickupDate={pickupDate} setPickupDate={setPickupDate}
+          pickupTime={pickupTime} setPickupTime={setPickupTime}
+          instructions={instructions} setInstructions={setInstructions}
+          showDatePicker={showDatePicker} setShowDatePicker={setShowDatePicker}
+          showTimePicker={showTimePicker} setShowTimePicker={setShowTimePicker}
+          handleDateChange={handleDateChange}
+          handleTimeChange={handleTimeChange}
+          pickDocument={pickDocument}
+          dimWarning={dimWarning}
+          dtfWarning={dtfWarning}
+        />
+
+        <VariantSelector
+          variants={variants}
+          selectedVariant={selectedVariant}
+          setSelectedVariant={setSelectedVariant}
+        />
+
+        <OrderSummary total={total} isFormValid={isFormValid} handleCheckout={handleCheckout} />
       </View>
-      {/* NEW: Dimension error message */}
-      {requiresDimensions && (
-        <Text style={dimError ? styles.errorText : styles.helperText}>
-          {dimError || 'Minimum size: 2 × 3 inches (either 2×3 or 3×2).'}
-        </Text>
-      )}
-      {requiresDimensions && !!dimWarning && (
-        <Text style={styles.errorText}>{dimWarning}</Text>
-      )}
     </ScrollView>
   );
 }

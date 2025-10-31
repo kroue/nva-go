@@ -4,9 +4,17 @@ import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 
+const statuses = ['Validation', 'Layout Approval', 'Printing', 'For Pickup'];
+
 export default function TrackOrder() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const isStepActive = (step) => {
+    const currentIndex = statuses.indexOf(order?.status);
+    const stepIndex = statuses.indexOf(step);
+    return currentIndex >= stepIndex;
+  };
 
   // Fetch the logged-in user's order (latest)
   useEffect(() => {
@@ -20,11 +28,12 @@ export default function TrackOrder() {
         setLoading(false);
         return;
       }
-      // Get latest order for this user
+      // Get latest order for this user that is not finished
       const { data, error } = await supabase
         .from('orders')
         .select('*')
         .eq('email', userEmail)
+        .neq('status', 'Finished')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -35,26 +44,25 @@ export default function TrackOrder() {
 
       // Subscribe to changes in the orders table for this user
       subscription = supabase
-        .channel('order-status')
+        .channel(`order-status-${userEmail}`)
         .on(
           'postgres_changes',
           {
             event: 'UPDATE',
             schema: 'public',
             table: 'orders',
+            filter: `email=eq.${userEmail}`,
           },
           payload => {
             console.log('Realtime payload:', payload);
-            if (payload.new && payload.new.email === userEmail) {
-              setOrder(payload.new);
-              Notifications.scheduleNotificationAsync({
-                content: {
-                  title: 'Order Status Updated',
-                  body: `Your order status changed to "${payload.new.status}"`,
-                },
-                trigger: null,
-              });
-            }
+            setOrder(payload.new);
+            Notifications.scheduleNotificationAsync({
+              content: {
+                title: 'Order Status Updated',
+                body: `Your order status changed to "${payload.new.status}"`,
+              },
+              trigger: null,
+            });
           }
         )
         .subscribe();
@@ -88,22 +96,22 @@ export default function TrackOrder() {
       <Text style={styles.trackingTitle}>Order Tracking</Text>
       <View style={styles.progressRow}>
         <View style={styles.progressStep}>
-          <View style={[styles.circle, order.status === 'Validation' && styles.circleActive]} />
+          <View style={[styles.circle, isStepActive('Validation') && styles.circleActive]} />
           <Text style={styles.progressLabel}>Validation</Text>
         </View>
-        <View style={styles.progressLine} />
+        <View style={[styles.progressLine, isStepActive('Layout Approval') && styles.progressLineActive]} />
         <View style={styles.progressStep}>
-          <View style={[styles.circle, order.status === 'Layout Approval' && styles.circleActive]} />
+          <View style={[styles.circle, isStepActive('Layout Approval') && styles.circleActive]} />
           <Text style={styles.progressLabel}>Layout Approval</Text>
         </View>
-        <View style={styles.progressLine} />
+        <View style={[styles.progressLine, isStepActive('Printing') && styles.progressLineActive]} />
         <View style={styles.progressStep}>
-          <View style={[styles.circle, order.status === 'Printing' && styles.circleActive]} />
+          <View style={[styles.circle, isStepActive('Printing') && styles.circleActive]} />
           <Text style={styles.progressLabel}>Printing</Text>
         </View>
-        <View style={styles.progressLine} />
+        <View style={[styles.progressLine, isStepActive('For Pickup') && styles.progressLineActive]} />
         <View style={styles.progressStep}>
-          <View style={[styles.circle, order.status === 'For Pickup' && styles.circleActive]} />
+          <View style={[styles.circle, isStepActive('For Pickup') && styles.circleActive]} />
           <Text style={styles.progressLabel}>For Pickup</Text>
         </View>
       </View>
@@ -209,6 +217,9 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: '#ccc',
     marginHorizontal: 2,
+  },
+  progressLineActive: {
+    backgroundColor: '#4CAF50',
   },
   summaryCard: {
     backgroundColor: '#eee',

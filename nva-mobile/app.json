@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "nva-mobile",
+    "name": "NVA Go",
     "slug": "nva-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/nva-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/nva-splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,13 +17,19 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/nva-adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.kroue.nvamobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/nva-favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f0e1acb6-a21b-4504-aadc-6d439dd84337"
+      }
     }
   }
 }

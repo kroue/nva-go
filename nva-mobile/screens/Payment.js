@@ -67,6 +67,12 @@ export default function Payment() {
 
   // Place order function
   const handlePlaceOrder = async () => {
+    // Require payment proof
+    if (!proofUri) {
+      Alert.alert('Proof Required', 'Please upload payment proof before placing the order.');
+      return;
+    }
+
     try {
       let proofUrl = '';
       if (proofUri) {
@@ -88,6 +94,7 @@ export default function Payment() {
         address: order.address,
         email: order.email,
         has_file: order.has_file,
+        product_name: order.product_name,
         variant: order.variant,
         height: order.height,
         width: order.width,
@@ -98,11 +105,11 @@ export default function Payment() {
         instructions: order.instructions,
         total: order.total,
         status: 'Validation',
-  attached_file: order.attached_file,
-  payment_proof: finalProofUrl, // URL of uploaded or passed payment proof
+        attached_file: order.attached_file,
+        payment_proof: finalProofUrl, // URL of uploaded or passed payment proof
         order_source: 'mobile',
         created_at: order.created_at || new Date().toISOString(), // Use order timestamp or current time
-        employee_email: order.employee_email || null, // ADD: Missing comma here
+        employee_email: order.employee_email || null,
         employee_first_name: null, // Mobile orders don't have employees initially
         employee_last_name: null
       };

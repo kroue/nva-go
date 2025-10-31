@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../SupabaseClient'; // Adjust the import path as necessary
 
-export default function Login() {
+export default function Login({ route }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const navigation = useNavigation();
+
+  useEffect(() => {
+    if (route?.params?.success) {
+      setSuccess(route.params.success);
+    }
+  }, [route?.params?.success]);
 
   const handleLogin = async () => {
     setError('');
@@ -56,6 +63,9 @@ export default function Login() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log In</Text>
+      {success ? (
+        <Text style={{ color: '#4CAF50', marginBottom: 12, textAlign: 'center' }}>{success}</Text>
+      ) : null}
       {error ? (
         <Text style={{ color: '#D32F2F', marginBottom: 12, textAlign: 'center' }}>{error}</Text>
       ) : null}
@@ -65,7 +75,7 @@ export default function Login() {
         <FontAwesome name="user-o" size={20} color="#888" style={styles.inputIcon} />
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Email"
           value={username}
           onChangeText={setUsername}
           placeholderTextColor="#888"

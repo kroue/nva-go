@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 // Import screens
 import Login from './screens/Login';
@@ -184,12 +185,6 @@ function Sidebar({ visible, onClose }) {
         {/* Bottom Actions */}
         <View style={styles.sidebarBottomBox}>
           <SidebarItem 
-            icon="cog" 
-            lib="FontAwesome" 
-            label="Settings" 
-            color="#232B55" 
-          />
-          <SidebarItem 
             icon="sign-out" 
             lib="FontAwesome" 
             label="Log out" 
@@ -218,11 +213,21 @@ function SidebarItem({ icon, lib, label, onPress, color }) {
 }
 
 function CustomHeader({ onMenu }) {
+  const navigation = useNavigation();
+  const route = useRoute();
+
+  // Screens that should NOT have back buttons
+  const excludedFromBackButton = ['Home', 'TrackOrder', 'OrderHistory', 'Messaging'];
+
+  const showBackButton = navigation.canGoBack() && !excludedFromBackButton.includes(route.name);
+
   return (
     <View style={styles.headerContainer}>
-      <TouchableOpacity style={styles.menuButton} onPress={onMenu}>
-        <FontAwesome name="bars" size={28} color="#fff" />
-      </TouchableOpacity>
+      {showBackButton && (
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <FontAwesome name="arrow-left" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
       <View style={styles.logoContainer}>
         <Image
           source={require('./assets/nvago-icon.png')}
@@ -230,6 +235,9 @@ function CustomHeader({ onMenu }) {
           resizeMode="contain"
         />
       </View>
+      <TouchableOpacity style={styles.menuButton} onPress={onMenu}>
+        <FontAwesome name="bars" size={28} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -336,6 +344,20 @@ const linking = {
 };
 
 export default function App() {
+  useEffect(() => {
+    // Request notification permissions
+    Notifications.requestPermissionsAsync();
+
+    // Set notification handler
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }, []);
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -433,15 +455,17 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     backgroundColor: '#232B55',
     paddingTop: 36,
     paddingBottom: 12,
     paddingHorizontal: 18,
   },
+  backButton: {
+    padding: 4,
+  },
   menuButton: {
     padding: 4,
-    marginRight: 'auto',
   },
   logoContainer: {
     alignItems: 'center',

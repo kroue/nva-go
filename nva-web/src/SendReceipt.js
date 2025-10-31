@@ -207,7 +207,7 @@ const SendReceipt = () => {
       <div class="section">
         <h3>Order Information:</h3>
         <div class="info-row"><span>Order ID:</span><span>${order.id.slice(0, 8)}</span></div>
-        <div class="info-row"><span>Product:</span><span>${order.variant}</span></div>
+        <div class="info-row"><span>Product:</span><span>${order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</span></div>
         ${order.height && order.width ? `<div class="info-row"><span>Size:</span><span>${order.height} × ${order.width}</span></div>` : ''}
         <div class="info-row"><span>Quantity:</span><span>${order.quantity} pcs</span></div>
         ${order.eyelets ? `<div class="info-row"><span>Eyelets:</span><span>${order.eyelets}</span></div>` : ''}
@@ -299,7 +299,7 @@ Address: ${order.address}
 
 📦 ORDER DETAILS:
 Order ID: ${order.id.slice(0, 8)}
-Product: ${order.variant}
+Product: ${order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}
 ${order.height && order.width ? `Size: ${order.height} × ${order.width}` : ''}
 Quantity: ${order.quantity} pcs
 ${order.eyelets ? `Eyelets: ${order.eyelets}` : ''}
@@ -408,7 +408,7 @@ Thank you for choosing NVA Printing Services! 🙏`,
                 </div>
                 
                 <div className="SendReceipt-order-details">
-                  <div>📦 {orderItem.variant}</div>
+                  <div>📦 {orderItem.product_name ? `${orderItem.product_name} - ${orderItem.variant}` : orderItem.variant}</div>
                   <div>💰 ₱{orderItem.total}</div>
                   <div>📅 {new Date(orderItem.created_at).toLocaleDateString()}</div>
                 </div>
@@ -477,7 +477,7 @@ Thank you for choosing NVA Printing Services! 🙏`,
                 </div>
                 <div className="info-row">
                   <span>Product:</span>
-                  <span>{order.variant}</span>
+                  <span>{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</span>
                 </div>
                 {order.height && order.width && (
                   <div className="info-row">

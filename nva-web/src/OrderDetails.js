@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import axios from 'axios';
@@ -7,68 +7,111 @@ import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import './OrderDetails.css';
 
+// Constants
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'proofs';
+const LAYOUT_FEE = 150;
 
-const OrderDetails = () => {
-  const { id } = useParams();
+// Custom hook for fetching order
+const useOrder = (id) => {
   const [order, setOrder] = useState(null);
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [employeeEmail, setEmployeeEmail] = useState(null);
-  const [employeeFirstName, setEmployeeFirstName] = useState(null);
-  const [employeeLastName, setEmployeeLastName] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from('orders')
           .select('*')
           .eq('id', id)
           .single();
-          
+
         if (error) {
+          setError('Error fetching order');
           console.error('Error fetching order:', error);
         } else {
           setOrder(data);
         }
-      } catch (error) {
-        console.error('Exception fetching order:', error);
+      } catch (err) {
+        setError('Exception fetching order');
+        console.error('Exception fetching order:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
+    if (id) fetchOrder();
+  }, [id]);
+
+  return { order, setOrder, loading, error };
+};
+
+// Custom hook for employee details
+const useEmployee = () => {
+  const [employee, setEmployee] = useState({
+    email: null,
+    firstName: null,
+    lastName: null,
+  });
+
+  useEffect(() => {
     const getEmployeeDetails = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.email) {
-          setEmployeeEmail(session.user.email);
+          setEmployee(prev => ({ ...prev, email: session.user.email }));
           console.log('Employee email set:', session.user.email);
-          
-          const { data: employee, error } = await supabase
+
+          const { data: emp, error } = await supabase
             .from('employees')
             .select('first_name, last_name')
             .eq('email', session.user.email)
             .single();
-          
-          if (!error && employee) {
-            setEmployeeFirstName(employee.first_name);
-            setEmployeeLastName(employee.last_name);
-            console.log('Employee details:', employee.first_name, employee.last_name);
+
+          if (!error && emp) {
+            setEmployee(prev => ({
+              ...prev,
+              firstName: emp.first_name,
+              lastName: emp.last_name,
+            }));
+            console.log('Employee details:', emp.first_name, emp.last_name);
           } else {
             console.error('Could not fetch employee details:', error);
-            setEmployeeFirstName('Employee');
-            setEmployeeLastName('Name');
+            setEmployee(prev => ({
+              ...prev,
+              firstName: 'Employee',
+              lastName: 'Name',
+            }));
           }
         }
-      } catch (error) {
-        console.error('Error getting employee details:', error);
+      } catch (err) {
+        console.error('Error getting employee details:', err);
       }
     };
 
-    fetchOrder();
     getEmployeeDetails();
-  }, [id]);
+  }, []);
+
+  return employee;
+};
+
+const OrderDetails = () => {
+  const { id } = useParams();
+  const { order, setOrder, loading, error } = useOrder(id);
+  const employee = useEmployee();
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+
+  // Memoized calculations for performance
+  const { subtotal, layoutFee, isWalkIn } = useMemo(() => {
+    if (!order) return { subtotal: 0, layoutFee: 0, isWalkIn: false };
+    const sub = order.has_file ? order.total : (order.total - LAYOUT_FEE);
+    const fee = order.has_file ? 0 : LAYOUT_FEE;
+    const walkIn = !order.email || order.order_source === 'walk-in';
+    return { subtotal: sub, layoutFee: fee, isWalkIn: walkIn };
+  }, [order]);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
@@ -104,7 +147,6 @@ const OrderDetails = () => {
   const handleSendApproval = async () => {
     if (!order) return;
     // Do not send approval for walk-in orders (no customer email / walk-in source)
-    const isWalkIn = !order.email || order.order_source === 'walk-in';
     if (isWalkIn) {
       alert('Approval is not required for walk-in orders.');
       return;
@@ -136,9 +178,9 @@ const OrderDetails = () => {
       const updatePayload = {
         approval_file: fileUrl,
         approved: 'no',
-        employee_email: employeeEmail || order.employee_email || null,
-        employee_first_name: employeeFirstName || order.employee_first_name || null,
-        employee_last_name: employeeLastName || order.employee_last_name || null
+        employee_email: employee.email || order.employee_email || null,
+        employee_first_name: employee.firstName || order.employee_first_name || null,
+        employee_last_name: employee.lastName || order.employee_last_name || null
       };
 
       const { error: updErr } = await supabase
@@ -155,7 +197,7 @@ const OrderDetails = () => {
 
       const messageText = `[APPROVAL_REQUEST]|${order.id}
 Order ID: ${order.id}
-Product: ${order.variant}
+Product: ${order.product_name || order.variant}
 Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
 Quantity: ${order.quantity} pcs
 Total: ₱${order.total}
@@ -164,10 +206,10 @@ ${order.approval_file ? '⚠️ This is a revised layout. Please review the new 
 ${fileUrl}`;
 
       const messageData = {
-        sender: employeeEmail,
+        sender: employee.email,
         receiver: order.email,
         text: messageText,
-        chat_id: [employeeEmail, order.email].sort().join('-'),
+        chat_id: [employee.email, order.email].sort().join('-'),
         created_at: new Date().toISOString(),
         read: false
       };
@@ -197,12 +239,9 @@ ${fileUrl}`;
     }
   };
 
-  if (!order) return <div>Loading...</div>;
-
-  // Calculate subtotal and layout fee
-  const subtotal = order.has_file ? order.total : (order.total - 150);
-  const layoutFee = order.has_file ? 0 : 150;
-  const isWalkIn = !order.email || order.order_source === 'walk-in';
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!order) return <div>Order not found.</div>;
 
   return (
     <div className="App">
@@ -239,16 +278,27 @@ ${fileUrl}`;
                   </span>
                   <span className="OrderDetails-status-badge">{order.status || 'Pending'}</span>
                 </div>
-                <div className="OrderDetails-product-title">{order.variant}</div>
+                <div className="OrderDetails-product-title">{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</div>
                 
                 {/* Show attached file if exists */}
                 {order.attached_file && (
                   <div className="OrderDetails-preview-img">
-                    {order.attached_file.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                      <img src={order.attached_file} alt="Order Preview" style={{ maxHeight: 200, maxWidth: 440 }} />
-                    ) : (
-                      <div>📄 {order.attached_file.split('/').pop()}</div>
-                    )}
+                    <div>📄 {order.attached_file.split('/').pop()}</div>
+                    <button
+                      onClick={() => window.open(order.attached_file, '_blank')}
+                      style={{
+                        marginLeft: 8,
+                        background: '#252b55',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 4,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Download
+                    </button>
                     <span style={{ marginLeft: 8 }}>Customer's File</span>
                   </div>
                 )}

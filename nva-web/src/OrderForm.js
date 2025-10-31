@@ -292,6 +292,7 @@ const OrderForm = () => {
         address: address,
         email: null, // No customer account for walk-ins
         has_file: hasFile,
+        product_name: productData?.name || product,
         variant: selectedVariant ? (selectedVariant.description || selectedVariant.size || product) : product,
         height: isDimProduct ? (height ? parseFloat(height) : null) : null,
         width: isDimProduct ? (width ? parseFloat(width) : null) : null,

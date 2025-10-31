@@ -62,7 +62,7 @@ const Orders = () => {
                 style={{ cursor: 'pointer' }}
               >
                 <div className="Orders-card-main">
-                  <span className="Orders-card-product">{order.variant}</span>
+                  <span className="Orders-card-product">{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</span>
                   <span className="Orders-card-id">No. {order.id.slice(0, 7)}</span>
                 </div>
                 <div className="Orders-card-details">
