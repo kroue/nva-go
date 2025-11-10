@@ -7,7 +7,7 @@ import ProductModal from './ProductModal';
 const Products = () => {
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProduct] = useState(null);
   const [products, setProducts] = useState([]);
 
   useEffect(() => {

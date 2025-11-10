@@ -384,7 +384,7 @@ Thank you for choosing NVA Printing Services! 🙏`,
               placeholder="Search orders by customer name, order ID, or product..."
               className="SendReceipt-search-input"
               onChange={(e) => {
-                const searchTerm = e.target.value.toLowerCase();
+                // const searchTerm = e.target.value.toLowerCase();
               }}
             />
           </div>
