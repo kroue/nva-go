@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
-import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../SupabaseClient';
 
 export default function SignUp({ navigation }) {
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,7 +20,7 @@ export default function SignUp({ navigation }) {
     setError('');
 
     // Basic validation
-    if (!firstname || !lastname || !email || !password || !confirmPassword) {
+    if (!firstname || !lastname || !email || !phone || !address || !password || !confirmPassword) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -33,34 +34,33 @@ export default function SignUp({ navigation }) {
     }
 
     try {
-      // Send a 6-digit OTP to email and create user on verification
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
+      // Use signInWithOtp so Supabase sends an email OTP/magic link and creates the user if needed
+      const res = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: {
-          shouldCreateUser: true,
-          data: {
-            first_name: firstname.trim(),
-            last_name: lastname.trim(),
-            address: address.trim() || null,
-          },
-        },
+        options: { shouldCreateUser: true, type: 'email' },
       });
-
-      if (otpErr) {
-        setError(otpErr.message || 'Failed to send OTP.');
+      console.log('signInWithOtp response', res);
+      if (res?.error) {
+        console.error('signInWithOtp failed', res.error);
+        // If Supabase returns a "wait N seconds" message we can show it
+        const msg = res.error.message || 'Failed to send verification email';
+        setError(msg);
         return;
       }
 
-      // Go to OTP screen with the data we need after verification
+      // navigate to verification screen and pass sentAt for cooldown tracking
       navigation.navigate('Verification', {
         email: email.trim(),
-        password, // will be set after verify
+        password,
         first_name: firstname.trim(),
         last_name: lastname.trim(),
-        address: address.trim() || null,
+        phone: phone.trim(),
+        address: address.trim(),
+        sentAt: Date.now(),
       });
-    } catch (e) {
-      setError('Network error. Please try again.');
+    } catch (err) {
+      console.error('send OTP failed', err);
+      setError(err?.message || 'Failed to send OTP');
     }
   };
 
@@ -103,11 +103,22 @@ export default function SignUp({ navigation }) {
         />
       </View>
 
-      {/* NEW: Address field (optional) */}
       <View style={[styles.inputContainer, { marginBottom: 16 }]}>
         <TextInput
           style={styles.input}
-          placeholder="Address (optional)"
+          placeholder="Phone Number"
+          value={phone}
+          onChangeText={setPhone}
+          placeholderTextColor="#888"
+          keyboardType="phone-pad"
+        />
+      </View>
+
+      {/* NEW: Address field */}
+      <View style={[styles.inputContainer, { marginBottom: 16 }]}>
+        <TextInput
+          style={styles.input}
+          placeholder="Address"
           value={address}
           onChangeText={setAddress}
           placeholderTextColor="#888"
@@ -160,18 +171,7 @@ export default function SignUp({ navigation }) {
         <Text style={styles.signupButtonText}>Sign Up</Text>
       </TouchableOpacity>
 
-      {/* Social Login (unchanged) */}
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={styles.orText}>Or Sign up with</Text>
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialButton}>
-            <FontAwesome name="facebook-official" size={36} color="#1877F3" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialButton}>
-            <MaterialIcons name="mail" size={36} color="#EA4335" />
-          </TouchableOpacity>
-        </View>
-      </View>
+
 
       <View style={styles.signinRow}>
         <Text style={styles.signinText}>Already have an account?</Text>
@@ -213,9 +213,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   signupButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
-  orText: { color: '#222', fontSize: 15, marginBottom: 12 },
-  socialRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
-  socialButton: { marginHorizontal: 12 },
+
   signinRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 32 },
   signinText: { color: '#222', fontSize: 15, marginRight: 6 },
   signinLink: { color: '#D32F2F', fontSize: 15, fontWeight: '500' },

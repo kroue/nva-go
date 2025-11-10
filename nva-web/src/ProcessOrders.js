@@ -3,12 +3,62 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './ProcessOrders.css';
 
+// Custom hook for employee details
+const useEmployee = () => {
+  const [employee, setEmployee] = useState({
+    email: null,
+    firstName: null,
+    lastName: null,
+  });
+
+  useEffect(() => {
+    const getEmployeeDetails = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          setEmployee(prev => ({ ...prev, email: session.user.email }));
+          console.log('Employee email set:', session.user.email);
+
+          const { data: emp, error } = await supabase
+            .from('employees')
+            .select('first_name, last_name')
+            .eq('email', session.user.email)
+            .single();
+
+          if (!error && emp) {
+            setEmployee(prev => ({
+              ...prev,
+              firstName: emp.first_name,
+              lastName: emp.last_name,
+            }));
+            console.log('Employee details:', emp.first_name, emp.last_name);
+          } else {
+            console.error('Could not fetch employee details:', error);
+            setEmployee(prev => ({
+              ...prev,
+              firstName: 'Employee',
+              lastName: 'Name',
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Error getting employee details:', err);
+      }
+    };
+
+    getEmployeeDetails();
+  }, []);
+
+  return employee;
+};
+
 const statuses = ['Validation', 'Layout Approval', 'Printing', 'For Pickup', 'Finished'];
 
 const ProcessOrders = () => {
   const [orders, setOrders] = useState([]);
   const [updatingId, setUpdatingId] = useState(null);
   const navigate = useNavigate();
+  const employee = useEmployee();
 
   const sortOrders = (list) =>
     list
@@ -44,6 +94,39 @@ const ProcessOrders = () => {
         console.error('Failed to update status:', error);
         return;
       }
+
+      // Send message if status is 'For Pickup'
+      if (newStatus === 'For Pickup') {
+        const order = orders.find(o => o.id === orderId);
+        if (order && order.email) {
+          const messageText = `[ORDER_READY]|${orderId}
+Your order is ready for pickup!
+
+Order ID: ${orderId}
+Product: ${order.product_name || order.variant}
+Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
+Quantity: ${order.quantity} pcs
+Pickup Date: ${order.pickup_date}
+Pickup Time: ${order.pickup_time}
+
+Please come to our store to pick up your order.`;
+
+          const messageData = {
+            sender: employee.email,
+            receiver: order.email,
+            text: messageText,
+            chat_id: [employee.email, order.email].sort().join('-'),
+            created_at: new Date().toISOString(),
+            read: false
+          };
+
+          const { error: msgErr } = await supabase.from('messages').insert(messageData);
+          if (msgErr) {
+            console.error('Error sending ready for pickup message:', msgErr);
+          }
+        }
+      }
+
       setOrders((prev) =>
         sortOrders(prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)))
       );

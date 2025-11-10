@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, Image } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -34,6 +34,8 @@ const OrderDetailsComponent = ({
   dimWarning,
   dtfWarning
 }) => {
+  const [showImageModal, setShowImageModal] = useState(false);
+
   return (
     <>
       <Text style={styles.sectionTitle}>
@@ -51,62 +53,82 @@ const OrderDetailsComponent = ({
         </TouchableOpacity>
       </View>
       <View style={styles.row}>
-        <TouchableOpacity style={styles.attachBtn} onPress={pickDocument}>
-          <Text style={styles.attachText}>{attachedFile ? 'Replace file' : 'Attach file'}</Text>
+        <TouchableOpacity style={styles.attachBtn} onPress={attachedFile ? () => setShowImageModal(true) : null}>
+          <Text style={styles.attachText}>{attachedFile ? attachedFile.name : 'Attach file'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.plusBtn}>
+        <TouchableOpacity style={styles.plusBtn} onPress={pickDocument}>
           <Text style={styles.plusText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.row}>
-        {requiresDimensions && (
-          <>
+      <Modal visible={showImageModal} transparent={true} onRequestClose={() => setShowImageModal(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Image source={{ uri: attachedFile?.url }} style={styles.modalImage} />
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setShowImageModal(false)}>
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {requiresDimensions && (
+        <>
+          <Text style={styles.label}>Size (Height x Width)</Text>
+          <View style={styles.row}>
             <TextInput
               style={styles.inputSmall}
-              placeholder="Height (ft)"
+              placeholder="Height"
               value={height}
               onChangeText={setHeight}
               keyboardType="numeric"
             />
             <TextInput
               style={styles.inputSmall}
-              placeholder="Width (ft)"
+              placeholder="Width"
               value={width}
               onChangeText={setWidth}
               keyboardType="numeric"
             />
-          </>
-        )}
-        <TextInput
-          style={styles.inputSmall}
-          placeholder="Quantity"
-          value={quantity}
-          onChangeText={setQuantity}
-          keyboardType="numeric"
-        />
-      </View>
+          </View>
+        </>
+      )}
+      <Text style={styles.label}>Quantity</Text>
+      <TextInput
+        style={styles.inputSmall}
+        value={quantity}
+        onChangeText={setQuantity}
+        keyboardType="numeric"
+      />
       {isSolventTarp && (
-        <TextInput
-          style={styles.inputSmall}
-          placeholder="Eyelets"
-          value={eyelets}
-          onChangeText={setEyelets}
-          keyboardType="numeric"
-        />
+        <>
+          <Text style={styles.label}>Eyelets</Text>
+          <TextInput
+            style={styles.inputSmall}
+            value={eyelets}
+            onChangeText={setEyelets}
+            keyboardType="numeric"
+          />
+        </>
       )}
 
       <View style={styles.row}>
-        <TouchableOpacity style={styles.inputHalf} onPress={() => setShowDatePicker(true)}>
-          <Text style={{ color: pickupDate ? '#222' : '#888' }}>
-            {pickupDate ? pickupDate : 'Date to Pickup'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.inputHalf} onPress={() => setShowTimePicker(true)}>
-          <Text style={{ color: pickupTime ? '#222' : '#888' }}>
-            {pickupTime ? pickupTime : 'Time to Pickup'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.halfContainer}>
+          <Text style={styles.label}>Date</Text>
+          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowDatePicker(true)}>
+            <Text style={{ color: pickupDate ? '#222' : '#888' }}>
+              {pickupDate ? pickupDate : 'Select Date'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.halfContainer}>
+          <Text style={styles.label}>Time</Text>
+          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowTimePicker(true)}>
+            <Text style={{ color: pickupTime ? '#222' : '#888' }}>
+              {pickupTime ? pickupTime : 'Select Time'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {showDatePicker && (
         <DateTimePicker
@@ -114,6 +136,7 @@ const OrderDetailsComponent = ({
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={handleDateChange}
+          minimumDate={new Date()}
         />
       )}
       {showTimePicker && (
@@ -125,9 +148,9 @@ const OrderDetailsComponent = ({
         />
       )}
 
+      <Text style={styles.label}>Instructions</Text>
       <TextInput
         style={styles.instructions}
-        placeholder="Instructions"
         value={instructions}
         onChangeText={setInstructions}
         multiline
@@ -160,6 +183,11 @@ const styles = StyleSheet.create({
   inputHalf: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginRight: 8, backgroundColor: '#fff', justifyContent: 'center' },
   instructions: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, minHeight: 60, backgroundColor: '#fff', marginBottom: 8 },
   errorText: { color: '#D32F2F', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: '600' },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 8, padding: 16, alignItems: 'center' },
+  modalImage: { width: 300, height: 300, resizeMode: 'contain' },
+  closeBtn: { marginTop: 16, padding: 10, backgroundColor: '#232B55', borderRadius: 8 },
+  closeText: { color: '#fff', fontWeight: 'bold' },
 });
 
 export default OrderDetailsComponent;

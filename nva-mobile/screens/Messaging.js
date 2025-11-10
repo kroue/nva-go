@@ -243,7 +243,7 @@ export default function Messaging() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         async payload => {
-          if (payload.new.sender === userEmail || payload.new.receiver === userEmail) {
+          if (payload.new.receiver === userEmail) {
             await fetchMessages();
             // Send push notification for new message
             Notifications.scheduleNotificationAsync({

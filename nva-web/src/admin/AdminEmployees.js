@@ -43,45 +43,74 @@ const AdminEmployees = () => {
   const handleAdd = async (e) => {
     e.preventDefault();
     setError('');
-    // 1. Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        data: {
+
+    try {
+      console.log('Creating user with data:', {
+        email: form.email,
+        password: form.password,
+        email_confirm: true,
+        user_metadata: {
           username: form.username,
           first_name: form.first_name,
           last_name: form.last_name,
           phone_number: form.phone_number,
           address: form.address,
         },
-      },
-    });
-    if (authError) {
-      setError(authError.message);
-      return;
+      });
+
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: form.email,
+        password: form.password,
+        email_confirm: true,
+        user_metadata: {
+          username: form.username,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          phone_number: form.phone_number,
+          address: form.address,
+        },
+      });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        setError(`Signup failed: ${authError.message}`);
+        return;
+      }
+
+      const userId = authData.user?.id;
+      console.log('Created user ID:', userId);
+
+      if (!userId) {
+        setError('User creation failed.');
+        return;
+      }
+
+      // Insert into employees table
+      const { error: dbError } = await supabase.from('employees').insert({
+        id: userId,
+        username: form.username,
+        email: form.email,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone_number: form.phone_number,
+        address: form.address,
+        position: form.position,
+        is_active: true,
+      });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        setError(`Database insert failed: ${dbError.message}`);
+        return;
+      }
+
+      setForm(emptyForm);
+      setModalOpen(false);
+      fetchEmployees();
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Failed to create user.');
     }
-    const userId = authData.user.id;
-    // 2. Insert into employees table
-    const { error: dbError } = await supabase.from('employees').insert({
-      id: userId,
-      username: form.username,
-      email: form.email,
-      first_name: form.first_name,
-      last_name: form.last_name,
-      phone_number: form.phone_number,
-      address: form.address,
-      position: form.position,
-      department: form.department,
-      is_active: true,
-    });
-    if (dbError) {
-      setError(dbError.message);
-      return;
-    }
-    setForm(emptyForm);
-    setModalOpen(false);
-    fetchEmployees();
   };
 
   // Edit employee (load into form)
@@ -95,7 +124,6 @@ const AdminEmployees = () => {
       phone_number: emp.phone_number,
       address: emp.address,
       position: emp.position,
-      department: emp.department,
       password: '', // leave blank
     });
     setModalOpen(true);
@@ -113,7 +141,6 @@ const AdminEmployees = () => {
       phone_number: form.phone_number,
       address: form.address,
       position: form.position,
-      department: form.department,
     }).eq('id', editingId);
     if (dbError) {
       setError(dbError.message);
@@ -138,6 +165,8 @@ const AdminEmployees = () => {
     setForm(emptyForm);
     setError('');
   };
+
+  console.log('Supabase object:', supabase); // Log the Supabase object
 
   return (
     <div className="AdminEmployees-container">

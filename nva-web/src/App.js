@@ -35,6 +35,8 @@ import AdminOrders from './admin/AdminOrders';
 import About from './About';
 import './App.css';
 import SalesReport from './admin/SalesReport';
+import SystemLogs from './admin/SystemLogs';
+import AdminNotifications from './admin/AdminNotifications';
 
 const App = () => {
   const isAdminHome =
@@ -290,6 +292,40 @@ const App = () => {
                     <AdminSidebar />
                     <div className="PageContent">
                       <SalesReport />
+                    </div>
+                    {/* Removed AdminRightPanel here */}
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/system-logs"
+            element={
+              <ProtectedRoute>
+                <div className="App">
+                  <AdminHeader />
+                  <div className="MainContent">
+                    <AdminSidebar />
+                    <div className="PageContent">
+                      <SystemLogs />
+                    </div>
+                    {/* Removed AdminRightPanel here */}
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/notifications"
+            element={
+              <ProtectedRoute>
+                <div className="App">
+                  <AdminHeader />
+                  <div className="MainContent">
+                    <AdminSidebar />
+                    <div className="PageContent">
+                      <AdminNotifications />
                     </div>
                     {/* Removed AdminRightPanel here */}
                   </div>

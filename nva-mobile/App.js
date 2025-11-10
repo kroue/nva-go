@@ -26,6 +26,7 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = Math.min(width * 0.8, 320);
+const navigationRef = React.createRef();
 
 function SplashScreen({ navigation }) {
   const [showSecond, setShowSecond] = useState(false);
@@ -356,12 +357,22 @@ export default function App() {
         shouldSetBadge: false,
       }),
     });
+
+    // Handle notification tap
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      // Navigate to Messaging screen when notification is tapped
+      if (navigationRef.current?.isReady()) {
+        navigationRef.current.navigate('Messaging');
+      }
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <NavigationContainer linking={linking}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator 
           initialRouteName="Splash"
           screenOptions={{

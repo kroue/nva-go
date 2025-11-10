@@ -72,6 +72,10 @@ export default function OrderForm() {
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) {
+      if (selectedDate.getDay() === 0) {
+        alert('Sundays are not available for pickup.');
+        return;
+      }
       const dateStr = selectedDate.toISOString().split('T')[0];
       setPickupDate(dateStr);
     }
@@ -79,6 +83,15 @@ export default function OrderForm() {
   const handleTimeChange = (event, selectedTime) => {
     setShowTimePicker(false);
     if (selectedTime) {
+      const dayOfWeek = pickupDate ? new Date(pickupDate).getDay() : 1; // Default to Monday if no date
+      const isSunday = dayOfWeek === 0;
+      const minHour = isSunday ? 8 : 9;
+      const maxHour = isSunday ? 16 : 19; // 4pm is 16, 7pm is 19
+      const selectedHour = selectedTime.getHours();
+      if (selectedHour < minHour || selectedHour > maxHour) {
+        alert(`Pickup time must be between ${minHour}am and ${maxHour > 12 ? maxHour - 12 : maxHour}pm.`);
+        return;
+      }
       const hours = selectedTime.getHours().toString().padStart(2, '0');
       const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
       setPickupTime(`${hours}:${minutes}`);

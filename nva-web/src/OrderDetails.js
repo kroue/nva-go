@@ -239,6 +239,60 @@ ${fileUrl}`;
     }
   };
 
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      setUploading(true);
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+      if (error) {
+        console.error('Failed to update status:', error);
+        alert('Failed to update order status.');
+        return;
+      }
+
+      // Send message if status is 'For Pickup'
+      if (newStatus === 'For Pickup') {
+        if (order.email) {
+          const messageText = `[ORDER_READY]|${orderId}
+Your order is ready for pickup!
+
+Order ID: ${orderId}
+Product: ${order.product_name || order.variant}
+Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
+Quantity: ${order.quantity} pcs
+Pickup Date: ${order.pickup_date}
+Pickup Time: ${order.pickup_time}
+
+Please come to our store to pick up your order.`;
+
+          const messageData = {
+            sender: employee.email,
+            receiver: order.email,
+            text: messageText,
+            chat_id: [employee.email, order.email].sort().join('-'),
+            created_at: new Date().toISOString(),
+            read: false
+          };
+
+          const { error: msgErr } = await supabase.from('messages').insert(messageData);
+          if (msgErr) {
+            console.error('Error sending ready for pickup message:', msgErr);
+          }
+        }
+      }
+
+      setOrder((prev) => ({ ...prev, status: newStatus }));
+      alert(`Order status updated to ${newStatus}.`);
+    } catch (e) {
+      console.error('Error updating order status:', e);
+      alert('Error updating order status.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!order) return <div>Order not found.</div>;
@@ -417,9 +471,9 @@ ${fileUrl}`;
                           <a href={order.approval_file} target="_blank" rel="noopener noreferrer">View Layout</a>
                         ) : 'None'}
                       </div>
-                      <input 
-                        type="file" 
-                        onChange={handleFileChange} 
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
                         style={{ marginTop: 8 }}
                         accept="image/*,.pdf"
                       />
@@ -438,11 +492,57 @@ ${fileUrl}`;
                           cursor: uploading || order.approved === 'yes' ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {uploading ? 'Uploading...' : 
+                        {uploading ? 'Uploading...' :
                          order.approval_file ? 'Send New Version' : 'Send Layout for Approval'}
                       </button>
                     </>
                   )}
+                </div>
+
+                {/* Status Change Buttons */}
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Update Order Status</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'For Pickup')}
+                      disabled={uploading || order.status === 'For Pickup' || order.status === 'Finished'}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        border: '1px solid #252b55',
+                        background:
+                          uploading || order.status === 'For Pickup' || order.status === 'Finished'
+                            ? '#ddd'
+                            : '#f2f3f5',
+                        cursor:
+                          uploading || order.status === 'For Pickup' || order.status === 'Finished'
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      Mark as Ready for Pickup
+                    </button>
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'Finished')}
+                      disabled={uploading || order.status === 'Finished'}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        border: '1px solid #252b55',
+                        background:
+                          uploading || order.status === 'Finished' ? '#ddd' : '#252b55',
+                        color: uploading || order.status === 'Finished' ? '#444' : '#fff',
+                        cursor:
+                          uploading || order.status === 'Finished'
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      Mark as Finished
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
