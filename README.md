@@ -120,14 +120,14 @@ yarn install
 
 ### Development Team
 
-**1. Kriz Marie P. Cultura** - System Analyst <br>
-**2. Aljohn B. Arranguez** - Database Administrator/ Developer <br>
-**3. Ariana Marie O. Palle** - Front-end Developer <br>
-**4. Rodel T. Madrid** - Technical Writer 
+1. **Kriz Marie P. Cultura** - System Analyst <br>
+2. **Aljohn B. Arranguez** - Database Administrator/ Developer <br>
+3. **Ariana Marie O. Palle** - Front-end Developer <br>
+4. **Rodel T. Madrid** - Technical Writer 
 
 
 ### Academic Supervisor
-Ms. Loredel Tamayo <br> University of Science and Technology of Southern Philippines
+**Ms. Loredel Tamayo** <br> University of Science and Technology of Southern Philippines
 
 
 
