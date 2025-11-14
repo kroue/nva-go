@@ -1,5 +1,5 @@
 ## NVAGo - Online Ordering and POS System
-![App Screenshots](https://github.com/kroue/nva-go/NVAGo-LogInPage.png)
+![App Screenshots](https://github.com/kroue/nva-go/blob/main/NVAGo-LogInPage.png)
 
 ## Table of Contents
 - About
