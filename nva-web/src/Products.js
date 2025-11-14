@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './Products.css';
 import ProductModal from './ProductModal';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -44,78 +50,121 @@ const Products = () => {
 
   return (
     <div className="Products-page">
-      <div className="Products-header">Products</div>
-      <div className="Products-section-title">Product Catalog</div>
+      <div className="Products-header">
+        <div className="Products-header-content">
+          <InventoryOutlinedIcon className="Products-header-icon" />
+          <div className="Products-header-text">
+            <h1>Product Catalog</h1>
+            <p>Browse our available printing products and services</p>
+          </div>
+        </div>
+        <div className="Products-stats">
+          <div className="stat-badge">
+            <span className="stat-number">{grouped.avail.length + 1}</span>
+            <span className="stat-label">Available</span>
+          </div>
+          <div className="stat-badge">
+            <span className="stat-number">{grouped.unavail.length}</span>
+            <span className="stat-label">Unavailable</span>
+          </div>
+        </div>
+      </div>
 
-      {/* Available and Limited Stocks */}
       <div className="Products-container">
+        {/* Available Products Section */}
+        <div className="Products-section-header">
+          <CheckCircleOutlineOutlinedIcon style={{ fontSize: 20 }} />
+          <span>Available Products</span>
+        </div>
+
         <div className="Products-grid">
           {grouped.avail.map((item) => (
             <div
               className={`Products-card ${item.status === 'limited' ? 'limited' : ''}`}
               key={item.product_id}
               onClick={() => handleCardClick(item)}
-              style={{ cursor: 'pointer' }}
             >
-              <img
-                src={item.image_url || '/images/default-product.jpg'}
-                alt={item.name}
-                className="Products-card-img"
-              />
-              <div className="Products-card-name">
-                {item.name}
-                {item.status === 'limited' && <span className="limited-tag">LIMITED</span>}
+              <div className="Products-card-image-wrapper">
+                <img
+                  src={item.image_url || '/images/default-product.jpg'}
+                  alt={item.name}
+                  className="Products-card-img"
+                />
+                {item.status === 'limited' && (
+                  <div className="status-badge limited-badge">
+                    <WarningAmberOutlinedIcon style={{ fontSize: 14 }} />
+                    <span>Limited Stock</span>
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
+              <div className="Products-card-content">
+                <div className="Products-card-name">{item.name}</div>
+                <div className="Products-card-category">
+                  <CategoryOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />
+                  {item.category}
+                </div>
+              </div>
             </div>
           ))}
+
           {/* Other Products Card */}
           <div
-            className="Products-card"
+            className="Products-card special-card"
             onClick={() => navigate('/order-form?product=Other Products')}
-            style={{ cursor: 'pointer' }}
           >
-            <img
-              src="/images/default-product.jpg"
-              alt="Other Products"
-              className="Products-card-img"
-            />
-            <div className="Products-card-name">Other Products</div>
-            <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>Custom Order</div>
+            <div className="Products-card-image-wrapper">
+              <div className="Products-card-img-placeholder">
+                <AddCircleOutlineOutlinedIcon style={{ fontSize: 64, opacity: 0.3 }} />
+              </div>
+            </div>
+            <div className="Products-card-content">
+              <div className="Products-card-name">Other Products</div>
+              <div className="Products-card-category">
+                <CategoryOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />
+                Custom Order
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Unavailable section below, not clickable */}
-      {grouped.unavail.length > 0 && (
-        <>
-          <div className="Products-section-title" style={{ marginTop: 8 }}>
-            Unavailable
-          </div>
-          <div className="Products-container">
+        {/* Unavailable Products Section */}
+        {grouped.unavail.length > 0 && (
+          <>
+            <div className="Products-section-header unavailable-header">
+              <BlockOutlinedIcon style={{ fontSize: 20 }} />
+              <span>Unavailable Products</span>
+            </div>
+
             <div className="Products-grid">
               {grouped.unavail.map((item) => (
                 <div
                   className="Products-card unavailable"
                   key={item.product_id}
-                  style={{ cursor: 'not-allowed', opacity: 0.5 }}
                 >
-                  <img
-                    src={item.image_url || '/images/default-product.jpg'}
-                    alt={item.name}
-                    className="Products-card-img"
-                  />
-                  <div className="Products-card-name">
-                    {item.name}
-                    <span className="unavailable-tag">UNAVAILABLE</span>
+                  <div className="Products-card-image-wrapper">
+                    <img
+                      src={item.image_url || '/images/default-product.jpg'}
+                      alt={item.name}
+                      className="Products-card-img"
+                    />
+                    <div className="status-badge unavailable-badge">
+                      <BlockOutlinedIcon style={{ fontSize: 14 }} />
+                      <span>Unavailable</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 13, color: '#888', marginTop: 4 }}>{item.category}</div>
+                  <div className="Products-card-content">
+                    <div className="Products-card-name">{item.name}</div>
+                    <div className="Products-card-category">
+                      <CategoryOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />
+                      {item.category}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
       <ProductModal
         open={modalOpen}

@@ -1,6 +1,9 @@
 /* filepath: src/HomePage.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(180deg, #f8f9fe 0%, #fafbff 100%);
 }
 
 /* --------------------
@@ -9,15 +12,14 @@ body {
 .HomePage {
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  background-color: #ffffff;
-  height: 100vh;
+  padding: 24px;
+  background: linear-gradient(180deg, #f8f9fe 0%, #fafbff 100%);
+  min-height: 100vh;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .HomePage-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #252b55;
   margin-bottom: 12px;
@@ -27,23 +29,49 @@ body {
    Title bar
 -------------------- */
 .HomePage-titlebar {
-  background-color: #d9d9d9;
-  border-radius: 8px;
-  padding: 18px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  padding: 32px 28px;
   display: flex;
   align-items: center;
+  gap: 16px;
   width: 100%;
   box-sizing: border-box;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.HomePage-titlebar::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.HomePage-titlebar-icon {
+  font-size: 32px !important;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .HomePage-titlebar-text {
   margin: 0;
-  font-size: 18px;
-  font-weight: 800;
-  color: #252b55;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
   text-align: left;
-  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.3px;
+  position: relative;
+  z-index: 1;
 }
 
 /* --------------------
@@ -52,166 +80,214 @@ body {
 .HomePage-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto;
+  gap: 20px;
   grid-template-areas:
-    "pickup recent"
-    "unread-sales validate"
-    "unread-sales validate";
-  overflow: hidden;
-  height: calc(100vh - 160px);
+    "pickup pickup recent"
+    "unread sales validate";
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* --------------------
    Cards / Sections
 -------------------- */
-.HomePage-pickup {
-  grid-area: pickup;
+.HomePage-pickup,
+.HomePage-recent,
+.HomePage-unread,
+.HomePage-sales,
+.HomePage-validate {
   background: white;
-  border: 1px solid #000;
-  border-radius: 8px;
+  border: none;
+  border-radius: 16px;
   padding: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.HomePage-pickup:hover,
+.HomePage-recent:hover,
+.HomePage-unread:hover,
+.HomePage-sales:hover,
+.HomePage-validate:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.HomePage-pickup {
+  grid-area: pickup;
 }
 
 .HomePage-recent {
   grid-area: recent;
-  background: white;
-  border: 1px solid #000;
-  border-radius: 8px;
-  padding: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
-.HomePage-unread-sales-row {
-  grid-area: unread-sales;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.HomePage-unread {
+  grid-area: unread;
 }
 
-.HomePage-unread, 
 .HomePage-sales {
-  flex: 1;
-  background: white;
-  border: 1px solid #000;
-  border-radius: 8px;
-  padding: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+  grid-area: sales;
 }
 
 .HomePage-validate {
   grid-area: validate;
-  background: white;
-  border: 1px solid #000;
-  border-radius: 8px;
-  padding: 0;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 
 /* --------------------
    Section headers
 -------------------- */
 .Dashboard-section-title.dark {
-  background-color: #252b55;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
-  border-radius: 8px 8px 0 0;
-  padding: 10px 12px;
+  border-radius: 0;
+  padding: 18px 20px;
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   width: 100%;
   display: flex;
   align-items: center;
+  gap: 12px;
   box-sizing: border-box;
+  letter-spacing: 0.5px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.Dashboard-section-title.dark::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  width: 40px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+}
+
+.section-icon {
+  font-size: 22px !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 /* --------------------
    Cards content
 -------------------- */
 .Card {
-  background-color: #e5e5e5;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin: 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px;
   text-align: left;
   font-size: 15px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  position: relative;
+  flex: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.Card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px 0 0 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .Card:hover {
-  background-color: #d0d0d0;
+  background: #ffffff;
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+}
+
+.Card:hover::before {
+  opacity: 1;
 }
 
 .Card p {
-  margin: 0 0 2px 0;
-  font-weight: 600;
-  font-size: 15px;
-  color: #252b55;
+  margin: 0 0 4px 0;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1e293b;
+  line-height: 1.4;
 }
 
-.Card-subtext,
-.Card-id {
-  font-size: 13px;
-  color: #252b55;
+.Card-subtext {
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
   text-align: left;
+  font-weight: 500;
+}
+
+.Card-id {
+  font-size: 13px;
+  color: #667eea;
+  margin: 4px 0 0 0;
+  text-align: left;
+  font-weight: 600;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+  width: fit-content;
 }
 
 .Card-button {
-  margin-top: 10px;
-  padding: 5px 10px;
-  background-color: #2c2c54;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .Card-button:hover {
-  background-color: #1a1a40;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .Card-empty {
   text-align: center;
-  color: #6c757d;
+  color: #94a3b8;
+  font-style: italic;
+  font-weight: 500;
 }
 
 .Card-status {
-  float: right;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
   font-size: 12px;
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.Card-time {
-  float: right;
-  color: #666;
-  font-size: 12px;
-}
-
-.Badge {
-  background: #FF4B4B;
-  color: white;
-  border-radius: 50%;
-  padding: 2px 6px;
-  font-size: 12px;
-  margin-left: 8px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  color: #667eea;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 8px;
+  width: fit-content;
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 /* --------------------
@@ -231,28 +307,77 @@ body {
 
 .Dashboard-section {
   background-color: #fff;
-  border: 1px solid #000;
-  border-radius: 8px;
+  border: none;
+  border-radius: 16px;
   padding: 0;
   box-sizing: border-box;
   margin-bottom: 0;
   position: relative;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* --------------------
+   Loading state
+-------------------- */
+.Card.loading {
+  background: linear-gradient(90deg, #f8f9fe 25%, #e9ecef 50%, #f8f9fe 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s ease-in-out infinite;
+  border-color: rgba(102, 126, 234, 0.05);
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* --------------------
    Media queries
 -------------------- */
-@media (max-height: 700px) {
+@media (max-width: 1400px) {
   .HomePage-grid {
-    grid-template-rows: auto 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+      "pickup recent"
+      "unread sales"
+      "validate validate";
+  }
+}
+
+@media (max-width: 900px) {
+  .HomePage-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "pickup"
+      "recent"
+      "unread"
+      "sales"
+      "validate";
   }
 
-  .HomePage-titlebar-text,
-  .Dashboard-section-title,
+  .HomePage-titlebar-text {
+    font-size: 20px;
+  }
+}
+
+@media (max-height: 700px) {
+  .HomePage-titlebar {
+    padding: 20px 24px;
+  }
+
+  .HomePage-titlebar-text {
+    font-size: 20px;
+  }
+
   .Dashboard-section-title.dark {
-    font-size: 12px;
+    font-size: 14px;
+    padding: 14px 18px;
+  }
+
+  .Card {
+    padding: 16px;
+    margin: 12px;
   }
 }

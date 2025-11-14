@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../SupabaseClient';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'proofs';
@@ -94,7 +95,7 @@ export default function Payment() {
         address: order.address,
         email: order.email,
         has_file: order.has_file,
-        product_name: order.product_name,
+        product_name: (typeof order.product_name === 'object' ? order.product_name?.name : order.product_name) || '',
         variant: order.variant,
         height: order.height,
         width: order.width,
@@ -106,15 +107,15 @@ export default function Payment() {
         total: order.total,
         status: 'Validation',
         attached_file: order.attached_file,
-        payment_proof: finalProofUrl, // URL of uploaded or passed payment proof
+        payment_proof: finalProofUrl,
         order_source: 'mobile',
-        created_at: order.created_at || new Date().toISOString(), // Use order timestamp or current time
+        created_at: order.created_at || new Date().toISOString(),
         employee_email: order.employee_email || null,
-        employee_first_name: null, // Mobile orders don't have employees initially
+        employee_first_name: null,
         employee_last_name: null
       };
 
-      console.log('Order data to insert:', orderData); // Debug log
+      console.log('Order data to insert:', orderData);
 
       const { data, error } = await supabase
         .from('orders')
@@ -141,48 +142,118 @@ export default function Payment() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.gcashLogo}>GCash</Text>
-          <Text style={styles.policyText}>
-            Payment first policy. We only receive Gcash payment only.
-          </Text>
-          <Text style={styles.acceptedText}>ACCEPTED HERE</Text>
-          <View style={styles.qrBox}>
-            <Image
-              source={require('../assets/gcash-qr.png')}
-              style={styles.qrImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.transferNote}>Transfer fees may apply.</Text>
-            <Text style={styles.accountName}>NI*****N A.</Text>
-            <Text style={styles.accountDetails}>Mobile No: 09177177429</Text>
-            <Text style={styles.accountDetails}>User ID: ********4HAPLZ</Text>
-          </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Complete Payment</Text>
+          <Text style={styles.headerSubtitle}>Scan QR code to pay with GCash</Text>
         </View>
-        
-        <View style={styles.attachBox}>
-          <Text style={styles.attachLabel}>
-            Attach proof payment here for validation purposes.
+
+        {/* GCash Card */}
+        <View style={styles.cardWrapper}>
+          <LinearGradient
+            colors={['#007AFF', '#0051D5']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.gcashLogo}>GCash</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>REQUIRED</Text>
+              </View>
+            </View>
+            
+            <View style={styles.qrBox}>
+              <Image
+                source={require('../assets/gcash-qr.png')}
+                style={styles.qrImage}
+                resizeMode="contain"
+              />
+            </View>
+
+            <View style={styles.accountInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Account Name</Text>
+                <Text style={styles.infoValue}>NI*****N A.</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Mobile Number</Text>
+                <Text style={styles.infoValue}>09177177429</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>User ID</Text>
+                <Text style={styles.infoValue}>********4HAPLZ</Text>
+              </View>
+            </View>
+
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeIcon}>ⓘ</Text>
+              <Text style={styles.noticeText}>
+                Payment first policy • Transfer fees may apply
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Upload Section */}
+        <View style={styles.uploadSection}>
+          <Text style={styles.sectionTitle}>Payment Proof</Text>
+          <Text style={styles.sectionSubtitle}>
+            Upload a screenshot of your payment confirmation
           </Text>
-          <View style={styles.attachRow}>
-            <TextInput
-              style={styles.attachInput}
-              placeholder="Attach file"
-              value={proofUri ? proofUri.split('/').pop() : ''}
-              editable={false}
-            />
-            <TouchableOpacity style={styles.attachPlus} onPress={pickImage}>
-              <Text style={styles.attachPlusText}>+</Text>
-            </TouchableOpacity>
-          </View>
+
           {proofUri ? (
-            <Image 
-              source={{ uri: proofUri }} 
-              style={styles.previewImage}
-            />
-          ) : null}
+            <View style={styles.imagePreviewContainer}>
+              <Image 
+                source={{ uri: proofUri }} 
+                style={styles.previewImage}
+              />
+              <TouchableOpacity 
+                style={styles.changeButton}
+                onPress={pickImage}
+              >
+                <Text style={styles.changeButtonText}>Change Photo</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={styles.uploadBox} 
+              onPress={pickImage}
+            >
+              <View style={styles.uploadIcon}>
+                <Text style={styles.uploadIconText}>📷</Text>
+              </View>
+              <Text style={styles.uploadText}>Tap to upload proof</Text>
+              <Text style={styles.uploadSubtext}>JPG, PNG or JPEG</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Order Summary */}
+        {order && (
+          <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>Order Summary</Text>
+            <View style={styles.summaryBox}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Product</Text>
+                <Text style={styles.summaryValue}>{order.product_name}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Quantity</Text>
+                <Text style={styles.summaryValue}>{order.quantity}</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabelBold}>Total Amount</Text>
+                <Text style={styles.summaryTotal}>₱{order.total}</Text>
+              </View>
+            </View>
+          </View>
+        )}
         
+        {/* Place Order Button */}
         <TouchableOpacity
           style={[
             styles.placeOrderBtn, 
@@ -190,11 +261,16 @@ export default function Payment() {
           ]}
           onPress={handlePlaceOrder}
           disabled={uploading}
+          activeOpacity={0.8}
         >
           <Text style={styles.placeOrderText}>
-            {uploading ? 'Uploading...' : 'Place Order'}
+            {uploading ? '⏳ Uploading...' : '✓ Confirm & Place Order'}
           </Text>
         </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          Your order will be validated within 24 hours
+        </Text>
       </View>
     </ScrollView>
   );
@@ -202,138 +278,258 @@ export default function Payment() {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F8F9FD',
     flexGrow: 1,
   },
   container: {
     width: '100%',
     alignItems: 'center',
   },
-  card: {
-    backgroundColor: '#1877F3',
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 16,
+  header: {
     width: '100%',
-    maxWidth: 370,
+    marginBottom: 24,
     alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: 6,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+  },
+  cardWrapper: {
+    width: '100%',
+    marginBottom: 24,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  card: {
+    borderRadius: 20,
+    padding: 24,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   gcashLogo: {
     color: '#fff',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
-  policyText: {
-    color: '#fff',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 8,
+  badge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  acceptedText: {
+  badgeText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 17,
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   qrBox: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
-    marginBottom: 8,
-    width: '100%',
+    marginBottom: 20,
   },
   qrImage: {
-    width: 160,
-    height: 160,
-    marginBottom: 8,
+    width: 180,
+    height: 180,
   },
-  transferNote: {
-    color: '#888',
-    fontSize: 12,
-    marginBottom: 2,
-    textAlign: 'center',
+  accountInfo: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
-  accountName: {
-    color: '#1877F3',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 2,
-    textAlign: 'center',
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
-  accountDetails: {
-    color: '#222',
+  infoLabel: {
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 13,
-    textAlign: 'center',
+    fontWeight: '500',
   },
-  attachBox: {
-    backgroundColor: '#eee',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 12,
-    width: '100%',
-    maxWidth: 370,
+  infoValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
-  attachLabel: {
-    color: '#222',
-    fontSize: 13,
-    marginBottom: 6,
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  attachRow: {
+  noticeBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 12,
   },
-  attachInput: {
+  noticeIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#fff',
+  },
+  noticeText: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: '#fff',
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 12,
+    fontWeight: '500',
   },
-  attachPlus: {
-    width: 32,
-    height: 32,
+  uploadSection: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  uploadBox: {
+    backgroundColor: '#fff',
     borderRadius: 16,
-    backgroundColor: '#232B55',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
-  attachPlusText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+  uploadIcon: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  previewImage: {
-    width: 120,
-    height: 120,
-    marginTop: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
+  uploadIconText: {
+    fontSize: 28,
   },
-  placeOrderBtn: {
-    backgroundColor: '#232B55',
-    borderRadius: 24,
+  uploadText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A2E',
+    marginBottom: 4,
+  },
+  uploadSubtext: {
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+  imagePreviewContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    marginTop: 12,
+  },
+  previewImage: {
     width: '100%',
-    maxWidth: 370,
+    height: 250,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  changeButton: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  changeButtonText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summarySection: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  summaryBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: '#1A1A2E',
+    fontWeight: '600',
+  },
+  summaryLabelBold: {
+    fontSize: 16,
+    color: '#1A1A2E',
+    fontWeight: '700',
+  },
+  summaryTotal: {
+    fontSize: 20,
+    color: '#007AFF',
+    fontWeight: '800',
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+    marginBottom: 16,
+  },
+  placeOrderBtn: {
+    backgroundColor: '#1A1A2E',
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   disabledBtn: {
-    backgroundColor: '#666',
-    opacity: 0.7,
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
   placeOrderText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  footerText: {
+    marginTop: 16,
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });

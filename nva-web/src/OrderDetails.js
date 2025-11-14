@@ -1,11 +1,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import axios from 'axios';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import Footer from './components/Footer';
 import './OrderDetails.css';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import AspectRatioOutlinedIcon from '@mui/icons-material/AspectRatioOutlined';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import DirectionsWalkOutlinedIcon from '@mui/icons-material/DirectionsWalkOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 
 // Constants
 const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
@@ -99,6 +117,7 @@ const useEmployee = () => {
 
 const OrderDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { order, setOrder, loading, error } = useOrder(id);
   const employee = useEmployee();
   const [file, setFile] = useState(null);
@@ -293,8 +312,43 @@ Please come to our store to pick up your order.`;
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) {
+    return (
+      <div className="App">
+        <Header />
+        <div className="MainContent">
+          <Sidebar />
+          <div className="PageContent">
+            <div className="OrderDetails-loading">
+              <ReceiptLongOutlinedIcon style={{ fontSize: 64, opacity: 0.3 }} />
+              <h2>Loading Order...</h2>
+              <p>Please wait while we fetch the order details.</p>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="App">
+        <Header />
+        <div className="MainContent">
+          <Sidebar />
+          <div className="PageContent">
+            <div className="OrderDetails-error">
+              <p>Error: {error}</p>
+              <button onClick={() => navigate('/process-orders')}>Back to Orders</button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!order) return <div>Order not found.</div>;
 
   return (
@@ -303,245 +357,317 @@ Please come to our store to pick up your order.`;
       <div className="MainContent">
         <Sidebar />
         <div className="PageContent">
-          <div className="OrderDetails-root">
+          <div className="OrderDetails-page">
+            {/* Header */}
             <div className="OrderDetails-header">
-              Order Details
-              {isWalkIn && (
-                <span
-                  style={{
-                    marginLeft: 10,
-                    fontSize: 12,
-                    padding: '4px 8px',
-                    borderRadius: 12,
-                    background: '#FFF7CC',
-                    color: '#8A6D3B',
-                    border: '1px solid #F3E59A',
-                    verticalAlign: 'middle',
-                    fontWeight: 600
-                  }}
-                >
-                  Walk-in Order
-                </span>
-              )}
-            </div>
-            <div className="OrderDetails-main">
-              <div className="OrderDetails-left">
-                <div className="OrderDetails-customer-row">
-                  <span className="OrderDetails-customer-name">
-                    {order.first_name} {order.last_name}
-                  </span>
-                  <span className="OrderDetails-status-badge">{order.status || 'Pending'}</span>
-                </div>
-                <div className="OrderDetails-product-title">{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</div>
-                
-                {/* Show attached file if exists */}
-                {order.attached_file && (
-                  <div className="OrderDetails-preview-img">
-                    <div>📄 {order.attached_file.split('/').pop()}</div>
-                    <button
-                      onClick={() => window.open(order.attached_file, '_blank')}
-                      style={{
-                        marginLeft: 8,
-                        background: '#252b55',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 4,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Download
-                    </button>
-                    <span style={{ marginLeft: 8 }}>Customer's File</span>
-                  </div>
-                )}
-                
-                <div className="OrderDetails-card">
-                  <div className="OrderDetails-card-title">{order.variant}</div>
-                  <div className="OrderDetails-card-desc">High Quality Printing Service</div>
-                  <div className="OrderDetails-card-pickup">
-                    Pickup:<br />
-                    Date: {order.pickup_date}<br />
-                    Time: {order.pickup_time}
-                  </div>
-                  <div className="OrderDetails-card-info">
-                    Order Created: {order.created_at ? new Date(order.created_at).toLocaleString() : 'N/A'}<br />
-                    {(order.employee_first_name || order.employee_email) && (
-                      <>Processed by: {order.employee_first_name && order.employee_last_name 
-                        ? `${order.employee_first_name} ${order.employee_last_name}`
-                        : order.employee_email || 'Unknown'}<br /></>
-                    )}
-                    Order ID: {order.id ? order.id.slice(0, 8) : 'N/A'}
-                  </div>
+              <div className="OrderDetails-header-content">
+                <button className="OrderDetails-back-btn" onClick={() => navigate('/process-orders')}>
+                  <ArrowBackOutlinedIcon />
+                </button>
+                <ReceiptLongOutlinedIcon className="OrderDetails-header-icon" />
+                <div className="OrderDetails-header-text">
+                  <h1>Order #{order.id.slice(0, 8)}</h1>
+                  <p>{order.first_name} {order.last_name}</p>
                 </div>
               </div>
-              <div className="OrderDetails-right">
-                <div className="OrderDetails-summary-title">Order Summary</div>
-                <input
-                  className="OrderDetails-summary-file"
-                  value={order.attached_file ? order.attached_file.split('/').pop() : 'No file attached'}
-                  disabled
-                />
-                <div className="OrderDetails-summary-info">
-                  <span>Size</span>
-                  <span>{order.height && order.width ? `${order.height} × ${order.width}` : 'Custom'}</span>
+              <div className="OrderDetails-header-badges">
+                <div className={`status-badge ${order.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                  {order.status || 'Pending'}
                 </div>
-                <div className="OrderDetails-summary-info">
-                  <span>No. of pcs</span>
-                  <span>{order.quantity} pcs</span>
-                </div>
-                {order.eyelets && (
-                  <div className="OrderDetails-summary-info">
-                    <span>Eyelets</span>
-                    <span>{order.eyelets}</span>
+                {isWalkIn && (
+                  <div className="walkin-badge">
+                    <DirectionsWalkOutlinedIcon style={{ fontSize: 16 }} />
+                    <span>Walk-in Order</span>
                   </div>
                 )}
-                <div className="OrderDetails-summary-info">
-                  <span>Quality</span>
-                  <span>{order.variant}</span>
-                </div>
-                <div className="OrderDetails-summary-info" style={{ marginBottom: 6 }}>
-                  <span>Instructions</span>
-                </div>
-                <textarea
-                  className="OrderDetails-summary-instructions"
-                  value={order.instructions || 'No special instructions'}
-                  disabled
-                />
-                <div className="OrderDetails-summary-totals">
-                  <div>
-                    <span>Subtotal</span>
-                    <span>₱ {subtotal}</span>
-                  </div>
-                  {layoutFee > 0 && (
-                    <div>
-                      <span>Layout Fee</span>
-                      <span>₱ {layoutFee}</span>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="OrderDetails-container">
+              <div className="OrderDetails-layout">
+                {/* Left Column - Customer & Order Info */}
+                <div className="OrderDetails-left">
+                  {/* Customer Information */}
+                  <div className="detail-section">
+                    <div className="section-header">
+                      <PersonOutlineOutlinedIcon className="section-icon" />
+                      <h3>Customer Information</h3>
                     </div>
-                  )}
-                </div>
-                <div className="OrderDetails-summary-total">
-                  <span>TOTAL</span>
-                  <span>₱ {order.total}</span>
-                </div>
-                
-                {/* Payment proof section */}
-                {order.payment_proof && (
-                  <div style={{ marginTop: 18 }}>
-                    <div><b>Payment Proof:</b></div>
-                    <a href={order.payment_proof} target="_blank" rel="noopener noreferrer">
-                      View Payment Proof
-                    </a>
-                  </div>
-                )}
-                
-                {/* Approval section */}
-                <div style={{ marginTop: 18 }}>
-                  {(!order.email || order.order_source === 'walk-in') ? (
-                    <div>
-                      <div style={{ fontStyle: 'italic', color: '#667085', marginBottom: 8 }}>
-                        Approval is not required for walk-in orders.
+                    <div className="customer-info-grid">
+                      <div className="info-item">
+                        <PersonOutlineOutlinedIcon className="info-icon" />
+                        <div>
+                          <span className="info-label">Name</span>
+                          <span className="info-value">{order.first_name} {order.last_name}</span>
+                        </div>
                       </div>
-                      <button
-                        onClick={handleWalkInApprove}
-                        disabled={uploading || order.status === 'Printing'}
-                        style={{
-                          background: uploading || order.status === 'Printing' ? '#ccc' : '#252b55',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 8,
-                          padding: '8px 18px',
-                          fontWeight: 600,
-                          fontSize: 16,
-                          cursor: uploading || order.status === 'Printing' ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        {order.status === 'Printing' ? 'Already Printing' : 'Approved'}
-                      </button>
+                      {!isWalkIn && (
+                        <>
+                          <div className="info-item">
+                            <EmailOutlinedIcon className="info-icon" />
+                            <div>
+                              <span className="info-label">Email</span>
+                              <span className="info-value">{order.email}</span>
+                            </div>
+                          </div>
+                          <div className="info-item">
+                            <PhoneOutlinedIcon className="info-icon" />
+                            <div>
+                              <span className="info-label">Phone</span>
+                              <span className="info-value">{order.phone_number}</span>
+                            </div>
+                          </div>
+                          <div className="info-item full-width">
+                            <LocationOnOutlinedIcon className="info-icon" />
+                            <div>
+                              <span className="info-label">Address</span>
+                              <span className="info-value">{order.address}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <div>
-                        <b>Approved:</b> {order.approved || 'no'}
+                  </div>
+
+                  {/* Order Details */}
+                  <div className="detail-section">
+                    <div className="section-header">
+                      <InventoryOutlinedIcon className="section-icon" />
+                      <h3>Order Details</h3>
+                    </div>
+                    <div className="order-product-card">
+                      <h4 className="product-name">
+                        {order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}
+                      </h4>
+                      <div className="product-details-grid">
+                        <div className="product-detail">
+                          <AspectRatioOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Size: {order.height && order.width ? `${order.height} × ${order.width}` : 'Custom'}</span>
+                        </div>
+                        <div className="product-detail">
+                          <InventoryOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Quantity: {order.quantity} pcs</span>
+                        </div>
+                        {order.eyelets && (
+                          <div className="product-detail">
+                            <span>Eyelets: {order.eyelets}</span>
+                          </div>
+                        )}
+                        <div className="product-detail">
+                          <CalendarTodayOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Pickup: {order.pickup_date}</span>
+                        </div>
+                        <div className="product-detail">
+                          <AccessTimeOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Time: {order.pickup_time}</span>
+                        </div>
                       </div>
-                      <div>
-                        <b>Approval File:</b>{' '}
-                        {order.approval_file ? (
-                          <a href={order.approval_file} target="_blank" rel="noopener noreferrer">View Layout</a>
-                        ) : 'None'}
+                    </div>
+
+                    {order.instructions && (
+                      <div className="instructions-card">
+                        <div className="instructions-header">
+                          <DescriptionOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Special Instructions</span>
+                        </div>
+                        <p>{order.instructions}</p>
                       </div>
-                      <input
-                        type="file"
-                        onChange={handleFileChange}
-                        style={{ marginTop: 8 }}
-                        accept="image/*,.pdf"
-                      />
-                      <button
-                        onClick={handleSendApproval}
-                        disabled={uploading || order.approved === 'yes'}
-                        style={{
-                          marginTop: 8,
-                          background: uploading || order.approved === 'yes' ? '#ccc' : '#252b55',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 8,
-                          padding: '8px 18px',
-                          fontWeight: 600,
-                          fontSize: 16,
-                          cursor: uploading || order.approved === 'yes' ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        {uploading ? 'Uploading...' :
-                         order.approval_file ? 'Send New Version' : 'Send Layout for Approval'}
-                      </button>
-                    </>
-                  )}
+                    )}
+
+                    {order.attached_file && (
+                      <div className="file-card">
+                        <div className="file-header">
+                          <AttachFileOutlinedIcon style={{ fontSize: 18 }} />
+                          <span>Customer's File</span>
+                        </div>
+                        <div className="file-content">
+                          <span className="file-name">{order.attached_file.split('/').pop()}</span>
+                          <button
+                            className="file-download-btn"
+                            onClick={() => window.open(order.attached_file, '_blank')}
+                          >
+                            <VisibilityOutlinedIcon style={{ fontSize: 16 }} />
+                            View/Download
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Order Metadata */}
+                  <div className="detail-section">
+                    <div className="order-metadata">
+                      <div className="metadata-item">
+                        <span className="metadata-label">Order ID:</span>
+                        <span className="metadata-value">{order.id.slice(0, 8)}</span>
+                      </div>
+                      <div className="metadata-item">
+                        <span className="metadata-label">Created:</span>
+                        <span className="metadata-value">
+                          {new Date(order.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                      {(order.employee_first_name || order.employee_email) && (
+                        <div className="metadata-item">
+                          <span className="metadata-label">Processed by:</span>
+                          <span className="metadata-value">
+                            {order.employee_first_name && order.employee_last_name
+                              ? `${order.employee_first_name} ${order.employee_last_name}`
+                              : order.employee_email || 'Unknown'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Status Change Buttons */}
-                <div style={{ marginTop: 18 }}>
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Update Order Status</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'For Pickup')}
-                      disabled={uploading || order.status === 'For Pickup' || order.status === 'Finished'}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        border: '1px solid #252b55',
-                        background:
-                          uploading || order.status === 'For Pickup' || order.status === 'Finished'
-                            ? '#ddd'
-                            : '#f2f3f5',
-                        cursor:
-                          uploading || order.status === 'For Pickup' || order.status === 'Finished'
-                            ? 'not-allowed'
-                            : 'pointer',
-                        fontWeight: 600
-                      }}
-                    >
-                      Mark as Ready for Pickup
-                    </button>
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'Finished')}
-                      disabled={uploading || order.status === 'Finished'}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        border: '1px solid #252b55',
-                        background:
-                          uploading || order.status === 'Finished' ? '#ddd' : '#252b55',
-                        color: uploading || order.status === 'Finished' ? '#444' : '#fff',
-                        cursor:
-                          uploading || order.status === 'Finished'
-                            ? 'not-allowed'
-                            : 'pointer',
-                        fontWeight: 600
-                      }}
-                    >
-                      Mark as Finished
-                    </button>
+                {/* Right Column - Payment & Actions */}
+                <div className="OrderDetails-right">
+                  {/* Payment Summary */}
+                  <div className="detail-section">
+                    <div className="section-header">
+                      <AttachMoneyOutlinedIcon className="section-icon" />
+                      <h3>Payment Summary</h3>
+                    </div>
+                    <div className="payment-card">
+                      <div className="payment-row">
+                        <span>Subtotal</span>
+                        <span>₱{subtotal}</span>
+                      </div>
+                      {layoutFee > 0 && (
+                        <div className="payment-row">
+                          <span>Layout Fee</span>
+                          <span>₱{layoutFee}</span>
+                        </div>
+                      )}
+                      <div className="payment-row total">
+                        <strong>Total Amount</strong>
+                        <strong>₱{order.total}</strong>
+                      </div>
+                    </div>
+
+                    {order.payment_proof && (
+                      <div className="payment-proof">
+                        <span className="proof-label">Payment Proof:</span>
+                        <a
+                          href={order.payment_proof}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="proof-link"
+                        >
+                          <VisibilityOutlinedIcon style={{ fontSize: 16 }} />
+                          View Payment Proof
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Approval Section */}
+                  <div className="detail-section">
+                    <div className="section-header">
+                      <CheckCircleOutlineOutlinedIcon className="section-icon" />
+                      <h3>Layout Approval</h3>
+                    </div>
+
+                    {isWalkIn ? (
+                      <div className="walkin-approval-section">
+                        <div className="walkin-notice">
+                          <DirectionsWalkOutlinedIcon style={{ fontSize: 20 }} />
+                          <p>Approval is not required for walk-in orders.</p>
+                        </div>
+                        <button
+                          onClick={handleWalkInApprove}
+                          disabled={uploading || order.status === 'Printing'}
+                          className="approve-btn primary"
+                        >
+                          <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
+                          {order.status === 'Printing' ? 'Already Printing' : 'Mark as Approved'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="approval-section">
+                        <div className="approval-status">
+                          <div className="approval-info-row">
+                            <span>Status:</span>
+                            <span className={`approval-value ${order.approved === 'yes' ? 'approved' : 'pending'}`}>
+                              {order.approved === 'yes' ? '✓ Approved' : '⏳ Pending'}
+                            </span>
+                          </div>
+                          {order.approval_file && (
+                            <div className="approval-info-row">
+                              <span>Current Layout:</span>
+                              <a
+                                href={order.approval_file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="approval-link"
+                              >
+                                <VisibilityOutlinedIcon style={{ fontSize: 16 }} />
+                                View Layout
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="file-upload-section">
+                          <label className="file-upload-label">
+                            <CloudUploadOutlinedIcon style={{ fontSize: 20 }} />
+                            <span>{file ? file.name : 'Choose layout file to upload'}</span>
+                            <input
+                              type="file"
+                              onChange={handleFileChange}
+                              accept="image/*,.pdf"
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+
+                          <button
+                            onClick={handleSendApproval}
+                            disabled={uploading || order.approved === 'yes'}
+                            className="approve-btn primary"
+                          >
+                            <CloudUploadOutlinedIcon style={{ fontSize: 18 }} />
+                            {uploading
+                              ? 'Uploading...'
+                              : order.approval_file
+                              ? 'Send New Version'
+                              : 'Send Layout for Approval'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Update Actions */}
+                  <div className="detail-section">
+                    <div className="section-header">
+                      <LocalShippingOutlinedIcon className="section-icon" />
+                      <h3>Update Order Status</h3>
+                    </div>
+                    <div className="status-actions">
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'For Pickup')}
+                        disabled={
+                          uploading ||
+                          order.status === 'For Pickup' ||
+                          order.status === 'Finished'
+                        }
+                        className="status-btn pickup"
+                      >
+                        <LocalShippingOutlinedIcon style={{ fontSize: 18 }} />
+                        Mark as Ready for Pickup
+                      </button>
+
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'Finished')}
+                        disabled={uploading || order.status === 'Finished'}
+                        className="status-btn finished"
+                      >
+                        <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
+                        Mark as Finished
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

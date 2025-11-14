@@ -10,38 +10,25 @@ const useProductData = (product) => {
   // Fetch product and variants from Supabase
   useEffect(() => {
     const fetchProductAndVariants = async () => {
-      if (!product) return;
-      const { data: products, error: pErr } = await supabase
-        .from('products')
-        .select('*')
-        .eq('name', product)
-        .limit(1);
+      if (!product || !product.name) return;
+      // If product object is passed, set it directly
+      setProductData(product);
 
-      if (pErr) {
-        console.warn('Product fetch error:', pErr.message);
-        return;
+      const { data: vdata, error: vErr } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', product.product_id);
+
+      if (vErr) {
+        console.warn('Variants fetch error:', vErr.message);
       }
 
-      if (products && products.length > 0) {
-        const prod = products[0];
-        setProductData(prod);
+      const list = vdata || [];
+      setVariants(list);
 
-        const { data: vdata, error: vErr } = await supabase
-          .from('product_variants')
-          .select('*')
-          .eq('product_id', prod.product_id);
-
-        if (vErr) {
-          console.warn('Variants fetch error:', vErr.message);
-        }
-
-        const list = vdata || [];
-        setVariants(list);
-
-        // Auto-select first variant if none selected
-        if (list.length > 0 && !selectedVariant) {
-          setSelectedVariant(list[0]);
-        }
+      // Auto-select first variant if none selected
+      if (list.length > 0 && !selectedVariant) {
+        setSelectedVariant(list[0]);
       }
     };
     fetchProductAndVariants();

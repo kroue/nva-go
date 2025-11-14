@@ -1,33 +1,263 @@
-/* filepath: src/components/Header.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --header-height: 80px;
+  --surface-color: #ffffff;
+  --background-gradient: linear-gradient(180deg, #f8f9fe 0%, #fafbff 100%);
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: rgba(100, 116, 139, 0.12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
 header {
-  background-color: #252B55;
-  color: white;
-  padding: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: var(--primary-gradient);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
 }
 
 .Header {
+  height: var(--header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: #252B55; /* Dark blue background */
-  padding: 10px 20px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 0 32px;
+  background: var(--primary-gradient);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  gap: 24px;
+}
+
+/* Left Section */
+.Header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.Header-logo {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.Header-logo:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .Header-logo img {
-  height: 40px; /* Adjust the logo size */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.Header-title h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.Header-title p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Center Section - Search */
+.Header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .Header-search {
-  flex-grow: 1;
-  margin-left: 20px;
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.Header-search.focused {
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.search-icon {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 22px;
+  transition: color 0.3s ease;
+}
+
+.Header-search.focused .search-icon {
+  color: #ffffff;
 }
 
 .Header-search-input {
-  width: 100%;
-  max-width: 300px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.Header-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+/* Right Section - Actions */
+.Header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.Header-action-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.Header-action-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.Header-action-btn svg {
+  font-size: 22px;
+  transition: transform 0.25s ease;
+}
+
+.Header-action-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.action-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .Header {
+    padding: 0 24px;
+  }
+
+  .Header-center {
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .Header {
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .Header-title {
+    display: none;
+  }
+
+  .Header-center {
+    max-width: none;
+    flex: 1;
+  }
+
+  .Header-search {
+    padding: 10px 14px;
+  }
+
+  .Header-action-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .Header-action-btn svg {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .Header-right {
+    gap: 6px;
+  }
+
+  .Header-action-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .Header-search {
+    padding: 8px 12px;
+  }
+
+  .search-icon {
+    font-size: 20px;
+  }
 }

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './SupabaseClient';
 import './ValidatePayment.css';
+import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import ZoomInOutlinedIcon from '@mui/icons-material/ZoomInOutlined';
 
 // Replace toNumber with a currency-safe parser
 const toNumber = (v, d = 0) => {
@@ -56,14 +65,17 @@ const buildSaleFromOrder = (o) => {
 const ValidatePayment = () => {
   const [payments, setPayments] = useState([]);
   const [selected, setSelected] = useState(0);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPayments = async () => {
+      // Fetch all orders with payment proof, including validated ones
       const { data } = await supabase
         .from('orders')
         .select('*')
         .not('payment_proof', 'is', null)
         .order('created_at', { ascending: false });
+      
       if (data) setPayments(data);
     };
     fetchPayments();
@@ -117,7 +129,7 @@ const ValidatePayment = () => {
       }
     }
 
-    // 4) Reflect locally (do not remove item)
+    // 4) Update the local state to mark as validated
     setPayments((prev) =>
       prev.map((p) => (p.id === orderId ? { ...p, status: 'Layout Approval' } : p))
     );
@@ -125,17 +137,40 @@ const ValidatePayment = () => {
 
   const handleDecline = async (orderId) => {
     await supabase.from('orders').update({ status: 'Declined' }).eq('id', orderId);
-    setPayments((prev) => prev.filter((p) => p.id !== orderId));
-    setSelected(0);
+    
+    // Update the local state to mark as declined
+    setPayments((prev) =>
+      prev.map((p) => (p.id === orderId ? { ...p, status: 'Declined' } : p))
+    );
+  };
+
+  const openImageModal = () => {
+    if (selectedPayment.payment_proof) {
+      setImageModalOpen(true);
+    }
+  };
+
+  const closeImageModal = () => {
+    setImageModalOpen(false);
   };
 
   if (payments.length === 0) {
     return (
       <div className="ValidatePayment-page">
-        <div className="Orders-header">Orders</div>
-        <div className="ValidatePayment-section-title">Validate Payment</div>
+        <div className="ValidatePayment-header">
+          <div className="ValidatePayment-header-content">
+            <VerifiedOutlinedIcon className="ValidatePayment-header-icon" />
+            <div className="ValidatePayment-header-text">
+              <h1>Validate Payment</h1>
+              <p>Review and approve payment submissions</p>
+            </div>
+          </div>
+        </div>
         <div className="ValidatePayment-container">
-          <div style={{ padding: 32, color: '#888' }}>No payments to validate.</div>
+          <div className="ValidatePayment-empty">
+            <VerifiedOutlinedIcon style={{ fontSize: 64, opacity: 0.3 }} />
+            <p>No payments to validate</p>
+          </div>
         </div>
       </div>
     );
@@ -146,93 +181,160 @@ const ValidatePayment = () => {
 
   return (
     <div className="ValidatePayment-page">
-      <div className="Orders-header">Orders</div>
-      <div className="ValidatePayment-section-title">Validate Payment</div>
+      <div className="ValidatePayment-header">
+        <div className="ValidatePayment-header-content">
+          <VerifiedOutlinedIcon className="ValidatePayment-header-icon" />
+          <div className="ValidatePayment-header-text">
+            <h1>Validate Payment</h1>
+            <p>Review and approve payment submissions</p>
+          </div>
+        </div>
+        <div className="ValidatePayment-stats">
+          <div className="stat-badge">
+            <span className="stat-number">{payments.filter(p => p.status !== 'Layout Approval' && p.status !== 'Declined' && p.status !== 'Printing' && p.status !== 'For Pickup' && p.status !== 'Finished').length}</span>
+            <span className="stat-label">Pending</span>
+          </div>
+          <div className="stat-badge">
+            <span className="stat-number">{payments.filter(p => p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished').length}</span>
+            <span className="stat-label">Validated</span>
+          </div>
+        </div>
+      </div>
+
       <div className="ValidatePayment-container">
         <div className="ValidatePayment-grid">
           <div className="ValidatePayment-list">
+            <h3 className="list-title">Payment Submissions</h3>
             {payments.map((p, idx) => (
               <div
-                className={`ValidatePayment-card${selected === idx ? ' active' : ''}`}
+                className={`ValidatePayment-card${selected === idx ? ' active' : ''} ${
+                  p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'validated' : p.status === 'Declined' ? 'declined' : ''
+                }`}
                 key={p.id}
                 onClick={() => setSelected(idx)}
               >
-                <div>
-                  <b>{p.first_name} {p.last_name}</b> sent proof of Payment
-                  <span className="ValidatePayment-card-id">No. {String(p.id).slice(0, 8)}</span>
+                <div className="card-header">
+                  <div className="card-customer">
+                    <PersonOutlineOutlinedIcon className="card-icon" />
+                    <div>
+                      <strong>{p.first_name} {p.last_name}</strong>
+                      <span className="card-order-id">#{String(p.id).slice(0, 8)}</span>
+                    </div>
+                  </div>
+                  <div className={`status-badge ${
+                    p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'success' : p.status === 'Declined' ? 'error' : 'pending'
+                  }`}>
+                    {p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? (
+                      <>
+                        <CheckCircleOutlineOutlinedIcon style={{ fontSize: 14 }} />
+                        Validated
+                      </>
+                    ) : p.status === 'Declined' ? (
+                      <>
+                        <CancelOutlinedIcon style={{ fontSize: 14 }} />
+                        Declined
+                      </>
+                    ) : (
+                      'Pending'
+                    )}
+                  </div>
                 </div>
-                <div className="ValidatePayment-card-file">
-                  {p.payment_proof ? p.payment_proof.split('/').pop() : 'No file'}
-                  <span className="ValidatePayment-card-method">Gcash</span>
-                  <span
-                    className={`ValidatePayment-card-status ${
-                      p.status === 'Layout Approval'
-                        ? 'validated'
-                        : p.status === 'Declined'
-                        ? 'declined'
-                        : 'pending'
-                    }`}
-                    style={{
-                      marginLeft: 8,
-                      padding: '2px 6px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                      border: '1px solid #ccc',
-                      background:
-                        p.status === 'Layout Approval'
-                          ? '#e6ffef'
-                          : p.status === 'Declined'
-                          ? '#ffe9e9'
-                          : '#f2f3f5',
-                      color:
-                        p.status === 'Layout Approval'
-                          ? '#1a7f37'
-                          : p.status === 'Declined'
-                          ? '#b42318'
-                          : '#444'
-                    }}
-                  >
-                    {p.status === 'Layout Approval'
-                      ? 'Validated'
-                      : p.status === 'Declined'
-                      ? 'Declined'
-                      : 'Pending'}
-                  </span>
+                <div className="card-details">
+                  <div className="detail-item">
+                    <AttachFileOutlinedIcon className="detail-icon" />
+                    <span>{p.payment_proof ? p.payment_proof.split('/').pop() : 'No file'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <AccountBalanceWalletOutlinedIcon className="detail-icon" />
+                    <span>GCash</span>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
           <div className="ValidatePayment-preview">
-            <div className="ValidatePayment-preview-title">Proof of Payment</div>
-            {selectedPayment.payment_proof ? (
-              <img
-                src={selectedPayment.payment_proof}
-                alt="Proof"
-                className="ValidatePayment-preview-img"
-                style={{ maxWidth: 320, maxHeight: 320, borderRadius: 10, border: '1.5px solid #252b55', background: '#fff' }}
-              />
-            ) : (
-              <div style={{ color: '#888' }}>No payment proof uploaded.</div>
-            )}
+            <div className="preview-header">
+              <ImageOutlinedIcon className="preview-icon" />
+              <h3>Payment Proof</h3>
+            </div>
+            
+            <div className="preview-content">
+              {selectedPayment.payment_proof ? (
+                <div className="preview-image-wrapper" onClick={openImageModal}>
+                  <img
+                    src={selectedPayment.payment_proof}
+                    alt="Payment Proof"
+                    className="ValidatePayment-preview-img"
+                  />
+                  <div className="image-overlay">
+                    <ZoomInOutlinedIcon className="zoom-icon" />
+                    <span>Click to view full size</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="preview-empty">
+                  <ImageOutlinedIcon style={{ fontSize: 48, opacity: 0.3 }} />
+                  <p>No payment proof uploaded</p>
+                </div>
+              )}
+            </div>
+
+            <div className="preview-info">
+              <div className="info-row">
+                <PersonOutlineOutlinedIcon className="info-icon" />
+                <div>
+                  <span className="info-label">Customer</span>
+                  <span className="info-value">{selectedPayment.first_name} {selectedPayment.last_name}</span>
+                </div>
+              </div>
+              <div className="info-row">
+                <AttachFileOutlinedIcon className="info-icon" />
+                <div>
+                  <span className="info-label">Order ID</span>
+                  <span className="info-value">#{String(selectedPayment.id || '').slice(0, 8)}</span>
+                </div>
+              </div>
+            </div>
+
             <div className="ValidatePayment-preview-actions">
               <button
-                className="ValidatePayment-btn validate"
+                className="action-btn validate"
                 onClick={() => handleValidate(selectedPayment.id)}
-                disabled={isValidated}
-                title={isValidated ? 'Already validated' : 'Validate this payment'}
+                disabled={selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
               >
-                {isValidated ? 'Validated' : 'Validate Payment'}
+                <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
+                {selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' ? 'Already Validated' : 'Validate Payment'}
               </button>
               <button
-                className="ValidatePayment-btn decline"
+                className="action-btn decline"
                 onClick={() => handleDecline(selectedPayment.id)}
+                disabled={selectedPayment.status === 'Declined' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
               >
+                <CancelOutlinedIcon style={{ fontSize: 18 }} />
                 Decline Payment
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {imageModalOpen && (
+        <div className="image-modal" onClick={closeImageModal}>
+          <div className="modal-backdrop" />
+          <button className="modal-close" onClick={closeImageModal}>
+            <CloseOutlinedIcon />
+          </button>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={selectedPayment.payment_proof}
+              alt="Payment Proof Full View"
+              className="modal-image"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,12 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard, Alert, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard, Alert, ActivityIndicator, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../SupabaseClient';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Verification({ navigation, route }) {
-  const { width, height } = useWindowDimensions();
-  const scale = (size) => (width / 375) * size; // Base width 375 for scaling
-
   const email = route?.params?.email || '';
   const desiredPassword = route?.params?.password || '';
   const profile = {
@@ -16,17 +14,36 @@ export default function Verification({ navigation, route }) {
     phone: route?.params?.phone || '',
   };
 
-  const [otp, setOtp] = useState(['', '', '', '', '', '']); // 6 digits
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
   const [loading, setLoading] = useState(false);
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
   // Resend cooldown
-  const COOLDOWN_DEFAULT = 60; // seconds
+  const COOLDOWN_DEFAULT = 60;
   const initialSentAt = route?.params?.sentAt ? Number(route.params.sentAt) : null;
   const [cooldown, setCooldown] = useState(() => {
     if (!initialSentAt) return 0;
     const elapsed = Math.floor((Date.now() - initialSentAt) / 1000);
     return Math.max(0, COOLDOWN_DEFAULT - elapsed);
   });
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
  
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -60,17 +77,14 @@ export default function Verification({ navigation, route }) {
   };
 
   const tryVerify = async (email, code) => {
-    // try multiple possible 'type' values to be resilient to different OTP flows
     const typesToTry = ['email', 'signup', 'signin', 'magiclink'];
     for (const t of typesToTry) {
       try {
-        // call verifyOtp and handle both returned error objects and thrown errors
         const res = await supabase.auth.verifyOtp({
           email,
           token: code,
           type: t,
         });
-        // some supabase clients return { data, error } while others might throw;
         const returnedError = res?.error ?? null;
         if (!returnedError) {
           return { success: true };
@@ -80,9 +94,7 @@ export default function Verification({ navigation, route }) {
         if (lower.includes('expire')) {
           return { success: false, fatal: true, error: returnedError };
         }
-        // otherwise try next type
       } catch (err) {
-        // verifyOtp may throw AuthApiError; determine if it's a fatal verification error
         const msg = err?.message?.toString?.() || '';
         const lower = msg.toLowerCase();
         const fatal = lower.includes('expire') || lower.includes('invalid') || lower.includes('token');
@@ -102,12 +114,10 @@ export default function Verification({ navigation, route }) {
     setLoading(true);
 
     try {
-      // 1) Verify OTP and create session (try multiple types)
       const verifyResult = await tryVerify(email, code);
       if (!verifyResult.success) {
         const err = verifyResult.error;
         const msg = err?.message?.toString?.() || err?.toString?.() || 'OTP verification failed';
-        // use console.warn for expected verification failures to avoid RN RedBox
         console.warn('verifyOtp failed:', msg);
 
         if (verifyResult.fatal || msg.toLowerCase().includes('expire') || msg.toLowerCase().includes('invalid')) {
@@ -130,12 +140,10 @@ export default function Verification({ navigation, route }) {
         return;
       }
 
-      // 2) Set the chosen password now that the user is authenticated
       if (desiredPassword) {
         try {
           const { error: pwErr } = await supabase.auth.updateUser({ password: desiredPassword });
           if (pwErr) {
-            // Ignore "new password should be different from the old password" error:
             const msg = pwErr?.message?.toString() || '';
             if (msg.includes('different') || msg.includes('should be different')) {
               console.warn('Password update skipped: new password matches existing one.');
@@ -148,7 +156,6 @@ export default function Verification({ navigation, route }) {
         }
       }
 
-      // 3) Create profile row in public.customers (username = email)
       const { error: insertErr } = await supabase.from('customers').insert({
         username: email,
         email,
@@ -158,12 +165,10 @@ export default function Verification({ navigation, route }) {
         phone_number: profile.phone,
       });
 
-      // Ignore unique violation (23505) if already inserted by a retry
       if (insertErr && insertErr.code !== '23505') {
         console.error('Insert customer failed:', insertErr);
       }
 
-      // 4) Sign out and go to Login
       await supabase.auth.signOut();
       navigation.replace('Login');
     } catch (e) {
@@ -188,7 +193,6 @@ export default function Verification({ navigation, route }) {
       });
       if (error) {
         console.error('Resend OTP failed:', error);
-        // parse "you can only request this after 42 seconds" message if present
         const msg = error?.message || '';
         const match = msg.match(/after\s+(\d+)\s+seconds/i);
         const wait = match ? Number(match[1]) : COOLDOWN_DEFAULT;
@@ -204,122 +208,299 @@ export default function Verification({ navigation, route }) {
       setCooldown(COOLDOWN_DEFAULT);
       Alert.alert('Resend failed', 'Could not resend OTP');
     }
-   };
- 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',
-      paddingHorizontal: scale(28),
-      paddingTop: scale(36),
-    },
-    backBtn: {
-      marginBottom: scale(18),
-      marginTop: scale(4),
-      alignSelf: 'flex-start',
-    },
-    title: {
-      fontSize: scale(22),
-      fontWeight: 'bold',
-      marginBottom: scale(8),
-      marginTop: scale(8),
-      color: '#111',
-    },
-    subtitle: {
-      fontSize: scale(15),
-      color: '#222',
-      marginBottom: scale(28),
-    },
-    email: {
-      fontWeight: 'bold',
-      color: '#232B55',
-    },
-    otpRow: {
-      flexDirection: 'row',
-      justifyContent: 'center', // Changed from space-between to center
-      marginBottom: scale(32),
-      marginTop: scale(8),
-      paddingHorizontal: scale(16),
-    },
-    otpInput: {
-      width: scale(48), // Slightly reduced from 54
-      height: scale(48), // Match width for square look
-      borderWidth: 1,
-      borderColor: '#222',
-      borderRadius: scale(12),
-      textAlign: 'center',
-      fontSize: scale(22),
-      backgroundColor: '#fff',
-      marginHorizontal: scale(4), // Increased from 2 for more spacing
-    },
-    submitBtn: {
-      backgroundColor: '#232B55',
-      borderRadius: scale(22),
-      height: scale(44),
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: scale(24),
-    },
-    submitText: {
-      color: '#fff',
-      fontSize: scale(17),
-      fontWeight: 'bold',
-    },
-    bottomRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginTop: scale(12),
-    },
-    bottomText: {
-      color: '#222',
-      fontSize: scale(14),
-      marginRight: scale(6),
-    },
-    resendText: {
-      color: '#D32F2F',
-      fontSize: scale(14),
-      fontWeight: '500',
-    },
-  });
+  };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-        <FontAwesome name="arrow-left" size={20} color="#222" />
-      </TouchableOpacity>
-      <Text style={styles.title}>OTP Verification</Text>
-      <Text style={styles.subtitle}>
-        Enter the One Time Password sent to <Text style={styles.email}>{email}</Text>
-      </Text>
-      <View style={styles.otpRow}>
-        {otp.map((digit, idx) => (
-          <TextInput
-            key={idx}
-            ref={inputs[idx]}
-            style={styles.otpInput}
-            keyboardType="number-pad"
-            maxLength={1}
-            value={digit}
-            onChangeText={(text) => handleChange(text, idx)}
-            returnKeyType="next"
-            autoFocus={idx === 0}
-          />
-        ))}
-      </View>
-      <TouchableOpacity
-        style={[styles.submitBtn, loading ? { opacity: 0.7 } : null]}
-        onPress={handleSubmit}
-        disabled={loading}
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Submit</Text>}
-      </TouchableOpacity>
-      <View style={styles.bottomRow}>
-        <Text style={styles.bottomText}>Didn't receive the OTP?</Text>
-        <TouchableOpacity onPress={handleResend} disabled={cooldown > 0} style={cooldown > 0 ? { opacity: 0.6 } : null}>
-          <Text style={styles.resendText}>{cooldown > 0 ? `Resend (${cooldown}s)` : 'Resend'}</Text>
+        {/* Header with Icon */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <View style={styles.backButtonCircle}>
+              <FontAwesome name="arrow-left" size={20} color="#232B55" />
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.iconContainer}>
+            <LinearGradient
+              colors={['#232B55', '#4A5698']}
+              style={styles.iconGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <FontAwesome name="shield" size={40} color="#fff" />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.title}>Verify Your Email</Text>
+          <Text style={styles.subtitle}>
+            Enter the 6-digit code sent to
+          </Text>
+          <Text style={styles.email}>{email}</Text>
+        </View>
+
+        {/* OTP Input Section */}
+        <View style={styles.otpSection}>
+          <View style={styles.otpRow}>
+            {otp.map((digit, idx) => (
+              <View key={idx} style={styles.otpInputWrapper}>
+                <TextInput
+                  ref={inputs[idx]}
+                  style={[
+                    styles.otpInput,
+                    digit ? styles.otpInputFilled : null
+                  ]}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  value={digit}
+                  onChangeText={(text) => handleChange(text, idx)}
+                  returnKeyType="next"
+                  autoFocus={idx === 0}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* Info Message */}
+          <View style={styles.infoBox}>
+            <FontAwesome name="info-circle" size={16} color="#4A5698" style={{ marginRight: 8 }} />
+            <Text style={styles.infoText}>Code expires in 10 minutes</Text>
+          </View>
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={loading ? ['#999', '#777'] : ['#232B55', '#4A5698']}
+            style={styles.submitGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.submitText}>Verify & Continue</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
-      </View>
-    </View>
+
+        {/* Resend Section */}
+        <View style={styles.resendSection}>
+          <Text style={styles.resendLabel}>Didn't receive the code?</Text>
+          <TouchableOpacity 
+            onPress={handleResend} 
+            disabled={cooldown > 0}
+            activeOpacity={0.7}
+            style={styles.resendButton}
+          >
+            {cooldown > 0 ? (
+              <View style={styles.cooldownContainer}>
+                <FontAwesome name="clock-o" size={14} color="#999" style={{ marginRight: 6 }} />
+                <Text style={styles.cooldownText}>Resend in {cooldown}s</Text>
+              </View>
+            ) : (
+              <View style={styles.resendActive}>
+                <FontAwesome name="refresh" size={14} color="#232B55" style={{ marginRight: 6 }} />
+                <Text style={styles.resendText}>Resend Code</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 50,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginBottom: 24,
+  },
+  backButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  iconContainer: {
+    marginBottom: 24,
+  },
+  iconGradient: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#232B55',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  email: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#232B55',
+    textAlign: 'center',
+  },
+  otpSection: {
+    marginBottom: 32,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  otpInputWrapper: {
+    marginHorizontal: 6,
+  },
+  otpInput: {
+    width: 50,
+    height: 56,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 16,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: 'bold',
+    backgroundColor: '#fff',
+    color: '#1A1A1A',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  otpInputFilled: {
+    borderColor: '#232B55',
+    backgroundColor: '#F0F2FF',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F2FF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A5698',
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#4A5698',
+    fontWeight: '500',
+  },
+  submitBtn: {
+    borderRadius: 16,
+    height: 56,
+    marginBottom: 24,
+    overflow: 'hidden',
+    shadowColor: '#232B55',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  submitBtnDisabled: {
+    shadowOpacity: 0.1,
+  },
+  submitGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+  resendSection: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  resendLabel: {
+    fontSize: 15,
+    color: '#666',
+    marginBottom: 12,
+  },
+  resendButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cooldownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cooldownText: {
+    fontSize: 15,
+    color: '#999',
+    fontWeight: '500',
+  },
+  resendActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: 15,
+    color: '#232B55',
+    fontWeight: 'bold',
+  },
+});

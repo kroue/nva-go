@@ -7,22 +7,35 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
-import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
-import ArrowForwardIosOutlinedIcon from '@mui/icons-material/ArrowForwardIosOutlined';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import nvagologo from '../assets/nvalogomini.png';
 import { supabase } from '../SupabaseClient';
 
 const navItems = [
   { label: 'Home', icon: <HomeOutlinedIcon />, path: '/homepage' },
-  { label: 'Orders', icon: <DescriptionOutlinedIcon />, path: '/orders', subItems: [
-    { label: 'Process Orders', path: '/orders/process' },
-    { label: 'Validate Payment', path: '/orders/validate' },
-    { label: 'Send Digital Receipt', path: '/send-receipt' },
-  ]},
-  { label: 'Products', icon: <Inventory2OutlinedIcon />, path: '/products', subItems: [
-    { label: 'Product Catalog', path: '/products' },
-    { label: 'Toggle Product Status', path: '/products/toggle' },
-  ]},
+  { 
+    label: 'Orders', 
+    icon: <DescriptionOutlinedIcon />, 
+    path: '/orders', 
+    subItems: [
+      { label: 'Process Orders', path: '/orders/process' },
+      { label: 'Validate Payment', path: '/orders/validate' },
+      { label: 'Send Receipt', path: '/send-receipt' },
+    ]
+  },
+  { 
+    label: 'Products', 
+    icon: <Inventory2OutlinedIcon />, 
+    path: '/products', 
+    subItems: [
+      { label: 'Catalog', path: '/products' },
+      { label: 'Manage Status', path: '/products/toggle' },
+    ]
+  },
   { label: 'Customers', icon: <GroupOutlinedIcon />, path: '/customers' },
 ];
 
@@ -32,7 +45,7 @@ const Sidebar = () => {
   const [expanded, setExpanded] = useState('');
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [profileName, setProfileName] = useState('Loading…');
-  const arrowRef = useRef(null);
+  const [notificationCount, setNotificationCount] = useState(3);
 
   useEffect(() => {
     let mounted = true;
@@ -56,7 +69,6 @@ const Sidebar = () => {
           return;
         }
 
-        // Fetch EMPLOYEE record only (this app is for staff/admin use)
         const { data: employee, error: empErr } = await supabase
           .from('employees')
           .select('first_name,last_name,username,email')
@@ -68,7 +80,6 @@ const Sidebar = () => {
           return;
         }
 
-        // Fallback to auth metadata or email local-part
         if (mounted) setProfileName(preferName({ email, meta }));
       } catch (e) {
         console.error('Sidebar: failed to load employee name', e);
@@ -83,7 +94,6 @@ const Sidebar = () => {
   const handleNavClick = (item) => {
     if (item.subItems) {
       setExpanded(expanded === item.label ? '' : item.label);
-      navigate(item.path);
     } else {
       setExpanded('');
       navigate(item.path);
@@ -97,146 +107,99 @@ const Sidebar = () => {
     return location.pathname === item.path;
   };
 
-  const handleProfileArrowClick = () => {
-    setProfileModalOpen(!profileModalOpen);
-  };
-
-  const handleEditProfile = () => {
-    setProfileModalOpen(false);
-    navigate('/edit-profile');
-  };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
       console.error('Logout error:', e);
     }
-    setProfileModalOpen(false);
     navigate('/login');
   };
 
   return (
     <div className="Sidebar">
-      {/* Search Bar */}
-      <div className="Sidebar-search">
-        <input type="text" placeholder="Search" className="Sidebar-search-input" />
+
+
+      {/* User Profile Card */}
+      <div className="Sidebar-user-card">
+        <div className="Sidebar-user-avatar">
+          <div className="avatar-circle">
+            {profileName.charAt(0).toUpperCase()}
+          </div>
+          <div className="avatar-status"></div>
+        </div>
+        <div className="Sidebar-user-info">
+          <h3>{profileName}</h3>
+        </div>
+        <button 
+          className="Sidebar-user-menu-btn"
+          onClick={() => setProfileModalOpen(!profileModalOpen)}
+        >
+          <ExpandMoreIcon className={profileModalOpen ? 'rotated' : ''} />
+        </button>
+        
+        {profileModalOpen && (
+          <div className="Sidebar-dropdown">
+            <button onClick={() => { setProfileModalOpen(false); navigate('/edit-profile'); }}>
+              <PersonOutlineIcon />
+              <span>My Profile</span>
+            </button>
+            <button onClick={() => { setProfileModalOpen(false); navigate('/settings'); }}>
+              <SettingsOutlinedIcon />
+              <span>Settings</span>
+            </button>
+            <div className="dropdown-divider"></div>
+            <button className="logout-btn" onClick={handleLogout}>
+              <LogoutOutlinedIcon />
+              <span>Logout</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation Menu */}
       <nav className="Sidebar-nav">
-        <ul>
+        <div className="nav-section-label">MENU</div>
+        <ul className="nav-list">
           {navItems.map(item => (
-            <React.Fragment key={item.label}>
-              <li
-                className={`Sidebar-item${isActive(item) ? ' active' : ''}`}
+            <li key={item.label} className="nav-item-wrapper">
+              <div
+                className={`nav-item ${isActive(item) ? 'active' : ''} ${item.subItems && expanded === item.label ? 'expanded' : ''}`}
                 onClick={() => handleNavClick(item)}
-                style={{ cursor: 'pointer' }}
               >
-                <span className="Sidebar-icon">{item.icon}</span>
-                <span className="Sidebar-text">{item.label}</span>
-              </li>
+                <div className="nav-item-icon">
+                  {item.icon}
+                </div>
+                <span className="nav-item-label">{item.label}</span>
+                {item.subItems && (
+                  <ExpandMoreIcon className={`expand-icon ${expanded === item.label ? 'rotated' : ''}`} />
+                )}
+              </div>
+              
               {item.subItems && expanded === item.label && (
-                <ul className="Sidebar-subitems">
+                <ul className="nav-subitems">
                   {item.subItems.map(sub => (
                     <li
                       key={sub.label}
-                      className={`Sidebar-subitem${location.pathname === sub.path ? ' active' : ''}`}
+                      className={`nav-subitem ${location.pathname === sub.path ? 'active' : ''}`}
                       onClick={() => navigate(sub.path)}
-                      style={{ cursor: 'pointer' }}
                     >
-                      <ChevronRightIcon fontSize="small" />
-                      <span className="Sidebar-text">{sub.label}</span>
+                      <FiberManualRecordIcon className="dot-icon" />
+                      <span>{sub.label}</span>
                     </li>
                   ))}
                 </ul>
               )}
-            </React.Fragment>
+            </li>
           ))}
         </ul>
       </nav>
 
+
       {/* Footer */}
       <div className="Sidebar-footer">
-        <div className="Sidebar-footer-buttons">
-          <button
-            className="Sidebar-footer-button"
-            onClick={() => navigate('/notifications')}
-          >
-            <NotificationsNoneOutlinedIcon />
-          </button>
-          <button
-            className="Sidebar-footer-button"
-            onClick={() => navigate('/messages')}
-          >
-            <ChatBubbleOutlineOutlinedIcon />
-          </button>
-          <button
-            className="Sidebar-footer-button"
-            onClick={() => navigate('/about')}
-          >
-            <HelpOutlineOutlinedIcon />
-          </button>
-        </div>
-        <div className="Sidebar-profile" style={{ position: 'relative' }}>
-          <span className="Sidebar-profile-name">{profileName}</span>
-          <button
-            className="Sidebar-profile-button"
-            ref={arrowRef}
-            onClick={handleProfileArrowClick}
-            style={{ position: 'relative', zIndex: 2 }}
-          >
-            <ArrowForwardIosOutlinedIcon />
-          </button>
-          {profileModalOpen && (
-            <div
-              className="Sidebar-profile-modal"
-              style={{
-                position: 'absolute',
-                bottom: '100%', // expand upwards
-                right: 0,
-                background: '#fff', 
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                borderRadius: '10px',
-                padding: '12px 0',
-                minWidth: '160px',
-                zIndex: 10,
-                animation: 'fadeInModal 0.18s ease'
-              }}
-            >
-              <button
-                className="Sidebar-profile-modal-item"
-                style={{
-                  width: '100%',
-                  padding: '10px 18px',
-                  background: 'none',
-                  border: 'none',
-                  textAlign: 'left',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                }}
-                onClick={handleEditProfile}
-              >
-                Edit Profile
-              </button>
-              <button
-                className="Sidebar-profile-modal-item"
-                style={{
-                  width: '100%',
-                  padding: '10px 18px',
-                  background: 'none',
-                  border: 'none',
-                  textAlign: 'left',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  color: '#d32f2f',
-                }}
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </div>
-          )}
+        <div className="footer-version">
+          <span>Version 2.1.0</span>
         </div>
       </div>
     </div>

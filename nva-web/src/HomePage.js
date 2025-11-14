@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './HomePage.css';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
+import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
+import WavingHandOutlinedIcon from '@mui/icons-material/WavingHandOutlined';
 
 const fmtId = (id) => (typeof id === 'string' ? id.slice(0, 6) : id);
 const peso = (n) =>
@@ -195,6 +201,7 @@ const HomePage = () => {
   return (
     <div className="HomePage">
       <div className="HomePage-titlebar">
+        <WavingHandOutlinedIcon className="HomePage-titlebar-icon" />
         <h2 className="HomePage-titlebar-text">
           Welcome back, {userName}! Here's what's happening today.
         </h2>
@@ -202,9 +209,12 @@ const HomePage = () => {
 
       <div className="HomePage-grid">
         <div className="HomePage-pickup">
-          <h2 className="Dashboard-section-title dark">To be picked up</h2>
+          <h2 className="Dashboard-section-title dark">
+            <LocalShippingOutlinedIcon className="section-icon" />
+            To be picked up
+          </h2>
           <div
-            className="Card"
+            className={`Card ${loading ? 'loading' : ''}`}
             style={{ cursor: pickupOrder ? 'pointer' : 'default' }}
             onClick={() => (pickupOrder ? onOpenPickupList() : null)}
             role="button"
@@ -213,20 +223,24 @@ const HomePage = () => {
               <>
                 <p><strong>{fullName(pickupOrder)}</strong></p>
                 <span className="Card-subtext">{productText(pickupOrder)}</span>
-                <span className="Card-id">No. {fmtId(pickupOrder.id)}</span>
+                <span className="Card-id">Order #{fmtId(pickupOrder.id)}</span>
+                <span className="Card-status">Ready for Pickup</span>
               </>
             ) : (
-              <span className="Card-subtext">
-                {loading ? 'Loading...' : 'No items ready for pickup.'}
+              <span className="Card-empty">
+                {loading ? 'Loading...' : '✓ All clear! No items waiting for pickup.'}
               </span>
             )}
           </div>
         </div>
 
         <div className="HomePage-recent">
-          <h2 className="Dashboard-section-title dark">Recent Transactions</h2>
+          <h2 className="Dashboard-section-title dark">
+            <HistoryOutlinedIcon className="section-icon" />
+            Recent Transactions
+          </h2>
           <div
-            className="Card"
+            className={`Card ${loading ? 'loading' : ''}`}
             style={{ cursor: recentOrder ? 'pointer' : 'default' }}
             onClick={() => (recentOrder ? onOpenOrder(recentOrder.id) : null)}
             role="button"
@@ -235,61 +249,86 @@ const HomePage = () => {
               <>
                 <p><strong>{fullName(recentOrder)}</strong></p>
                 <span className="Card-subtext">{productText(recentOrder)}</span>
-                <span className="Card-id">No. {fmtId(recentOrder.id)}</span>
+                <span className="Card-id">Order #{fmtId(recentOrder.id)}</span>
+                {recentOrder.status && (
+                  <span className="Card-status">{recentOrder.status}</span>
+                )}
               </>
             ) : (
-              <span className="Card-subtext">
-                {loading ? 'Loading...' : 'No recent transactions.'}
+              <span className="Card-empty">
+                {loading ? 'Loading...' : 'No recent transactions yet.'}
               </span>
             )}
           </div>
         </div>
 
-        <div className="HomePage-unread-sales-row">
-          <div className="HomePage-unread">
-            <h2 className="Dashboard-section-title dark">Unread Messages</h2>
-            <div
-              className="Card"
-              style={{ cursor: 'pointer' }}
-              onClick={onOpenMessages}
-              role="button"
-            >
-              <span className="Card-subtext">Open Messages</span>
-            </div>
+        <div className="HomePage-unread">
+          <h2 className="Dashboard-section-title dark">
+            <ChatBubbleOutlineOutlinedIcon className="section-icon" />
+            Unread Messages
+          </h2>
+          <div
+            className="Card"
+            style={{ cursor: 'pointer' }}
+            onClick={onOpenMessages}
+            role="button"
+          >
+            <p><strong>Messages Center</strong></p>
+            <span className="Card-subtext">Click to view all messages</span>
           </div>
+        </div>
 
-          <div className="HomePage-sales">
-            <h2 className="Dashboard-section-title dark">Sales Today</h2>
-            <div
-              className="Card"
-              style={{ cursor: 'pointer' }}
-              onClick={onOpenSalesToday}
-              role="button"
-            >
-              <span className="Card-subtext">
-                {loading
-                  ? 'Loading...'
-                  : `${salesTodayCount} sale(s) • ${peso(salesTodayTotal)} today`}
-              </span>
-              {latestSale ? (
-                <div
-                  style={{ marginTop: 8, textDecoration: latestSale.order_id ? 'underline' : 'none', opacity: 0.95 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (latestSale.order_id) onOpenOrder(latestSale.order_id);
-                  }}
-                >
-                  Latest: {latestSale.customer_name} • {latestSale.product_name} • {peso(latestSale.total_amount)}
-                </div>
-              ) : null}
-            </div>
+        <div className="HomePage-sales">
+          <h2 className="Dashboard-section-title dark">
+            <AttachMoneyOutlinedIcon className="section-icon" />
+            Sales Today
+          </h2>
+          <div
+            className={`Card ${loading ? 'loading' : ''}`}
+            style={{ cursor: 'pointer' }}
+            onClick={onOpenSalesToday}
+            role="button"
+          >
+            {!loading && (
+              <>
+                <p><strong>{peso(salesTodayTotal)}</strong></p>
+                <span className="Card-subtext">
+                  {salesTodayCount} {salesTodayCount === 1 ? 'sale' : 'sales'} completed today
+                </span>
+                {latestSale && (
+                  <div
+                    style={{ 
+                      marginTop: 12, 
+                      paddingTop: 12,
+                      borderTop: '1px solid rgba(0,0,0,0.1)',
+                      cursor: latestSale.order_id ? 'pointer' : 'default'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (latestSale.order_id) onOpenOrder(latestSale.order_id);
+                    }}
+                  >
+                    <span className="Card-subtext" style={{ fontSize: '13px' }}>
+                      Latest: <strong>{latestSale.customer_name}</strong>
+                    </span>
+                    <span className="Card-subtext" style={{ fontSize: '13px', display: 'block', marginTop: '4px' }}>
+                      {latestSale.product_name} • {peso(latestSale.total_amount)}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+            {loading && <span className="Card-empty">Loading sales data...</span>}
           </div>
         </div>
 
         <div className="HomePage-validate">
-          <h2 className="Dashboard-section-title dark">Validate Payment</h2>
+          <h2 className="Dashboard-section-title dark">
+            <VerifiedOutlinedIcon className="section-icon" />
+            Validate Payment
+          </h2>
           <div
-            className="Card"
+            className={`Card ${loading ? 'loading' : ''}`}
             style={{ cursor: validateOrder ? 'pointer' : 'default' }}
             onClick={() => (validateOrder ? onOpenValidate() : null)}
             role="button"
@@ -297,11 +336,16 @@ const HomePage = () => {
             {validateOrder ? (
               <>
                 <p><strong>{fullName(validateOrder)} needs validation</strong></p>
-                <span className="Card-subtext">{fileName(validateOrder.payment_proof)}</span>
-                <span className="Card-id">No. {fmtId(validateOrder.id)}</span>
+                <span className="Card-subtext">Payment proof uploaded</span>
+                <span className="Card-subtext" style={{ fontSize: '13px', marginTop: '4px' }}>
+                  📎 {fileName(validateOrder.payment_proof)}
+                </span>
+                <span className="Card-id">Order #{fmtId(validateOrder.id)}</span>
               </>
             ) : (
-              <span className="Card-subtext">No payments awaiting validation.</span>
+              <span className="Card-empty">
+                {loading ? 'Loading...' : '✓ All payments validated!'}
+              </span>
             )}
           </div>
         </div>

@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/nva-icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/nva-splash-icon.png",
       "resizeMode": "contain",

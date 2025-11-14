@@ -1,235 +1,411 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../SupabaseClient'; // Adjust the import path as necessary
+import { supabase } from '../SupabaseClient';
 
-export default function Login({ route }) {
+export default function Login() {
+  const navigation = useNavigation();
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const navigation = useNavigation();
 
-  useEffect(() => {
-    if (route?.params?.success) {
-      setSuccess(route.params.success);
-    }
-  }, [route?.params?.success]);
+  const handleCreateAccountClick = () => {
+    navigation.navigate('SignUp');
+  };
 
   const handleLogin = async () => {
     setError('');
-    // 1. Find customer by username
-    const { data: custData, error: custError } = await supabase
-      .from('customers')
-      .select('email,first_name,last_name')
-      .eq('username', username.trim())
+    setIsLoading(true);
+    const { data: empData, error: empError } = await supabase
+      .from('employees')
+      .select('email')
+      .eq('username', username)
       .maybeSingle();
-
-    if (custError || !custData) {
+    if (empError || !empData) {
       setError('Invalid username');
+      setIsLoading(false);
       return;
     }
-
-    // 2. Login with Supabase Auth using customer email
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email: custData.email.trim(),
-      password: password,
+      email: empData.email,
+      password,
     });
-
     if (authError) {
-      if (
-        authError.message &&
-        authError.message.toLowerCase().includes('email not confirmed')
-      ) {
-        setError('Confirm your email first before logging in.');
-      } else {
-        setError('Invalid password');
-      }
+      setError('Invalid password');
+      setIsLoading(false);
       return;
     }
+    navigation.navigate('Home');
+  };
 
-    // 3. Store user info in AsyncStorage for session
-    await AsyncStorage.setItem('firstName', custData.first_name || '');
-    await AsyncStorage.setItem('lastName', custData.last_name || '');
-    await AsyncStorage.setItem('email', custData.email);
+  const handleForgotPasswordClick = () => {
+    navigation.navigate('ForgotPassword');
+  };
 
-    navigation.replace('Home');
+  const handleAdminLoginClick = () => {
+    navigation.navigate('AdminLogin');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Log In</Text>
-      {success ? (
-        <Text style={{ color: '#4CAF50', marginBottom: 12, textAlign: 'center' }}>{success}</Text>
-      ) : null}
-      {error ? (
-        <Text style={{ color: '#D32F2F', marginBottom: 12, textAlign: 'center' }}>{error}</Text>
-      ) : null}
-
-      {/* Username */}
-      <View style={styles.inputContainer}>
-        <FontAwesome name="user-o" size={20} color="#888" style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={username}
-          onChangeText={setUsername}
-          placeholderTextColor="#888"
-        />
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Image source={require('../assets/nvago-icon.png')} style={styles.headerLogo} />
+        </View>
       </View>
 
-      {/* Password */}
-      <View style={styles.inputContainer}>
-        <FontAwesome name="lock" size={20} color="#888" style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholderTextColor="#888"
-          secureTextEntry={!showPassword}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <Text style={styles.showText}>{showPassword ? 'Hide' : 'Show'}</Text>
-        </TouchableOpacity>
+      {/* Body */}
+      <View style={styles.body}>
+        {/* Left Section */}
+        <View style={styles.leftSection}>
+          <View style={styles.leftContent}>
+            <Image source={require('../assets/nvago-icon.png')} style={styles.logoLarge} />
+            <Text style={styles.welcomeTitle}>Welcome to NVAGo</Text>
+            <Text style={styles.description}>
+              NVAGo is intuitive, reliable online and offline, and offers a wide range of options to meet all your printing business needs. Set it up in minutes, start selling in seconds, and keep both your staff and clients satisfied!
+            </Text>
+            <TouchableOpacity style={styles.adminButton} onPress={handleAdminLoginClick}>
+              <Text style={styles.adminButtonIcon}>👤</Text>
+              <Text style={styles.adminButtonText}>Admin Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Right Section */}
+        <View style={styles.rightSection}>
+          <View style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>Log In</Text>
+              <Text style={styles.formSubtitle}>Enter your credentials to continue</Text>
+            </View>
+            
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="Enter your username"
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholderTextColor="#999"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput 
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholderTextColor="#999"
+                  secureTextEntry={true}
+                />
+              </View>
+              
+              {error && (
+                <View style={styles.errorAlert}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text>{error}</Text>
+                </View>
+              )}
+              
+              <View style={styles.formOptions}>
+                <TouchableOpacity
+                  style={styles.checkboxLabel}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
+                    {rememberMe && <FontAwesome name="check" size={14} color="#fff" />}
+                  </View>
+                  <Text style={styles.checkboxText}>Remember me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleForgotPasswordClick}
+                  style={styles.forgotButton}
+                >
+                  <Text style={styles.forgotButtonText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                <Text style={styles.loginButtonText}>{isLoading ? 'Logging in...' : 'Log In'}</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.divider}>
+              <View style={styles.dividerLine}></View>
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine}></View>
+            </View>
+            
+            <View style={styles.createAccount}>
+              <Text style={styles.createAccountText}>
+                Don't have an account?{' '}
+                <TouchableOpacity 
+                  onPress={handleCreateAccountClick}
+                  style={styles.createAccountLink}
+                >
+                  <Text style={styles.createAccountLinkText}>Create Account</Text>
+                </TouchableOpacity>
+              </Text>
+            </View>
+          </View>
+        </View>
       </View>
 
-      {/* Remember me & Forgot Password */}
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.customCheckbox}
-          onPress={() => setRememberMe(!rememberMe)}
-        >
-          {rememberMe ? (
-            <FontAwesome name="check-square-o" size={22} color="#232B55" />
-          ) : (
-            <FontAwesome name="square-o" size={22} color="#232B55" />
-          )}
-        </TouchableOpacity>
-        <Text style={styles.rememberText}>Remember me</Text>
-        <TouchableOpacity style={styles.forgotContainer} onPress={() => navigation.navigate('ForgotPassword')}>
-          <Text style={styles.forgotText}>Forgot Password</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Log In Button */}
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginButtonText}>Log In</Text>
-      </TouchableOpacity>
-
-      {/* Sign Up */}
-      <View style={styles.signupRow}>
-        <Text style={styles.signupText}>Don't have an account?</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-          <Text style={styles.signupLink}>Sign Up</Text>
-        </TouchableOpacity>
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>© 2025 NVA Printing Services. All rights reserved.</Text>
       </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    flexDirection: 'column',
+    backgroundColor: '#f8f9fa',
   },
-  title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    marginBottom: 36,
+  header: {
+    backgroundColor: '#252B55',
+    paddingVertical: 20,
+    paddingHorizontal: 40,
   },
-  inputContainer: {
+  headerContent: {
+    alignItems: 'center',
+  },
+  headerLogo: {
+    height: 50,
+  },
+  body: {
+    flex: 1,
+    flexDirection: 'column',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  leftSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  leftContent: {
+    maxWidth: 500,
+    alignItems: 'center',
+  },
+  logoLarge: {
+    width: '100%',
+    maxWidth: 350,
+    height: 100,
+    marginBottom: 30,
+  },
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#252B55',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#5a6c7d',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  adminButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    backgroundColor: '#252B55',
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: '#222',
-    borderWidth: 1,
-    borderRadius: 20,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    height: 44,
-    backgroundColor: '#fff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  inputIcon: {
-    marginRight: 8,
+  adminButtonIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  adminButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rightSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  formCard: {
+    width: '100%',
+    maxWidth: 450,
+    backgroundColor: '#ffffff',
+    padding: 40,
+    borderRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  formHeader: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  formTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  form: {
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#344054',
+    marginBottom: 8,
   },
   input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#222',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    color: '#1a1a1a',
   },
-  showText: {
-    color: '#222',
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  row: {
+  errorAlert: {
+    backgroundColor: '#fee',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fcc',
+  },
+  errorIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  formOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 24,
   },
-  customCheckbox: {
-    marginRight: 4,
+  checkboxLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  rememberText: {
-    color: '#555',
-    fontSize: 15,
-  },
-  forgotContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  forgotText: {
-    color: '#D32F2F',
-    fontSize: 15,
-    fontWeight: '400',
-  },
-  loginButton: {
-    backgroundColor: '#232B55',
-    borderRadius: 20,
-    height: 44,
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#252B55',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-    marginTop: 8,
+    marginRight: 8,
+    backgroundColor: '#fff',
+  },
+  checkboxActive: {
+    backgroundColor: '#252B55',
+  },
+  checkboxText: {
+    fontSize: 14,
+    color: '#4b5563',
+  },
+  forgotButton: {
+  },
+  forgotButtonText: {
+    color: '#252B55',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loginButton: {
+    paddingVertical: 14,
+    backgroundColor: '#252B55',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  orText: {
-    color: '#222',
-    fontSize: 15,
-    marginBottom: 12,
-  },
-  socialRow: {
+  divider: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  socialButton: {
-    marginHorizontal: 12,
-  },
-  signupRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
+    marginVertical: 24,
   },
-  signupText: {
-    color: '#222',
-    fontSize: 15,
-    marginRight: 6,
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e5e7eb',
   },
-  signupLink: {
-    color: '#D32F2F',
-    fontSize: 15,
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#9ca3af',
     fontWeight: '500',
+  },
+  createAccount: {
+    alignItems: 'center',
+  },
+  createAccountText: {
+    fontSize: 14,
+    color: '#6c757d',
+  },
+  createAccountLink: {
+  },
+  createAccountLinkText: {
+    color: '#252B55',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  footer: {
+    backgroundColor: '#252B55',
+    paddingVertical: 24,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+  },
+  footerText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
   },
 });

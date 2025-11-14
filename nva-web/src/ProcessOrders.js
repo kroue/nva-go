@@ -2,6 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './ProcessOrders.css';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import AspectRatioOutlinedIcon from '@mui/icons-material/AspectRatioOutlined';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 
 // Custom hook for employee details
 const useEmployee = () => {
@@ -137,109 +144,130 @@ Please come to our store to pick up your order.`;
 
   return (
     <div className="ProcessOrders-page">
-      <div className="ProcessOrders-section-title">Process Orders</div>
-      <div className="ProcessOrders-container">
-        <div className="ProcessOrders-grid">
-          {orders.map((order) => (
-            <div
-              className={`ProcessOrders-card ${order.status === 'Finished' ? 'finished' : ''}`}
-              key={order.id}
-              onClick={() => handleCardClick(order)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="ProcessOrders-card-header">
-                <span className="ProcessOrders-card-name">
-                  {order.first_name} {order.last_name}
-                </span>
-                <span className="ProcessOrders-card-id">
-                  No. {order.id ? order.id.slice(0, 8) : ''}
-                </span>
-              </div>
-              <div className="ProcessOrders-card-product">{order.variant}</div>
-              <div className="ProcessOrders-card-details">
-                <div>
-                  Size: {order.height && order.width ? `${order.height} x ${order.width}` : '---'}
-                </div>
-                <div>Pickup: {order.pickup_date}</div>
-                <div>Time: {order.pickup_time}</div>
-              </div>
-              <input
-                className="ProcessOrders-card-description"
-                type="text"
-                value={order.instructions || ''}
-                disabled
-              />
-
-              <div className="status-tracker">
-                {statuses.map((status) => (
-                  <div
-                    key={status}
-                    className={`status-pill ${order.status === status ? 'active' : ''}`}
-                  >
-                    {status}
-                  </div>
-                ))}
-              </div>
-
-              <div className="ProcessOrders-card-actions" style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateOrderStatus(order.id, 'For Pickup');
-                  }}
-                  disabled={
-                    updatingId === order.id ||
-                    order.status === 'For Pickup' ||
-                    order.status === 'Finished'
-                  }
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    border: '1px solid #252b55',
-                    background:
-                      updatingId === order.id ||
-                      order.status === 'For Pickup' ||
-                      order.status === 'Finished'
-                        ? '#ddd'
-                        : '#f2f3f5',
-                    cursor:
-                      updatingId === order.id ||
-                      order.status === 'For Pickup' ||
-                      order.status === 'Finished'
-                        ? 'not-allowed'
-                        : 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Ready for Pick Up
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    updateOrderStatus(order.id, 'Finished');
-                  }}
-                  disabled={updatingId === order.id || order.status === 'Finished'}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: 6,
-                    border: '1px solid #252b55',
-                    background:
-                      updatingId === order.id || order.status === 'Finished' ? '#ddd' : '#252b55',
-                    color: updatingId === order.id || order.status === 'Finished' ? '#444' : '#fff',
-                    cursor:
-                      updatingId === order.id || order.status === 'Finished'
-                        ? 'not-allowed'
-                        : 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Finish Order
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="ProcessOrders-header">
+        <div className="ProcessOrders-header-content">
+          <InventoryOutlinedIcon className="ProcessOrders-header-icon" />
+          <div className="ProcessOrders-header-text">
+            <h1>Process Orders</h1>
+            <p>Manage and track all customer orders</p>
+          </div>
         </div>
+        <div className="ProcessOrders-stats">
+          <div className="stat-badge">
+            <span className="stat-number">{orders.filter(o => o.status !== 'Finished').length}</span>
+            <span className="stat-label">Active</span>
+          </div>
+          <div className="stat-badge">
+            <span className="stat-number">{orders.filter(o => o.status === 'Finished').length}</span>
+            <span className="stat-label">Completed</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="ProcessOrders-container">
+        {orders.length === 0 ? (
+          <div className="ProcessOrders-empty">
+            <InventoryOutlinedIcon style={{ fontSize: 64, opacity: 0.3 }} />
+            <p>No orders to display</p>
+          </div>
+        ) : (
+          <div className="ProcessOrders-grid">
+            {orders.map((order) => (
+              <div
+                className={`ProcessOrders-card ${order.status === 'Finished' ? 'finished' : ''}`}
+                key={order.id}
+                onClick={() => handleCardClick(order)}
+              >
+                <div className="ProcessOrders-card-header">
+                  <div className="card-header-left">
+                    <PersonOutlineOutlinedIcon className="card-icon" />
+                    <div>
+                      <span className="ProcessOrders-card-name">
+                        {order.first_name} {order.last_name}
+                      </span>
+                      <span className="ProcessOrders-card-id">
+                        #{order.id ? order.id.slice(0, 8) : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="ProcessOrders-card-product">
+                  <strong>{order.variant}</strong>
+                </div>
+
+                <div className="ProcessOrders-card-details">
+                  <div className="detail-item">
+                    <AspectRatioOutlinedIcon className="detail-icon" />
+                    <span>Size: {order.height && order.width ? `${order.height} × ${order.width}` : 'Custom'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <CalendarTodayOutlinedIcon className="detail-icon" />
+                    <span>{order.pickup_date}</span>
+                  </div>
+                  <div className="detail-item">
+                    <AccessTimeOutlinedIcon className="detail-icon" />
+                    <span>{order.pickup_time}</span>
+                  </div>
+                </div>
+
+                {order.instructions && (
+                  <div className="ProcessOrders-card-instructions">
+                    <p>{order.instructions}</p>
+                  </div>
+                )}
+
+                <div className="status-tracker">
+                  {statuses.map((status) => (
+                    <div
+                      key={status}
+                      className={`status-pill ${order.status === status ? 'active' : ''}`}
+                      title={status}
+                    >
+                      {status === 'Finished' && order.status === status ? (
+                        <CheckCircleOutlineOutlinedIcon style={{ fontSize: 14 }} />
+                      ) : status === 'For Pickup' && order.status === status ? (
+                        <LocalShippingOutlinedIcon style={{ fontSize: 14 }} />
+                      ) : (
+                        status.split(' ')[0]
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="ProcessOrders-card-actions">
+                  <button
+                    className="action-btn secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOrderStatus(order.id, 'For Pickup');
+                    }}
+                    disabled={
+                      updatingId === order.id ||
+                      order.status === 'For Pickup' ||
+                      order.status === 'Finished'
+                    }
+                  >
+                    <LocalShippingOutlinedIcon style={{ fontSize: 16 }} />
+                    Ready for Pickup
+                  </button>
+
+                  <button
+                    className="action-btn primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateOrderStatus(order.id, 'Finished');
+                    }}
+                    disabled={updatingId === order.id || order.status === 'Finished'}
+                  >
+                    <CheckCircleOutlineOutlinedIcon style={{ fontSize: 16 }} />
+                    Finish Order
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

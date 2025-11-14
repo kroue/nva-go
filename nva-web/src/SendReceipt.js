@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
 import './SendReceipt.css';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
+import AspectRatioOutlinedIcon from '@mui/icons-material/AspectRatioOutlined';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 
 const SendReceipt = () => {
   const { id } = useParams();
@@ -361,7 +377,8 @@ Thank you for choosing NVA Printing Services! 🙏`,
   if (loading) {
     return (
       <div className="SendReceipt-page">
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className="SendReceipt-loading">
+          <ReceiptLongOutlinedIcon style={{ fontSize: 64, opacity: 0.3 }} />
           <h2>Loading...</h2>
           <p>Please wait while we fetch the information.</p>
         </div>
@@ -372,13 +389,29 @@ Thank you for choosing NVA Printing Services! 🙏`,
   if (showOrderSelect || !order) {
     return (
       <div className="SendReceipt-page">
-        <div className="SendReceipt-order-selection">
-          <div className="SendReceipt-selection-header">
-            <h2>📧 Send Digital Receipt</h2>
-            <p>Select an order to send the receipt to customer</p>
+        <div className="SendReceipt-header">
+          <div className="SendReceipt-header-content">
+            <ReceiptLongOutlinedIcon className="SendReceipt-header-icon" />
+            <div className="SendReceipt-header-text">
+              <h1>Send Digital Receipt</h1>
+              <p>Select an order to send the receipt to customer</p>
+            </div>
           </div>
-          
-          <div className="SendReceipt-order-search">
+          <div className="SendReceipt-stats">
+            <div className="stat-badge">
+              <span className="stat-number">{orders.filter(o => o.receipt_sent).length}</span>
+              <span className="stat-label">Sent</span>
+            </div>
+            <div className="stat-badge">
+              <span className="stat-number">{orders.filter(o => !o.receipt_sent).length}</span>
+              <span className="stat-label">Pending</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="SendReceipt-container">
+          <div className="SendReceipt-search-wrapper">
+            <SearchOutlinedIcon className="search-icon" />
             <input
               type="text"
               placeholder="Search orders by customer name, order ID, or product..."
@@ -393,31 +426,48 @@ Thank you for choosing NVA Printing Services! 🙏`,
             {orders.map((orderItem) => (
               <div
                 key={orderItem.id}
-                className="SendReceipt-order-card"
+                className={`SendReceipt-order-card ${orderItem.receipt_sent ? 'receipt-sent' : ''}`}
                 onClick={() => handleOrderSelect(orderItem.id)}
               >
-                <div className="SendReceipt-order-header">
-                  <div className="SendReceipt-order-id">
-                    Order #{orderItem.id.slice(0, 8)}
+                <div className="SendReceipt-card-header">
+                  <div className="card-header-left">
+                    <PersonOutlineOutlinedIcon className="card-icon" />
+                    <div>
+                      <span className="SendReceipt-card-name">
+                        {orderItem.first_name} {orderItem.last_name}
+                      </span>
+                      <span className="SendReceipt-card-id">
+                        #{orderItem.id.slice(0, 8)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="SendReceipt-order-customer">
-                  <strong>{orderItem.first_name} {orderItem.last_name}</strong>
-                  <div className="SendReceipt-order-email">{orderItem.email}</div>
-                </div>
-                
-                <div className="SendReceipt-order-details">
-                  <div>📦 {orderItem.product_name ? `${orderItem.product_name} - ${orderItem.variant}` : orderItem.variant}</div>
-                  <div>💰 ₱{orderItem.total}</div>
-                  <div>📅 {new Date(orderItem.created_at).toLocaleDateString()}</div>
+                  {orderItem.receipt_sent && (
+                    <div className="receipt-badge">
+                      <CheckCircleOutlineOutlinedIcon style={{ fontSize: 14 }} />
+                      Sent
+                    </div>
+                  )}
                 </div>
 
-                {orderItem.receipt_sent && (
-                  <div className="SendReceipt-receipt-badge">
-                    ✅ Receipt Sent
+                <div className="SendReceipt-card-product">
+                  <InventoryOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />
+                  {orderItem.product_name ? `${orderItem.product_name} - ${orderItem.variant}` : orderItem.variant}
+                </div>
+
+                <div className="SendReceipt-card-details">
+                  <div className="detail-item">
+                    <EmailOutlinedIcon className="detail-icon" />
+                    <span>{orderItem.email}</span>
                   </div>
-                )}
+                  <div className="detail-item">
+                    <span className="detail-label">Total:</span>
+                    <span className="detail-value">₱{orderItem.total}</span>
+                  </div>
+                  <div className="detail-item">
+                    <CalendarTodayOutlinedIcon className="detail-icon" />
+                    <span>{new Date(orderItem.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -431,177 +481,183 @@ Thank you for choosing NVA Printing Services! 🙏`,
 
   return (
     <div className="SendReceipt-page">
-      {/* Back button */}
-      <div className="SendReceipt-back-button">
-        <button onClick={() => setShowOrderSelect(true)}>
-          ← Back to Order Selection
-        </button>
+      {/* Header */}
+      <div className="SendReceipt-header">
+        <div className="SendReceipt-header-content">
+          <button className="SendReceipt-back-btn" onClick={() => setShowOrderSelect(true)}>
+            <ArrowBackOutlinedIcon />
+          </button>
+          <ReceiptLongOutlinedIcon className="SendReceipt-header-icon" />
+          <div className="SendReceipt-header-text">
+            <h1>Invoice #{order.id.slice(0, 8)}</h1>
+            <p>{order.first_name} {order.last_name}</p>
+          </div>
+        </div>
+        <div className="SendReceipt-header-actions">
+          <button className="SendReceipt-print-btn" onClick={handlePrint}>
+            <PrintOutlinedIcon style={{ fontSize: 18 }} />
+            Print
+          </button>
+          <button 
+            className="SendReceipt-send-btn"
+            onClick={() => setShowCustomerSelect(true)}
+            disabled={sending}
+          >
+            <SendOutlinedIcon style={{ fontSize: 18 }} />
+            {order.receipt_sent ? 'Send Again' : 'Send to Mobile'}
+          </button>
+        </div>
       </div>
 
       {/* Invoice Content */}
-      <div className="SendReceipt-invoice">
-        <div className="SendReceipt-invoice-header">
-          <div className="SendReceipt-company-info">
-            <h1>NVA PRINTING SERVICES</h1>
-            <div className="SendReceipt-company-details">
-              <p>📍 Pabayo - Chavez St. Plaza Divisoria Cagayan de Oro City</p>
-              <p>📞 09177174889</p>
-              <p>📧 nicholsonanora@gmail.com</p>
-            </div>
-          </div>
-          <div className="SendReceipt-invoice-info">
-            <h2>INVOICE</h2>
-            <p><strong>Invoice #:</strong> {order.id.slice(0, 8)}</p>
-            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
-          </div>
-        </div>
-
-        <div className="SendReceipt-content">
-          <div className="SendReceipt-left-column">
-            <div className="SendReceipt-customer-section">
-              <h3>Bill To:</h3>
-              <div className="SendReceipt-customer-info">
-                <p><strong>{order.first_name} {order.last_name}</strong></p>
-                <p>📞 {order.phone_number}</p>
-                <p>📍 {order.address}</p>
-                <p>📧 {order.email}</p>
+      <div className="SendReceipt-invoice-container">
+        <div className="SendReceipt-invoice">
+          <div className="SendReceipt-invoice-header">
+            <div className="SendReceipt-company-info">
+              <h1>NVA PRINTING SERVICES</h1>
+              <div className="SendReceipt-company-details">
+                <p><LocationOnOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />Pabayo - Chavez St. Plaza Divisoria Cagayan de Oro City</p>
+                <p><PhoneOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />09177174889</p>
+                <p><EmailOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />nicholsonanora@gmail.com</p>
               </div>
             </div>
+            <div className="SendReceipt-invoice-info">
+              <h2>INVOICE</h2>
+              <p><strong>Invoice #:</strong> {order.id.slice(0, 8)}</p>
+              <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
 
-            <div className="SendReceipt-order-section">
-              <h3>Order Information:</h3>
-              <div className="SendReceipt-order-info">
-                <div className="info-row">
-                  <span>Order ID:</span>
-                  <span>{order.id.slice(0, 8)}</span>
+          <div className="SendReceipt-content">
+            <div className="SendReceipt-left-column">
+              <div className="SendReceipt-customer-section">
+                <h3><PersonOutlineOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />Bill To:</h3>
+                <div className="SendReceipt-customer-info">
+                  <p><strong>{order.first_name} {order.last_name}</strong></p>
+                  <p><PhoneOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />{order.phone_number}</p>
+                  <p><LocationOnOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />{order.address}</p>
+                  <p><EmailOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />{order.email}</p>
                 </div>
-                <div className="info-row">
-                  <span>Product:</span>
-                  <span>{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</span>
-                </div>
-                {order.height && order.width && (
+              </div>
+
+              <div className="SendReceipt-order-section">
+                <h3><InventoryOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />Order Information:</h3>
+                <div className="SendReceipt-order-info">
                   <div className="info-row">
-                    <span>Size:</span>
-                    <span>{order.height} × {order.width}</span>
+                    <span>Order ID:</span>
+                    <span>{order.id.slice(0, 8)}</span>
                   </div>
-                )}
-                <div className="info-row">
-                  <span>Quantity:</span>
-                  <span>{order.quantity} pcs</span>
-                </div>
-                {order.eyelets && (
                   <div className="info-row">
-                    <span>Eyelets:</span>
-                    <span>{order.eyelets}</span>
+                    <span>Product:</span>
+                    <span>{order.product_name ? `${order.product_name} - ${order.variant}` : order.variant}</span>
                   </div>
-                )}
-                <div className="info-row">
-                  <span>Pickup Date:</span>
-                  <span>{order.pickup_date}</span>
-                </div>
-                <div className="info-row">
-                  <span>Pickup Time:</span>
-                  <span>{order.pickup_time}</span>
-                </div>
-                <div className="info-row">
-                  <span>Created:</span>
-                  <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </div>
-
-            {order.instructions && (
-              <div className="SendReceipt-instructions-section">
-                <h3>Special Instructions:</h3>
-                <div className="SendReceipt-instructions">
-                  {order.instructions}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="SendReceipt-right-column">
-            {order.attached_file && (
-              <div className="SendReceipt-file-section">
-                <h3>Attached File:</h3>
-                <div className="SendReceipt-file-preview">
-                  {order.attached_file.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                    <img
-                      src={order.attached_file}
-                      alt="Order Preview"
-                      className="SendReceipt-preview-img"
-                    />
-                  ) : (
-                    <div className="SendReceipt-file-placeholder">
-                      📄 {order.attached_file.split('/').pop()}
+                  {order.height && order.width && (
+                    <div className="info-row">
+                      <span><AspectRatioOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />Size:</span>
+                      <span>{order.height} × {order.width}</span>
                     </div>
                   )}
-                </div>
-              </div>
-            )}
-
-            <div className="SendReceipt-payment-section">
-              <h3>Payment Summary:</h3>
-              <div className="SendReceipt-totals">
-                <div className="total-row">
-                  <span>Subtotal:</span>
-                  <span>₱{subtotal}</span>
-                </div>
-                {layoutFee > 0 && (
-                  <div className="total-row">
-                    <span>Layout Fee:</span>
-                    <span>₱{layoutFee}</span>
+                  <div className="info-row">
+                    <span>Quantity:</span>
+                    <span>{order.quantity} pcs</span>
                   </div>
-                )}
-                <div className="total-row final-total">
-                  <strong>
-                    <span>TOTAL AMOUNT:</span>
-                    <span>₱{order.total}</span>
-                  </strong>
+                  {order.eyelets && (
+                    <div className="info-row">
+                      <span>Eyelets:</span>
+                      <span>{order.eyelets}</span>
+                    </div>
+                  )}
+                  <div className="info-row">
+                    <span><CalendarTodayOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />Pickup Date:</span>
+                    <span>{order.pickup_date}</span>
+                  </div>
+                  <div className="info-row">
+                    <span><AccessTimeOutlinedIcon style={{ fontSize: 14, marginRight: 4 }} />Pickup Time:</span>
+                    <span>{order.pickup_time}</span>
+                  </div>
+                  <div className="info-row">
+                    <span>Created:</span>
+                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                  </div>
                 </div>
               </div>
+
+              {order.instructions && (
+                <div className="SendReceipt-instructions-section">
+                  <h3>Special Instructions:</h3>
+                  <div className="SendReceipt-instructions">
+                    {order.instructions}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {order.receipt_sent && (
-              <div className="SendReceipt-status-section">
-                <div className="SendReceipt-receipt-sent">
-                  <strong>✅ Receipt Sent</strong>
-                  <p>To: {customers.find(c => c.email === order.receipt_sent_to)?.first_name} {customers.find(c => c.email === order.receipt_sent_to)?.last_name}</p>
-                  <p>Date: {new Date(order.receipt_sent_at).toLocaleDateString()}</p>
+            <div className="SendReceipt-right-column">
+              {order.attached_file && (
+                <div className="SendReceipt-file-section">
+                  <h3><AttachFileOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />Attached File:</h3>
+                  <div className="SendReceipt-file-preview">
+                    {order.attached_file.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                      <img
+                        src={order.attached_file}
+                        alt="Order Preview"
+                        className="SendReceipt-preview-img"
+                      />
+                    ) : (
+                      <div className="SendReceipt-file-placeholder">
+                        <AttachFileOutlinedIcon style={{ fontSize: 32, opacity: 0.5 }} />
+                        <p>{order.attached_file.split('/').pop()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="SendReceipt-payment-section">
+                <h3>Payment Summary:</h3>
+                <div className="SendReceipt-totals">
+                  <div className="total-row">
+                    <span>Subtotal:</span>
+                    <span>₱{subtotal}</span>
+                  </div>
+                  {layoutFee > 0 && (
+                    <div className="total-row">
+                      <span>Layout Fee:</span>
+                      <span>₱{layoutFee}</span>
+                    </div>
+                  )}
+                  <div className="total-row final-total">
+                    <strong>
+                      <span>TOTAL AMOUNT:</span>
+                      <span>₱{order.total}</span>
+                    </strong>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {order.receipt_sent && (
+                <div className="SendReceipt-status-section">
+                  <div className="SendReceipt-receipt-sent">
+                    <CheckCircleOutlineOutlinedIcon style={{ fontSize: 20, marginBottom: 4 }} />
+                    <strong>Receipt Sent</strong>
+                    <p>To: {customers.find(c => c.email === order.receipt_sent_to)?.first_name} {customers.find(c => c.email === order.receipt_sent_to)?.last_name}</p>
+                    <p>Date: {new Date(order.receipt_sent_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="SendReceipt-footer">
+            <div className="SendReceipt-footer-content">
+              <p><strong>Thank you for choosing NVA Printing Services!</strong></p>
+              <p>For questions or concerns, please contact us at 09177174889</p>
+              {employeeFirstName && employeeLastName && (
+                <p className="processed-by">Processed by: {employeeFirstName} {employeeLastName}</p>
+              )}
+            </div>
           </div>
         </div>
-
-        <div className="SendReceipt-footer">
-          <div className="SendReceipt-footer-content">
-            <p><strong>Thank you for choosing NVA Printing Services!</strong></p>
-            <p>For questions or concerns, please contact us at 09177174889</p>
-            {employeeFirstName && employeeLastName && (
-              <p className="processed-by">Processed by: {employeeFirstName} {employeeLastName}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Action buttons - FIXED: Make sure these render */}
-      <div className="SendReceipt-actions">
-        <button 
-          className="SendReceipt-print-btn"
-          onClick={handlePrint}
-          type="button"
-        >
-          🖨️ Print Invoice
-        </button>
-        <button 
-          className="SendReceipt-send-btn"
-          onClick={() => setShowCustomerSelect(true)}
-          disabled={sending}
-          type="button"
-        >
-          {order.receipt_sent ? '📱 Send to Another Customer' : '📱 Send to Mobile'}
-        </button>
       </div>
 
       {/* Customer Selection Modal */}
@@ -614,7 +670,7 @@ Thank you for choosing NVA Printing Services! 🙏`,
                 className="SendReceipt-modal-close"
                 onClick={() => setShowCustomerSelect(false)}
               >
-                ✕
+                <CloseOutlinedIcon />
               </button>
             </div>
             
@@ -643,12 +699,12 @@ Thank you for choosing NVA Printing Services! 🙏`,
                     const customer = customers.find(c => c.email === selectedCustomer);
                     return customer ? (
                       <div className="customer-info">
-                        <p><strong>{customer.first_name} {customer.last_name}</strong></p>
-                        <p>📧 {customer.email}</p>
-                        <p>📞 {customer.phone_number}</p>
+                        <p><PersonOutlineOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} /><strong>{customer.first_name} {customer.last_name}</strong></p>
+                        <p><EmailOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />{customer.email}</p>
+                        <p><PhoneOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />{customer.phone_number}</p>
                         {selectedCustomer !== order.email && (
                           <p className="forward-warning">
-                            ⚠️ This receipt will be forwarded to a different customer than the original order.
+                            This receipt will be forwarded to a different customer than the original order.
                           </p>
                         )}
                       </div>
@@ -671,7 +727,8 @@ Thank you for choosing NVA Printing Services! 🙏`,
                 onClick={handleSendReceipt}
                 disabled={sending || !selectedCustomer}
               >
-                {sending ? '📤 Sending...' : '📱 Send Receipt'}
+                <SendOutlinedIcon style={{ fontSize: 16, marginRight: 6 }} />
+                {sending ? 'Sending...' : 'Send Receipt'}
               </button>
             </div>
           </div>

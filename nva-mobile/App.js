@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons, FontAwesome, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Import screens
 import Login from './screens/Login';
@@ -69,13 +70,15 @@ function SplashScreen({ navigation }) {
 
 function Sidebar({ visible, onClose }) {
   const navigation = useNavigation();
+  const route = useRoute();
   const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     Animated.timing(slideAnim, {
       toValue: visible ? 0 : -SIDEBAR_WIDTH,
-      duration: 250,
+      duration: 300,
       useNativeDriver: false,
     }).start();
   }, [visible]);
@@ -83,21 +86,24 @@ function Sidebar({ visible, onClose }) {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const [first, last] = await Promise.all([
+        const [first, last, userEmail] = await Promise.all([
           AsyncStorage.getItem('firstName'),
-          AsyncStorage.getItem('lastName')
+          AsyncStorage.getItem('lastName'),
+          AsyncStorage.getItem('email')
         ]);
         if (first || last) {
           setFullName(`${first || ''} ${last || ''}`.trim());
         } else {
-          setFullName('Guest');
+          setFullName('Guest User');
         }
+        setEmail(userEmail || 'guest@example.com');
       } catch (error) {
         console.error('Error loading user data:', error);
-        setFullName('Guest');
+        setFullName('Guest User');
+        setEmail('guest@example.com');
       }
     };
-    
+
     if (visible) {
       loadUserData();
     }
@@ -113,101 +119,108 @@ function Sidebar({ visible, onClose }) {
     }
   };
 
-  const handleTrackOrder = () => {
+  const handleNavigation = (screen) => {
     onClose();
-    navigation.navigate('TrackOrder');
-  };
-
-  const handleViewProfile = () => {
-    onClose();
-    navigation.navigate('Profile');
+    if (route.name === screen) {
+      // If already on the same screen, just close the sidebar
+      return;
+    }
+    navigation.navigate(screen);
   };
 
   return (
-    <>
-      {visible && (
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
-      )}
-      <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
-        {/* Header */}
-        <View style={styles.sidebarHeader}>
-          <View style={styles.profilePic}>
-            <FontAwesome name="user" size={24} color="#fff" />
-          </View>
-          <View>
-            <Text style={styles.profileName}>{fullName}</Text>
-            <TouchableOpacity onPress={handleViewProfile}>
-              <Text style={styles.profileLink}>View Profile</Text>
+    <Animated.View style={[styles.sidebar, { left: slideAnim }]}>
+      {/* Enhanced Header with Gradient */}
+      <LinearGradient
+        colors={['#232B55', '#4A5698']}
+        style={styles.sidebarHeader}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.profileSection}>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName} numberOfLines={1}>{fullName}</Text>
+            <Text style={styles.profileEmail} numberOfLines={1}>{email}</Text>
+            <TouchableOpacity
+              onPress={() => handleNavigation('Profile')}
+              style={styles.viewProfileButton}
+            >
+              <Text style={styles.viewProfileText}>View Profile</Text>
+              <FontAwesome name="chevron-right" size={12} color="#fff" style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
         </View>
-        {/* Blue Divider */}
-        <View style={styles.sidebarBlueDivider} />
-        {/* Menu Items */}
-        <View style={styles.sidebarMenu}>
-          <SidebarItem 
-            icon="home" 
-            lib="FontAwesome" 
-            label="Home" 
-            color="#232B55" 
-            onPress={() => {
-              onClose();
-              navigation.navigate('Home');
-            }} 
-          />
-          <SidebarItem 
-            icon="search" 
-            lib="FontAwesome" 
-            label="Track Order" 
-            color="#232B55" 
-            onPress={handleTrackOrder} 
-          />
-          <SidebarItem 
-            icon="history" 
-            lib="FontAwesome" 
-            label="Order History" 
-            color="#232B55" 
-            onPress={() => { 
-              onClose(); 
-              navigation.navigate('OrderHistory'); 
-            }} 
-          />
-          <SidebarItem 
-            icon="message-circle" 
-            lib="Feather" 
-            label="Messaging" 
-            color="#232B55" 
-            onPress={() => { 
-              onClose(); 
-              navigation.navigate('Messaging'); 
-            }} 
-          />
-        </View>
-        {/* Bottom Actions */}
-        <View style={styles.sidebarBottomBox}>
-          <SidebarItem 
-            icon="sign-out" 
-            lib="FontAwesome" 
-            label="Log out" 
-            color="#232B55" 
-            onPress={handleLogout} 
-          />
-        </View>
-      </Animated.View>
-    </>
+      </LinearGradient>
+
+      {/* Menu Items */}
+      <View style={styles.sidebarMenu}>
+        <Text style={styles.menuSection}>MAIN MENU</Text>
+
+        <SidebarItem
+          icon="home"
+          lib="FontAwesome"
+          label="Home"
+          onPress={() => handleNavigation('Home')}
+        />
+        <SidebarItem
+          icon="file-text"
+          lib="Feather"
+          label="Track Order"
+          onPress={() => handleNavigation('TrackOrder')}
+        />
+        <SidebarItem
+          icon="history"
+          lib="FontAwesome"
+          label="Order History"
+          onPress={() => handleNavigation('OrderHistory')}
+        />
+        <SidebarItem
+          icon="message-circle"
+          lib="Feather"
+          label="Messages"
+          onPress={() => handleNavigation('Messaging')}
+        />
+
+        <View style={styles.divider} />
+
+        <Text style={styles.menuSection}>ACCOUNT</Text>
+
+        <SidebarItem
+          icon="user"
+          lib="FontAwesome"
+          label="Profile"
+          onPress={() => handleNavigation('Profile')}
+        />
+      </View>
+
+      {/* Logout Button */}
+      <View style={styles.sidebarFooter}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+          <FontAwesome name="sign-out" size={18} color="#D32F2F" style={{ marginRight: 12 }} />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
 }
 
-function SidebarItem({ icon, lib, label, onPress, color }) {
+function SidebarItem({ icon, lib, label, onPress }) {
   let IconComponent = FontAwesome;
   if (lib === 'Feather') IconComponent = Feather;
   if (lib === 'Ionicons') IconComponent = Ionicons;
 
   return (
-    <TouchableOpacity onPress={onPress} disabled={!onPress}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <View style={styles.sidebarItem}>
-        <IconComponent name={icon} size={18} color={color || "#888"} style={{ marginRight: 16 }} />
-        <Text style={[styles.sidebarItemText, { color: color || "#232B55" }]}>{label}</Text>
+        <View style={styles.iconContainer}>
+          <IconComponent name={icon} size={20} color="#232B55" />
+        </View>
+        <Text style={styles.sidebarItemText}>{label}</Text>
+        <FontAwesome name="chevron-right" size={14} color="#ccc" />
       </View>
     </TouchableOpacity>
   );
@@ -217,29 +230,28 @@ function CustomHeader({ onMenu }) {
   const navigation = useNavigation();
   const route = useRoute();
 
-  // Screens that should NOT have back buttons
   const excludedFromBackButton = ['Home', 'TrackOrder', 'OrderHistory', 'Messaging'];
-
   const showBackButton = navigation.canGoBack() && !excludedFromBackButton.includes(route.name);
 
   return (
-    <View style={styles.headerContainer}>
-      {showBackButton && (
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <FontAwesome name="arrow-left" size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('./assets/nvago-icon.png')}
-          style={styles.logoImage}
-          resizeMode="contain"
-        />
-      </View>
+    <LinearGradient
+      colors={['#232B55', '#4A5698']}
+      style={styles.headerContainer}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+    >
+      <Image
+        source={require('./assets/nvago-icon.png')}
+        style={styles.logoImage}
+        resizeMode="contain"
+      />
+
       <TouchableOpacity style={styles.menuButton} onPress={onMenu}>
-        <FontAwesome name="bars" size={28} color="#fff" />
+        <View style={styles.headerIconButton}>
+          <FontAwesome name="bars" size={20} color="#fff" />
+        </View>
       </TouchableOpacity>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -262,7 +274,7 @@ function ScreenWithHeaderSidebar({ children }) {
         console.error('Error loading user data:', error);
       }
     };
-    
+
     loadUserData();
   }, []);
 
@@ -282,10 +294,17 @@ function ScreenWithHeaderSidebar({ children }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#232B55' }}>
-      <CustomHeader onMenu={() => setSidebarVisible(true)} />
-      <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <CustomHeader onMenu={() => setSidebarVisible(!sidebarVisible)} />
+      <View style={{ flex: 1, backgroundColor: '#fff', paddingTop: 106 }}>
         {children}
       </View>
+      {sidebarVisible && (
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setSidebarVisible(false)}
+        />
+      )}
       <Sidebar visible={sidebarVisible} onClose={() => setSidebarVisible(false)} userName={fullName} />
     </View>
   );
@@ -329,6 +348,63 @@ function MainTabsWithHeader() {
   return (
     <ScreenWithHeaderSidebar>
       <MainTabs />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+// Individual screen wrappers
+function HomeWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <Home />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function OrderFormWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <OrderForm />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function PaymentWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <Payment />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function TrackOrderWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <TrackOrder />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function OrderHistoryWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <OrderHistory />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function MessagingWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <Messaging />
+    </ScreenWithHeaderSidebar>
+  );
+}
+
+function ProfileWithHeader() {
+  return (
+    <ScreenWithHeaderSidebar>
+      <Profile />
     </ScreenWithHeaderSidebar>
   );
 }
@@ -414,41 +490,13 @@ export default function App() {
           />
           
           {/* Other Screens with custom header */}
-          <Stack.Screen name="Home" component={() => (
-            <ScreenWithHeaderSidebar>
-              <Home />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="OrderForm" component={() => (
-            <ScreenWithHeaderSidebar>
-              <OrderForm />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="Payment" component={() => (
-            <ScreenWithHeaderSidebar>
-              <Payment />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="TrackOrder" component={() => (
-            <ScreenWithHeaderSidebar>
-              <TrackOrder />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="OrderHistory" component={() => (
-            <ScreenWithHeaderSidebar>
-              <OrderHistory />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="Messaging" component={() => (
-            <ScreenWithHeaderSidebar>
-              <Messaging />
-            </ScreenWithHeaderSidebar>
-          )} />
-          <Stack.Screen name="Profile" component={() => (
-            <ScreenWithHeaderSidebar>
-              <Profile />
-            </ScreenWithHeaderSidebar>
-          )} />
+          <Stack.Screen name="Home" component={HomeWithHeader} />
+          <Stack.Screen name="OrderForm" component={OrderFormWithHeader} />
+          <Stack.Screen name="Payment" component={PaymentWithHeader} />
+          <Stack.Screen name="TrackOrder" component={TrackOrderWithHeader} />
+          <Stack.Screen name="OrderHistory" component={OrderHistoryWithHeader} />
+          <Stack.Screen name="Messaging" component={MessagingWithHeader} />
+          <Stack.Screen name="Profile" component={ProfileWithHeader} />
         </Stack.Navigator>
       </NavigationContainer>
     </View>
@@ -463,33 +511,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Header Styles
   headerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#232B55',
-    paddingTop: 36,
-    paddingBottom: 12,
-    paddingHorizontal: 18,
+    paddingTop: 50,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 40,
   },
   backButton: {
-    padding: 4,
+    width: 40,
   },
   menuButton: {
-    padding: 4,
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoContainer: {
+    flex: 1,
     alignItems: 'center',
   },
   logoImage: {
     width: 120,
-    height: 48,
+    height: 40,
   },
+  // Sidebar Styles
   overlay: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    zIndex: 10,
+    top: 106,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 25,
   },
   sidebar: {
     position: 'absolute',
@@ -497,65 +569,130 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: SIDEBAR_WIDTH,
     backgroundColor: '#fff',
-    zIndex: 20,
-    elevation: 8,
+    zIndex: 50,
+    elevation: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 4, height: 0 },
   },
   sidebarHeader: {
-    backgroundColor: '#232B55',
-    paddingTop: 36,
-    paddingBottom: 18,
-    paddingHorizontal: 18,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  profilePicContainer: {
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   profilePic: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#666',
-    marginRight: 14,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  profileInfo: {
+    flex: 1,
   },
   profileName: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 15,
-    marginBottom: 2,
+    fontSize: 18,
+    marginBottom: 4,
   },
-  profileLink: {
-    color: '#d1d5e0',
+  profileEmail: {
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 13,
+    marginBottom: 8,
   },
-  sidebarBlueDivider: {
-    height: 3,
-    backgroundColor: '#1877F3',
-    width: '100%',
+  viewProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  viewProfileText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   sidebarMenu: {
-    paddingTop: 18,
-    paddingHorizontal: 18,
     flex: 1,
+    paddingTop: 24,
+    paddingHorizontal: 20,
+  },
+  menuSection: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#999',
+    marginBottom: 12,
+    marginTop: 8,
+    letterSpacing: 0.5,
   },
   sidebarItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F0F2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   sidebarItemText: {
-    fontSize: 15,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '500',
+    color: '#1A1A1A',
   },
-  sidebarBottomBox: {
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 24,
+  },
+  sidebarFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#E0E0E0',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFF5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D32F2F',
   },
   container: {
     flex: 1,

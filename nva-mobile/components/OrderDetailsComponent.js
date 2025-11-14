@@ -3,6 +3,17 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, I
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 
+// Helper function to format 24-hour time to 12-hour format
+const formatTime12Hour = (time24) => {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':');
+  let hour = parseInt(hours);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  hour = hour ? hour : 12;
+  return `${hour}:${minutes} ${ampm}`;
+};
+
 const OrderDetailsComponent = ({
   hasFile,
   setHasFile,
@@ -114,7 +125,7 @@ const OrderDetailsComponent = ({
 
       <View style={styles.row}>
         <View style={styles.halfContainer}>
-          <Text style={styles.label}>Date</Text>
+          <Text style={styles.label}>Pickup Date</Text>
           <TouchableOpacity style={styles.inputHalf} onPress={() => setShowDatePicker(true)}>
             <Text style={{ color: pickupDate ? '#222' : '#888' }}>
               {pickupDate ? pickupDate : 'Select Date'}
@@ -122,10 +133,10 @@ const OrderDetailsComponent = ({
           </TouchableOpacity>
         </View>
         <View style={styles.halfContainer}>
-          <Text style={styles.label}>Time</Text>
+          <Text style={styles.label}>Pickup Time</Text>
           <TouchableOpacity style={styles.inputHalf} onPress={() => setShowTimePicker(true)}>
             <Text style={{ color: pickupTime ? '#222' : '#888' }}>
-              {pickupTime ? pickupTime : 'Select Time'}
+              {pickupTime ? formatTime12Hour(pickupTime) : 'Select Time'}
             </Text>
           </TouchableOpacity>
         </View>

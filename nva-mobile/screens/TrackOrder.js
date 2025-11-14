@@ -1,20 +1,56 @@
+
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Animated, TouchableOpacity, Modal } from 'react-native';
 import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { FontAwesome } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const statuses = ['Validation', 'Layout Approval', 'Printing', 'For Pickup'];
 
 export default function TrackOrder() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(20));
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const isStepActive = (step) => {
     const currentIndex = statuses.indexOf(order?.status);
     const stepIndex = statuses.indexOf(step);
     return currentIndex >= stepIndex;
   };
+
+  const isCurrentStep = (step) => {
+    return order?.status === step;
+  };
+
+  const getStepIcon = (step) => {
+    const icons = {
+      'Validation': 'check-circle',
+      'Layout Approval': 'file-text-o',
+      'Printing': 'print',
+      'For Pickup': 'shopping-bag'
+    };
+    return icons[step] || 'circle';
+  };
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [order]);
 
   // Fetch the logged-in user's order (latest)
   useEffect(() => {
@@ -28,7 +64,7 @@ export default function TrackOrder() {
         setLoading(false);
         return;
       }
-      // Get latest order for this user that is not finished
+      
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -42,7 +78,6 @@ export default function TrackOrder() {
       else setOrder(null);
       setLoading(false);
 
-      // Subscribe to changes in the orders table for this user
       subscription = supabase
         .channel(`order-status-${userEmail}`)
         .on(
@@ -77,246 +112,575 @@ export default function TrackOrder() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Loading order...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#232B55" />
+        <Text style={styles.loadingText}>Loading order...</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.container}>
-        <Text>No order found.</Text>
+      <View style={styles.emptyContainer}>
+        <FontAwesome name="inbox" size={80} color="#ccc" />
+        <Text style={styles.emptyTitle}>No Active Orders</Text>
+        <Text style={styles.emptyText}>You don't have any orders to track</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.trackingTitle}>Order Tracking</Text>
-      <View style={styles.progressRow}>
-        <View style={styles.progressStep}>
-          <View style={[styles.circle, isStepActive('Validation') && styles.circleActive]} />
-          <Text style={styles.progressLabel}>Validation</Text>
+    <ScrollView 
+      style={styles.scrollView}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <Animated.View
+        style={{
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        }}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <LinearGradient
+            colors={['#232B55', '#4A5698']}
+            style={styles.headerGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <FontAwesome name="map-marker" size={32} color="#fff" />
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Track Your Order</Text>
+              <Text style={styles.headerSubtitle}>Real-time status updates</Text>
+            </View>
+          </LinearGradient>
         </View>
-        <View style={[styles.progressLine, isStepActive('Layout Approval') && styles.progressLineActive]} />
-        <View style={styles.progressStep}>
-          <View style={[styles.circle, isStepActive('Layout Approval') && styles.circleActive]} />
-          <Text style={styles.progressLabel}>Layout Approval</Text>
-        </View>
-        <View style={[styles.progressLine, isStepActive('Printing') && styles.progressLineActive]} />
-        <View style={styles.progressStep}>
-          <View style={[styles.circle, isStepActive('Printing') && styles.circleActive]} />
-          <Text style={styles.progressLabel}>Printing</Text>
-        </View>
-        <View style={[styles.progressLine, isStepActive('For Pickup') && styles.progressLineActive]} />
-        <View style={styles.progressStep}>
-          <View style={[styles.circle, isStepActive('For Pickup') && styles.circleActive]} />
-          <Text style={styles.progressLabel}>For Pickup</Text>
-        </View>
-      </View>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Order Summary</Text>
-        <View style={styles.headerRow}>
-          <Image source={{ uri: order.image_url }} style={styles.productImage} />
-          <Text style={styles.productTitle}>{order.variant || order.product}</Text>
-        </View>
-        <TextInput
-          style={styles.fileInput}
-          value={order.has_file ? 'file.pdf' : 'No file attached'}
-          editable={false}
-        />
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Size</Text>
-          <Text style={styles.detailValue}>
-            {order.height && order.width ? `${order.height} x ${order.width}` : '---'}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>No. of pcs</Text>
-          <Text style={styles.detailValue}>{order.quantity} pcs</Text>
-        </View>
-        {order.eyelets && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Eyelets</Text>
-            <Text style={styles.detailValue}>{order.eyelets}</Text>
+        {/* Progress Tracker */}
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>Order Progress</Text>
+          <View style={styles.progressContainer}>
+            {statuses.map((step, index) => (
+              <View key={step} style={styles.progressStepWrapper}>
+                <View style={styles.progressStep}>
+                  {/* Circle with Icon */}
+                  <View style={[
+                    styles.circle,
+                    isStepActive(step) && styles.circleActive,
+                    isCurrentStep(step) && styles.circleCurrent
+                  ]}>
+                    <FontAwesome 
+                      name={getStepIcon(step)} 
+                      size={16} 
+                      color={isStepActive(step) ? '#fff' : '#999'} 
+                    />
+                  </View>
+                  
+                  {/* Label */}
+                  <Text style={[
+                    styles.progressLabel,
+                    isCurrentStep(step) && styles.progressLabelCurrent
+                  ]}>
+                    {step}
+                  </Text>
+                  
+                  {/* Current Status Badge */}
+                  {isCurrentStep(step) && (
+                    <View style={styles.currentBadge}>
+                      <Text style={styles.currentBadgeText}>Current</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Connecting Line */}
+                {index < statuses.length - 1 && (
+                  <View style={[
+                    styles.progressLine,
+                    isStepActive(statuses[index + 1]) && styles.progressLineActive
+                  ]} />
+                )}
+              </View>
+            ))}
           </View>
-        )}
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date to pickup</Text>
-          <Text style={styles.detailValue}>{order.pickup_date}</Text>
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Time to pickup</Text>
-          <Text style={styles.detailValue}>{order.pickup_time}</Text>
+
+        {/* Order Details Card */}
+        <View style={styles.detailsCard}>
+          <View style={styles.cardHeader}>
+            <FontAwesome name="file-text" size={20} color="#232B55" />
+            <Text style={styles.cardTitle}>Order Details</Text>
+          </View>
+
+          {/* Product Info */}
+          <View style={styles.productSection}>
+            {order.image_url && (
+              <Image source={{ uri: order.image_url }} style={styles.productImage} />
+            )}
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>{order.variant || order.product}</Text>
+              <View style={styles.statusBadge}>
+                <View style={[
+                  styles.statusDot,
+                  { backgroundColor: isCurrentStep(order.status) ? '#FFC107' : '#4CAF50' }
+                ]} />
+                <Text style={styles.statusText}>{order.status}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* File Attached */}
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() => {
+              if (order.attached_file) {
+                setSelectedImage(order.attached_file);
+                setImageModalVisible(true);
+              }
+            }}
+            disabled={!order.attached_file}
+          >
+            <View style={styles.infoIconContainer}>
+              <FontAwesome name="paperclip" size={16} color="#232B55" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>File Attached</Text>
+              <Text style={[styles.infoValue, order.attached_file && styles.linkText]}>
+                {order.attached_file ? order.attached_file.split('/').pop() : 'No file'}
+              </Text>
+            </View>
+            {order.attached_file && (
+              <FontAwesome name="external-link" size={14} color="#232B55" />
+            )}
+          </TouchableOpacity>
+
+          {/* Dimensions */}
+          {(order.height && order.width) && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <FontAwesome name="expand" size={16} color="#232B55" />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Size</Text>
+                <Text style={styles.infoValue}>{order.height} x {order.width}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Quantity */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconContainer}>
+              <FontAwesome name="cubes" size={16} color="#232B55" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Quantity</Text>
+              <Text style={styles.infoValue}>{order.quantity} pcs</Text>
+            </View>
+          </View>
+
+          {/* Eyelets */}
+          {order.eyelets && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <FontAwesome name="circle-o" size={16} color="#232B55" />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Eyelets</Text>
+                <Text style={styles.infoValue}>{order.eyelets}</Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.divider} />
+
+          {/* Pickup Date */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconContainer}>
+              <FontAwesome name="calendar" size={16} color="#232B55" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Pickup Date</Text>
+              <Text style={styles.infoValue}>{order.pickup_date}</Text>
+            </View>
+          </View>
+
+          {/* Pickup Time */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconContainer}>
+              <FontAwesome name="clock-o" size={16} color="#232B55" />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Pickup Time</Text>
+              <Text style={styles.infoValue}>{order.pickup_time}</Text>
+            </View>
+          </View>
+
+          {/* Instructions */}
+          {order.instructions && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.instructionsSection}>
+                <View style={styles.instructionsHeader}>
+                  <FontAwesome name="info-circle" size={16} color="#232B55" />
+                  <Text style={styles.instructionsLabel}>Special Instructions</Text>
+                </View>
+                <Text style={styles.instructionsText}>{order.instructions}</Text>
+              </View>
+            </>
+          )}
+
+          {/* Total Price */}
+          <View style={styles.totalSection}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalValue}>₱ {order.total}</Text>
+          </View>
         </View>
-        <Text style={styles.instructionsLabel}>Instructions</Text>
-        <TextInput
-          style={styles.instructionsInput}
-          value={order.instructions}
-          editable={false}
-          multiline
-        />
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabelTotal}>TOTAL</Text>
-          <Text style={styles.priceValueTotal}>₱ {order.total}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Status</Text>
-          <Text style={styles.detailValue}>{order.status}</Text>
-        </View>
-      </View>
+
+        {/* Image Modal */}
+        <Modal
+          visible={imageModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setImageModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => setImageModalVisible(false)}
+              >
+                <FontAwesome name="arrow-left" size={24} color="#232B55" />
+              </TouchableOpacity>
+              {selectedImage && (
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={styles.modalImage}
+                  resizeMode="contain"
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+      </Animated.View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
   container: {
-    padding: 12,
-    backgroundColor: '#f5f5f5',
-    flexGrow: 1,
+    padding: 16,
+    paddingBottom: 32,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F8F9FA',
   },
-  trackingTitle: {
-    fontWeight: 'bold',
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
+    color: '#666',
   },
-  progressRow: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  headerSection: {
+    marginBottom: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#232B55',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  headerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
-    marginTop: 4,
-    width: '100%',
-    maxWidth: 370,
-    justifyContent: 'space-between',
+    padding: 20,
+  },
+  headerTextContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  progressCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  progressTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginBottom: 20,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  progressStepWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   progressStep: {
     alignItems: 'center',
-    width: 70,
+    flex: 1,
   },
   circle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#ccc',
-    marginBottom: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   circleActive: {
     backgroundColor: '#4CAF50',
   },
+  circleCurrent: {
+    backgroundColor: '#FFC107',
+  },
   progressLabel: {
     fontSize: 11,
-    color: '#222',
+    color: '#666',
     textAlign: 'center',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  progressLabelCurrent: {
+    color: '#1A1A1A',
+    fontWeight: '700',
+  },
+  currentBadge: {
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFC107',
+  },
+  currentBadgeText: {
+    fontSize: 9,
+    color: '#F57C00',
+    fontWeight: 'bold',
   },
   progressLine: {
-    flex: 1,
+    width: 20,
     height: 2,
-    backgroundColor: '#ccc',
-    marginHorizontal: 2,
+    backgroundColor: '#E0E0E0',
+    marginTop: -40,
   },
   progressLineActive: {
     backgroundColor: '#4CAF50',
   },
-  summaryCard: {
-    backgroundColor: '#eee',
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 8,
-    width: '100%',
-    maxWidth: 370,
-    alignSelf: 'center',
+  detailsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  summaryTitle: {
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 15,
+    color: '#1A1A1A',
+    marginLeft: 12,
+  },
+  productSection: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    marginRight: 16,
+  },
+  productInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
     marginBottom: 8,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F2FF',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#232B55',
   },
-  headerRow: {
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F0F2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  instructionsSection: {
+    marginTop: 4,
+  },
+  instructionsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  productImage: {
-    width: 80,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#eee',
-  },
-  productTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#232B55',
-    flex: 1,
-    flexWrap: 'wrap',
-  },
-  fileInput: {
-    borderWidth: 1,
-    borderColor: '#888',
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: '#fff',
-    marginBottom: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  detailLabel: {
-    color: '#222',
-    fontSize: 14,
-  },
-  detailValue: {
-    color: '#232B55',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
   instructionsLabel: {
-    marginTop: 8,
-    color: '#222',
     fontSize: 14,
-    marginBottom: 2,
+    fontWeight: '600',
+    color: '#232B55',
+    marginLeft: 8,
   },
-  instructionsInput: {
-    borderWidth: 1,
-    borderColor: '#888',
-    borderRadius: 8,
-    padding: 8,
-    backgroundColor: '#fff',
-    minHeight: 48,
-    marginBottom: 8,
+  instructionsText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 12,
   },
-  priceRow: {
+  totalSection: {
+    marginTop: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 2,
-    marginBottom: 2,
+    alignItems: 'center',
+    backgroundColor: '#F0F2FF',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#232B55',
   },
-  priceLabel: {
-    color: '#222',
-    fontSize: 15,
-  },
-  priceValue: {
-    color: '#232B55',
+  totalLabel: {
+    fontSize: 16,
     fontWeight: 'bold',
-    fontSize: 15,
-  },
-  priceLabelTotal: {
     color: '#232B55',
-    fontWeight: 'bold',
-    fontSize: 17,
-    marginTop: 8,
   },
-  priceValueTotal: {
-    color: '#232B55',
+  totalValue: {
+    fontSize: 24,
     fontWeight: 'bold',
-    fontSize: 17,
-    marginTop: 8,
+    color: '#232B55',
+  },
+  linkText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    height: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 1,
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
 });

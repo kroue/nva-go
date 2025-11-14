@@ -121,14 +121,6 @@ const Login = () => {
               </div>
               <button type="submit" className="LoginForm-button">Log In</button>
             </form>
-            <div className="CreateAccount">
-              <p>
-                Don't have an account?{' '}
-                <button className="CreateAccount-link" onClick={handleCreateAccountClick}>
-                  Create Account
-                </button>
-              </p>
-            </div>
           </div>
         </div>
       </div>
