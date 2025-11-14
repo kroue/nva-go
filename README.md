@@ -2,12 +2,11 @@
 ![App Screenshots](https://github.com/kroue/nva-go/blob/main/NVAGo-LogInPage.png)
 
 ## Table of Contents
-- About
-- Key Features 
-- Technology Stack
-- Installation
-- Contributors
-- License
+- [About](#about)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Contributors](#contributors)
 
 ## About
 
@@ -75,13 +74,47 @@ May 2025
 ## Installation
 
 ### Clone Repository
-git clone https://github.com/kroue/nva-go.git <br>
-cd nva-go
+Download or clone the project code to your local machine <br>
+
+Run: 
+  ```
+  git clone https://github.com/kroue/nva-go.git
+  cd nva-go
+  code .
+  ```
+
+
+Run:
 
 ### Install Dependencies
-npm install or yarn install 
+Install all required packages and libraries for the project <br>
 
-## Run Development Server VIDEO DEMO
+```sh
+npm install
+```
+
+or if you're using yarn: 
+
+```sh 
+yarn install
+```
+
+
+### Run Development Server 
+
+
+**For Web**
+1. Open the Integrated Terminal.
+2. Run:
+   ```sh
+   npm run
+
+**For Mobile:**
+- Open Integrated Terminal
+- Run: 
+   ```sh
+   npx expo start
+- Scan the QR code on your Expo Go mobile app
 
 ## Contributors
 
