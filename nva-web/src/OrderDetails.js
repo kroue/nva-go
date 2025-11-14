@@ -4,7 +4,7 @@ import { supabase } from './SupabaseClient';
 import axios from 'axios';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
-import Footer from './components/Footer';
+
 import './OrderDetails.css';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
@@ -326,7 +326,6 @@ Please come to our store to pick up your order.`;
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -344,7 +343,6 @@ Please come to our store to pick up your order.`;
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -675,7 +673,6 @@ Please come to our store to pick up your order.`;
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

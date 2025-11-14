@@ -1,13 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import nvagologo from '../assets/nvalogomini.png';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
+import { supabase } from '../SupabaseClient';
+import { useAuth } from '../hooks/useAuth';
 
 const Header = () => {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const fetchUnreadCount = async () => {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id, read_by, target_email')
+        .or(`target_email.is.null,target_email.eq.${user.email}`);
+
+      if (!error && data) {
+        const unread = data.filter(n => !(n.read_by || []).includes(user.email));
+        setUnreadCount(unread.length);
+      }
+    };
+
+    fetchUnreadCount();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('header-notifications')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email]);
 
   return (
     <header className="Header">
@@ -25,15 +65,15 @@ const Header = () => {
       </div>
 
       <div className="Header-right">
-        <button className="Header-action-btn" title="Notifications">
+        <button className="Header-action-btn" title="Notifications" onClick={() => navigate('/notifications')}>
           <NotificationsNoneOutlinedIcon />
-          <span className="action-badge">3</span>
+          {unreadCount > 0 && <span className="action-badge">{unreadCount}</span>}
         </button>
-        <button className="Header-action-btn" title="Messages">
+        <button className="Header-action-btn" title="Messages" onClick={() => navigate('/messages')}>
           <ChatBubbleOutlineOutlinedIcon />
         </button>
-        <button className="Header-action-btn" title="Settings">
-          <SettingsOutlinedIcon />
+        <button className="Header-action-btn" title="About" onClick={() => navigate('/about')}>
+          <HelpOutlineOutlinedIcon />
         </button>
       </div>
     </header>

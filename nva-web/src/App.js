@@ -6,7 +6,6 @@ import Verification from './Verification';
 import HomePage from './HomePage';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import Footer from './components/Footer';
 import Orders from './Orders';
 import ProcessOrders from './ProcessOrders';
 import ValidatePayment from './ValidatePayment';
@@ -56,7 +55,6 @@ const App = () => {
                     <HomePage />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -71,7 +69,6 @@ const App = () => {
                     <Orders />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -86,7 +83,6 @@ const App = () => {
                     <ProcessOrders />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -101,7 +97,6 @@ const App = () => {
                     <ValidatePayment />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -116,7 +111,6 @@ const App = () => {
                     <SendReceipt />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -131,7 +125,6 @@ const App = () => {
                     <SendReceipt />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -146,7 +139,6 @@ const App = () => {
                     <Products />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -161,7 +153,6 @@ const App = () => {
                     <Customers />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -176,7 +167,6 @@ const App = () => {
                     <Notifications />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -191,7 +181,6 @@ const App = () => {
                     <Messages />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
@@ -343,14 +332,13 @@ const App = () => {
                     <ToggleProductStatus />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />
           <Route
             path="/about"
             element={
-              <div className="App"> 
+              <div className="App">
                 <Header />
                 <div className="MainContent">
                   <Sidebar />
@@ -358,7 +346,6 @@ const App = () => {
                     <About />
                   </div>
                 </div>
-                <Footer />
               </div>
             }
           />

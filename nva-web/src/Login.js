@@ -76,7 +76,7 @@ const Login = () => {
             style={{
               marginTop: '24px',
               padding: '10px 24px',
-              background: '#252b55',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
