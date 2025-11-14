@@ -58,7 +58,7 @@ May 2025
 - **CSS** - Styling and responsive design
 
 ### Back-End
-- **Supabase** - Backend-as-a-Service platform
+- **Supabase** - Backend as a Service platform
 - **PostgreSQL** - Relational database management
 - **Supabase Aut**h - User authentication and authorization
 - **Supabase Storage** - File storage for designs and receipts
@@ -120,10 +120,10 @@ yarn install
 
 ### Development Team
 
-Kriz Marie P. Cultura - System Analyst <br>
-Aljohn B. Arranguez - Database Administrator/ Developer <br>
-Ariana Marie O. Palle - Front-end Developer <br>
-Rodel T. Madrid - Technical Writer 
+**1. Kriz Marie P. Cultura** - System Analyst <br>
+**2. Aljohn B. Arranguez** - Database Administrator/ Developer <br>
+**3. Ariana Marie O. Palle** - Front-end Developer <br>
+**4. Rodel T. Madrid** - Technical Writer 
 
 
 ### Academic Supervisor
