@@ -41,24 +41,8 @@ export function useAuth() {
   }, [])
 
   const fetchProfile = async (userId) => {
-    try {
-      // Fetch profile from profiles table
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          employees(position, department, is_active),
-          customers(company_name, is_corporate_account, is_barred)
-        `)
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-
-      setProfile(data)
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    }
+    // No profiles table exists, set profile to null
+    setProfile(null)
   }
 
   const signUp = async (email, password, additionalData) => {
@@ -78,19 +62,7 @@ export function useAuth() {
 
       if (authError) throw authError
 
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          first_name: additionalData.firstName,
-          last_name: additionalData.lastName,
-          email: email,
-          phone_number: additionalData.phoneNumber,
-          address: additionalData.address
-        })
-
-      if (profileError) throw profileError
+      // No profiles table, skip profile creation
 
       // Create customer or employee profile based on role
       if (additionalData.role === 'customer') {
@@ -146,21 +118,10 @@ export function useAuth() {
     try {
       if (!user) throw new Error('No user logged in')
 
-      // Update profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: updates.firstName,
-          last_name: updates.lastName,
-          phone_number: updates.phoneNumber,
-          address: updates.address
-        })
-        .eq('id', user.id)
-
-      if (profileError) throw profileError
+      // No profiles table, skip profile update
 
       // Update role-specific table if needed
-      if (profile.employees) {
+      if (profile && profile.employees) {
         await supabase
           .from('employees')
           .update({
@@ -168,7 +129,7 @@ export function useAuth() {
             department: updates.department
           })
           .eq('id', user.id)
-      } else if (profile.customers) {
+      } else if (profile && profile.customers) {
         await supabase
           .from('customers')
           .update({
