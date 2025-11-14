@@ -127,7 +127,7 @@ yarn install
 
 
 ### Academic Supervisor
-**Ms. Loredel Tamayo** <br> University of Science and Technology of Southern Philippines
+**Ms. Lorie Tamayo** <br> University of Science and Technology of Southern Philippines
 
 
 
