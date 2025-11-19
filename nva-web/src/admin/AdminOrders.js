@@ -5,7 +5,6 @@ import './AdminOrders.css';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 const peso = (n) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(n || 0));
@@ -101,20 +100,19 @@ const AdminOrders = () => {
                 <th>Date</th>
                 <th>Status</th>
                 <th>Total</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="table-empty">
+                  <td colSpan={5} className="table-empty">
                     <div className="loading-spinner"></div>
                     <p>Loading orders...</p>
                   </td>
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="table-empty">
+                  <td colSpan={5} className="table-empty">
                     <AssignmentIcon className="empty-icon" />
                     <p>No orders found</p>
                   </td>
@@ -124,7 +122,7 @@ const AdminOrders = () => {
                   <tr
                     key={o.id}
                     className="table-row"
-                    onClick={() => navigate(`/orders/${o.id}`)}
+                    onClick={() => navigate(`/admin/orders/${o.id}`)}
                   >
                     <td>
                       <span className="order-id">#{String(o.id).slice(0, 8)}</span>
@@ -150,15 +148,6 @@ const AdminOrders = () => {
                       <span className={statusClass(o.status)}>{o.status || '—'}</span>
                     </td>
                     <td className="amount-cell">{peso(o.total)}</td>
-                    <td>
-                      <button
-                        className="action-btn"
-                        onClick={(e) => e.stopPropagation()}
-                        title="More actions"
-                      >
-                        <MoreVertIcon />
-                      </button>
-                    </td>
                   </tr>
                 ))
               )}
