@@ -30,6 +30,7 @@ import OrderDetails from './OrderDetails';
 import OrderForm from './OrderForm';
 import ToggleProductStatus from './ToggleProductStatus';
 import AdminOrders from './admin/AdminOrders';
+import AdminOrderDetails from './admin/AdminOrderDetails';
 import About from './About';
 import './App.css';
 import SalesReport from './admin/SalesReport';
@@ -265,6 +266,22 @@ const App = () => {
                       <AdminOrders />
                     </div>
                     {/* Removed AdminRightPanel here */}
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <ProtectedRoute>
+                <div className="App">
+                  <AdminHeader />
+                  <div className="MainContent">
+                    <AdminSidebar />
+                    <div className="PageContent">
+                      <AdminOrderDetails />
+                    </div>
                   </div>
                 </div>
               </ProtectedRoute>
