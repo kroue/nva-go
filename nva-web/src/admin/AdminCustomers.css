@@ -5,6 +5,10 @@
   margin: 0;
   width: 100%;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .AdminCustomers-title {
@@ -12,8 +16,9 @@
   font-weight: 800;
   color: #1a1f36;
   margin: 0 0 24px 0;
-  padding: 0 24px;
+  padding: 24px 24px 0 24px;
   letter-spacing: -0.5px;
+  flex-shrink: 0;
 }
 
 .AdminCustomers-toolbar {
@@ -23,6 +28,7 @@
   margin-bottom: 24px;
   padding: 0 24px;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .toolbar-left {
@@ -104,12 +110,33 @@
   border: 2px solid #e8ecf4;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  margin: 0 24px;
+  margin: 0 24px 24px 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .table-wrapper {
+  overflow-y: auto;
   overflow-x: auto;
   width: 100%;
+  flex: 1;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: rgba(102, 126, 234, 0.05);
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
 }
 
 .AdminCustomers-table {
@@ -141,7 +168,11 @@
 .AdminCustomers-table th:nth-child(4) { width: 150px; }
 .AdminCustomers-table th:nth-child(5) { width: auto; min-width: 200px; }
 .AdminCustomers-table th:nth-child(6) { width: 140px; text-align: center; }
-.AdminCustomers-table th:nth-child(7) { width: 200px; text-align: center; }
+.AdminCustomers-table th:nth-child(7) { 
+  width: 200px; 
+  text-align: center; 
+  padding-right: 32px;
+}
 
 .AdminCustomers-table tbody tr {
   border-bottom: 1px solid #f5f7fa;
@@ -168,6 +199,7 @@
 .AdminCustomers-table td:nth-child(6),
 .AdminCustomers-table td:nth-child(7) {
   text-align: center;
+  padding-right: 32px;
 }
 
 .customer-name-cell {
@@ -199,13 +231,15 @@
 
 .barred-badge {
   display: inline-block;
-  padding: 8px 14px;
+  padding: 7px 0px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
+  min-width: 80px;
+  text-align: center;
 }
 
 .barred-badge.yes {
@@ -348,6 +382,78 @@
   cursor: not-allowed;
 }
 
+.toggle-switch-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f8f9ff;
+  border-radius: 12px;
+  border: 2px solid #e8ecf4;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+  transition: all 0.4s ease;
+  border-radius: 34px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 24px;
+  width: 24px;
+  left: 4px;
+  bottom: 4px;
+  background: white;
+  transition: all 0.4s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(28px);
+}
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.toggle-label.active {
+  color: #667eea;
+}
+
+.toggle-label.inactive {
+  color: #f44336;
+}
+
 .checkbox-group {
   display: flex;
   align-items: center;
@@ -405,6 +511,56 @@
 
 .modal-btn.secondary:hover {
   background: #e8ecf4;
+}
+
+.modal-btn.danger {
+  background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(214, 48, 49, 0.3);
+}
+
+.modal-btn.danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(214, 48, 49, 0.4);
+}
+
+.delete-modal {
+  text-align: center;
+  max-width: 400px;
+  padding: 32px;
+}
+
+.delete-modal-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.delete-modal .modal-header {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+.delete-modal-message {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.delete-modal-message strong {
+  color: #1a1f36;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.delete-modal .modal-actions {
+  gap: 12px;
+  margin-top: 0;
+}
+
+.delete-modal .modal-btn {
+  padding: 10px 20px;
+  font-size: 13px;
 }
 
 .error-message {

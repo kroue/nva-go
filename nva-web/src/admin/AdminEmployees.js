@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabaseAdmin } from './SupabaseAdminClient';
-import './AdminCustomers.css';
+import './AdminEmployees.css';
 import { FaUserPlus, FaUsers, FaSearch } from 'react-icons/fa';
 
 const emptyForm = {
@@ -12,6 +12,7 @@ const emptyForm = {
   phone_number: '',
   address: '',
   position: '',
+  is_active: true,
 };
 
 const AdminEmployees = () => {
@@ -21,6 +22,8 @@ const AdminEmployees = () => {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
   const filteredEmployees = employees.filter((employee) => {
     const searchLower = searchTerm.toLowerCase();
@@ -136,6 +139,7 @@ const AdminEmployees = () => {
       phone_number: emp.phone_number,
       address: emp.address,
       position: emp.position,
+      is_active: emp.is_active ?? true,
       password: '', // leave blank
     });
     setModalOpen(true);
@@ -153,6 +157,7 @@ const AdminEmployees = () => {
       phone_number: form.phone_number,
       address: form.address,
       position: form.position,
+      is_active: form.is_active,
     }).eq('id', editingId);
     if (dbError) {
       setError(dbError.message);
@@ -166,8 +171,23 @@ const AdminEmployees = () => {
 
   // Delete employee
   const handleDelete = async (id) => {
-    await supabaseAdmin.from('employees').delete().eq('id', id);
-    fetchEmployees();
+    const employee = employees.find(e => e.id === id);
+    setEmployeeToDelete(employee);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (employeeToDelete) {
+      await supabaseAdmin.from('employees').delete().eq('id', employeeToDelete.id);
+      setDeleteModalOpen(false);
+      setEmployeeToDelete(null);
+      fetchEmployees();
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setEmployeeToDelete(null);
   };
 
   // Modal close
@@ -181,10 +201,10 @@ const AdminEmployees = () => {
   console.log('Supabase object:', supabaseAdmin); // Log the Supabase object
 
   return (
-    <div className="AdminCustomers">
-      <div className="AdminCustomers-title">Employees</div>
+    <div className="AdminEmployees">
+      <div className="AdminEmployees-title">Employees</div>
 
-      <div className="AdminCustomers-toolbar">
+      <div className="AdminEmployees-toolbar">
         <div className="toolbar-left">
           <div className="search-box">
             <FaSearch className="search-icon" />
@@ -198,11 +218,11 @@ const AdminEmployees = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div className="customers-count">
+          <div className="employees-count">
             {filteredEmployees.length} {filteredEmployees.length === 1 ? 'Employee' : 'Employees'}
           </div>
           <button
-            className="add-customer-btn"
+            className="add-employee-btn"
             onClick={() => { setModalOpen(true); setEditingId(null); setForm(emptyForm); }}
           >
             <FaUserPlus />
@@ -211,9 +231,9 @@ const AdminEmployees = () => {
         </div>
       </div>
 
-      <div className="AdminCustomers-card">
+      <div className="AdminEmployees-card">
         <div className="table-wrapper">
-          <table className="AdminCustomers-table">
+          <table className="AdminEmployees-table">
             <thead>
               <tr>
                 <th>Email</th>
@@ -239,11 +259,11 @@ const AdminEmployees = () => {
                     <td>{emp.email}</td>
                     <td>{emp.username}</td>
                     <td>
-                      <div className="customer-name-cell">
-                        <div className="customer-avatar">
+                      <div className="employee-name-cell">
+                        <div className="employee-avatar">
                           {(emp.first_name?.[0] || 'E').toUpperCase()}
                         </div>
-                        <span className="customer-name">
+                        <span className="employee-name">
                           {emp.first_name} {emp.last_name}
                         </span>
                       </div>
@@ -251,7 +271,9 @@ const AdminEmployees = () => {
                     <td>{emp.phone_number}</td>
                     <td>{emp.address}</td>
                     <td>
-                      <span className="barred-badge no">{emp.position}</span>
+                      <span className={`position-badge ${!emp.is_active ? 'inactive' : ''}`}>
+                        {emp.position}
+                      </span>
                     </td>
                     <td>
                       <div className="action-buttons">
@@ -356,6 +378,25 @@ const AdminEmployees = () => {
                   onChange={handleChange}
                 />
               </div>
+              {editingId && (
+                <div className="form-group">
+                  <label className="form-label">Employee Status</label>
+                  <div className="toggle-switch-container">
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        name="is_active"
+                        checked={form.is_active}
+                        onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                    <span className={`toggle-label ${form.is_active ? 'active' : 'inactive'}`}>
+                      {form.is_active ? 'Active - Can Login' : 'Inactive - Cannot Login'}
+                    </span>
+                  </div>
+                </div>
+              )}
               {error && <div className="error-message">{error}</div>}
               <div className="modal-actions">
                 <button type="submit" className="modal-btn primary">
@@ -366,6 +407,29 @@ const AdminEmployees = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && employeeToDelete && (
+        <div className="modal-backdrop" onClick={cancelDelete}>
+          <div className="modal-content delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="delete-modal-icon">⚠️</div>
+            <h3 className="modal-header">Delete Employee?</h3>
+            <p className="delete-modal-message">
+              You're about to delete
+              <strong>{employeeToDelete.first_name} {employeeToDelete.last_name}</strong>
+              This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="modal-btn secondary" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button type="button" className="modal-btn danger" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

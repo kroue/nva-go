@@ -1,14 +1,16 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import nvagologo from '../../assets/nvalogomini.png';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 
 const AdminHeader = () => {
+  const navigate = useNavigate();
+
   return (
     <header className="Header">
       <div className="Header-left">
-        <div className="Header-logo">
+        <div className="Header-logo" onClick={() => navigate('/adminhomepage')} style={{ cursor: 'pointer' }}>
           <img src={nvagologo} alt="NVA Go Logo" />
         </div>
         <div className="Header-title">
@@ -24,14 +26,9 @@ const AdminHeader = () => {
         <button 
           className="Header-action-btn" 
           title="Notifications"
+          onClick={() => navigate('/admin/notifications')}
         >
           <NotificationsNoneOutlinedIcon />
-        </button>
-        <button 
-          className="Header-action-btn" 
-          title="Settings"
-        >
-          <SettingsOutlinedIcon />
         </button>
       </div>
     </header>

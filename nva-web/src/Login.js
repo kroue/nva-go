@@ -20,10 +20,10 @@ const Login = () => {
 
     console.log('username input:', username);
 
-    // Find employee by username
+    // Find employee by username and check if active
     const { data: empData, error: empError } = await supabase
       .from('employees')
-      .select('email')
+      .select('email, is_active')
       .eq('username', username)
       .maybeSingle();
 
@@ -31,6 +31,12 @@ const Login = () => {
 
     if (empError || !empData) {
       setError('Invalid username');
+      return;
+    }
+
+    // Check if employee is active
+    if (!empData.is_active) {
+      setError('Your account has been deactivated. Please contact an administrator.');
       return;
     }
 

@@ -25,7 +25,6 @@ const navItems = [
   { label: 'Employees', icon: <GroupsOutlinedIcon />, path: '/adminemployees' },
   { label: 'Customers', icon: <GroupOutlinedIcon />, path: '/admin/customers' },
   { label: 'Sales Report', icon: <BarChartOutlinedIcon />, path: '/admin/sales-report' },
-  { label: 'View System Logs', icon: <EventNoteOutlinedIcon />, path: '/admin/system-logs' },
 ];
 
 const Sidebar = () => {
@@ -91,15 +90,6 @@ const Sidebar = () => {
         
         {profileModalOpen && (
           <div className="Sidebar-dropdown">
-            <button onClick={() => { setProfileModalOpen(false); navigate('/admin/profile'); }}>
-              <PersonOutlineIcon />
-              <span>Edit Profile</span>
-            </button>
-            <button onClick={() => { setProfileModalOpen(false); navigate('/admin/settings'); }}>
-              <SettingsOutlinedIcon />
-              <span>Settings</span>
-            </button>
-            <div className="dropdown-divider"></div>
             <button className="logout-btn" onClick={handleLogout}>
               <LogoutOutlinedIcon />
               <span>Logout</span>

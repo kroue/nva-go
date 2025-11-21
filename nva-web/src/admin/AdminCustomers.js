@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../SupabaseClient';
+import { supabaseAdmin } from './SupabaseAdminClient';
 import './AdminCustomers.css';
 import { FaUserPlus, FaUsers, FaSearch } from 'react-icons/fa';
 
@@ -21,6 +21,8 @@ const AdminCustomers = () => {
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState(null);
 
   const filteredCustomers = customers.filter((customer) => {
     const searchLower = searchTerm.toLowerCase();
@@ -34,7 +36,7 @@ const AdminCustomers = () => {
   });
 
   const fetchCustomers = async () => {
-    const { data, error } = await supabase.from('customers').select('*');
+    const { data, error } = await supabaseAdmin.from('customers').select('*');
     if (!error) setCustomers(data);
   };
 
@@ -50,29 +52,24 @@ const AdminCustomers = () => {
   const handleAdd = async (e) => {
     e.preventDefault();
     setError('');
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: form.email,
       password: form.password,
-      options: {
-        data: {
-          username: form.username,
-          first_name: form.first_name,
-          last_name: form.last_name,
-          phone_number: form.phone_number,
-          address: form.address,
-        },
+      email_confirm: true,
+      user_metadata: {
+        username: form.username,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        phone_number: form.phone_number,
+        address: form.address,
       },
     });
     if (authError) {
       setError(authError.message);
       return;
     }
-    if (!authData.user) {
-      setError('User must confirm their email before being added as a customer.');
-      return;
-    }
     const userId = authData.user.id;
-    const { error: dbError } = await supabase.from('customers').insert({
+    const { error: dbError } = await supabaseAdmin.from('customers').insert({
       id: userId,
       username: form.username,
       email: form.email,
@@ -93,6 +90,11 @@ const AdminCustomers = () => {
 
   const handleEdit = (cust) => {
     setEditingId(cust.id);
+    
+    console.log('=== EDIT CUSTOMER DEBUG ===');
+    console.log('Customer ID:', cust.id);
+    console.log('is_barred from DB:', cust.is_barred, 'type:', typeof cust.is_barred);
+    
     setForm({
       email: cust.email,
       username: cust.username,
@@ -103,36 +105,62 @@ const AdminCustomers = () => {
       is_barred: cust.is_barred,
       password: '',
     });
+    
+    console.log('Form is_barred set to:', cust.is_barred);
     setModalOpen(true);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     setError('');
-    const { error: dbError } = await supabase.from('customers').update({
+    
+    console.log('=== UPDATE CUSTOMER DEBUG ===');
+    console.log('Customer ID:', editingId);
+    console.log('Form is_barred:', form.is_barred, 'type:', typeof form.is_barred);
+    
+    const { data, error: dbError } = await supabaseAdmin.from('customers').update({
       username: form.username,
-      email: form.email,
       first_name: form.first_name,
       last_name: form.last_name,
       phone_number: form.phone_number,
       address: form.address,
       is_barred: form.is_barred,
-    }).eq('id', editingId);
+    }).eq('id', editingId).select();
+    
     if (dbError) {
+      console.error('Update error:', dbError);
       setError(dbError.message);
       return;
     }
+    
+    console.log('Update successful!');
+    console.log('Returned data:', data);
+    console.log('is_barred in returned data:', data?.[0]?.is_barred);
+    
     setEditingId(null);
     setForm(emptyForm);
     setModalOpen(false);
-    fetchCustomers();
+    await fetchCustomers();
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      await supabase.from('customers').delete().eq('id', id);
+    const customer = customers.find(c => c.id === id);
+    setCustomerToDelete(customer);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (customerToDelete) {
+      await supabaseAdmin.from('customers').delete().eq('id', customerToDelete.id);
+      setDeleteModalOpen(false);
+      setCustomerToDelete(null);
       fetchCustomers();
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setCustomerToDelete(null);
   };
 
   const handleCloseModal = () => {
@@ -311,16 +339,40 @@ const AdminCustomers = () => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="checkbox-group">
-                <input
-                  type="checkbox"
-                  id="is_barred"
-                  name="is_barred"
-                  checked={form.is_barred}
-                  onChange={handleChange}
-                />
-                <label htmlFor="is_barred" className="checkbox-label">Bar this customer</label>
-              </div>
+              {editingId && (
+                <div className="form-group">
+                  <label className="form-label">Customer Status</label>
+                  <div className="toggle-switch-container">
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={!form.is_barred}
+                        onChange={(e) => {
+                          const newValue = !e.target.checked;
+                          console.log('=== TOGGLE CLICKED ===');
+                          console.log('Checkbox checked:', e.target.checked);
+                          console.log('Setting is_barred to:', newValue);
+                          setForm({ ...form, is_barred: newValue });
+                        }}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                    <span className={`toggle-label ${!form.is_barred ? 'active' : 'inactive'}`}>
+                      {!form.is_barred ? 'Active - Can Order' : 'Barred - Cannot Order'}
+                    </span>
+                  </div>
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '8px', 
+                    background: '#f0f0f0', 
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontFamily: 'monospace'
+                  }}>
+                    DEBUG: is_barred = {String(form.is_barred)} (type: {typeof form.is_barred})
+                  </div>
+                </div>
+              )}
               {error && <div className="error-message">{error}</div>}
               <div className="modal-actions">
                 <button type="submit" className="modal-btn primary">
@@ -331,6 +383,29 @@ const AdminCustomers = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && customerToDelete && (
+        <div className="modal-backdrop" onClick={cancelDelete}>
+          <div className="modal-content delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="delete-modal-icon">⚠️</div>
+            <h3 className="modal-header">Delete Customer?</h3>
+            <p className="delete-modal-message">
+              You're about to delete
+              <strong>{customerToDelete.first_name} {customerToDelete.last_name}</strong>
+              This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="modal-btn secondary" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button type="button" className="modal-btn danger" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
