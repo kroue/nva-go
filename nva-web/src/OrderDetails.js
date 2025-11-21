@@ -30,6 +30,27 @@ const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dfejxqixw/image/upload';
 const CLOUDINARY_UPLOAD_PRESET = 'proofs';
 const LAYOUT_FEE = 150;
 
+// Status hierarchy - defines the order of statuses
+const STATUS_ORDER = ['Validation', 'Layout Approval', 'Printing', 'For Pickup', 'Finished'];
+
+// Helper function to check if status transition is allowed
+const canTransitionTo = (currentStatus, targetStatus) => {
+  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+  const targetIndex = STATUS_ORDER.indexOf(targetStatus);
+  
+  // Can't go backwards or skip steps (must be exactly next step or same step)
+  return targetIndex <= currentIndex + 1;
+};
+
+// Helper function to get required status message
+const getRequiredStatusMessage = (targetStatus) => {
+  const targetIndex = STATUS_ORDER.indexOf(targetStatus);
+  if (targetIndex > 0) {
+    return `Order must be in "${STATUS_ORDER[targetIndex - 1]}" status first`;
+  }
+  return '';
+};
+
 // Custom hook for fetching order
 const useOrder = (id) => {
   const [order, setOrder] = useState(null);
@@ -133,12 +154,28 @@ const OrderDetails = () => {
   }, [order]);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      const fileType = selectedFile.type;
+      if (fileType !== 'image/jpeg' && fileType !== 'image/png') {
+        alert('Only JPEG and PNG files are allowed.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+      setFile(selectedFile);
+    }
   };
 
   // NEW: Walk-in approve -> set status to "Printing"
   const handleWalkInApprove = async () => {
     if (!order) return;
+    
+    // Check if order is in Layout Approval status
+    if (order.status !== 'Layout Approval') {
+      alert(`Cannot approve. ${getRequiredStatusMessage('Printing')}`);
+      return;
+    }
+    
     try {
       setUploading(true);
       const { error } = await supabase
@@ -165,6 +202,13 @@ const OrderDetails = () => {
 
   const handleSendApproval = async () => {
     if (!order) return;
+    
+    // Check if order is in Validation status (payment validated)
+    if (order.status !== 'Validation' && order.status !== 'Layout Approval') {
+      alert(`Cannot send approval. ${getRequiredStatusMessage('Layout Approval')}`);
+      return;
+    }
+    
     // Do not send approval for walk-in orders (no customer email / walk-in source)
     if (isWalkIn) {
       alert('Approval is not required for walk-in orders.');
@@ -197,6 +241,7 @@ const OrderDetails = () => {
       const updatePayload = {
         approval_file: fileUrl,
         approved: 'no',
+        status: 'Layout Approval',
         employee_email: employee.email || order.employee_email || null,
         employee_first_name: employee.firstName || order.employee_first_name || null,
         employee_last_name: employee.lastName || order.employee_last_name || null
@@ -244,6 +289,7 @@ ${fileUrl}`;
         ...prev,
         approval_file: fileUrl,
         approved: 'no',
+        status: 'Layout Approval',
         employee_email: updatePayload.employee_email,
         employee_first_name: updatePayload.employee_first_name,
         employee_last_name: updatePayload.employee_last_name
@@ -259,6 +305,12 @@ ${fileUrl}`;
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    // Validate status transition
+    if (!canTransitionTo(order.status, newStatus)) {
+      alert(`Cannot update to ${newStatus}. ${getRequiredStatusMessage(newStatus)}`);
+      return;
+    }
+    
     try {
       setUploading(true);
       const { error } = await supabase
@@ -576,8 +628,9 @@ Please come to our store to pick up your order.`;
                         </div>
                         <button
                           onClick={handleWalkInApprove}
-                          disabled={uploading || order.status === 'Printing'}
+                          disabled={uploading || order.status !== 'Layout Approval'}
                           className="approve-btn primary"
+                          title={order.status !== 'Layout Approval' ? getRequiredStatusMessage('Printing') : ''}
                         >
                           <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
                           {order.status === 'Printing' ? 'Already Printing' : 'Mark as Approved'}
@@ -615,15 +668,16 @@ Please come to our store to pick up your order.`;
                             <input
                               type="file"
                               onChange={handleFileChange}
-                              accept="image/*,.pdf"
+                              accept="image/jpeg,image/png"
                               style={{ display: 'none' }}
                             />
                           </label>
 
                           <button
                             onClick={handleSendApproval}
-                            disabled={uploading || order.approved === 'yes'}
+                            disabled={uploading || order.approved === 'yes' || (order.status !== 'Validation' && order.status !== 'Layout Approval')}
                             className="approve-btn primary"
+                            title={order.status !== 'Validation' && order.status !== 'Layout Approval' ? getRequiredStatusMessage('Layout Approval') : ''}
                           >
                             <CloudUploadOutlinedIcon style={{ fontSize: 18 }} />
                             {uploading
@@ -649,9 +703,11 @@ Please come to our store to pick up your order.`;
                         disabled={
                           uploading ||
                           order.status === 'For Pickup' ||
-                          order.status === 'Finished'
+                          order.status === 'Finished' ||
+                          !canTransitionTo(order.status, 'For Pickup')
                         }
                         className="status-btn pickup"
+                        title={!canTransitionTo(order.status, 'For Pickup') ? getRequiredStatusMessage('For Pickup') : ''}
                       >
                         <LocalShippingOutlinedIcon style={{ fontSize: 18 }} />
                         Mark as Ready for Pickup
@@ -659,8 +715,9 @@ Please come to our store to pick up your order.`;
 
                       <button
                         onClick={() => updateOrderStatus(order.id, 'Finished')}
-                        disabled={uploading || order.status === 'Finished'}
+                        disabled={uploading || order.status === 'Finished' || !canTransitionTo(order.status, 'Finished')}
                         className="status-btn finished"
+                        title={!canTransitionTo(order.status, 'Finished') ? getRequiredStatusMessage('Finished') : ''}
                       >
                         <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
                         Mark as Finished

@@ -45,16 +45,75 @@ export default function OrderForm() {
 
   // Normalization + product flags
   const normalize = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const productNameRaw = product || productData?.name || '';
+  const productNameRaw = product?.name || productData?.name || '';
   const normalizedProduct = normalize(productNameRaw);
   const isDTFPrint = normalizedProduct.includes('dtf') && normalizedProduct.includes('print');
   const isSolventTarp = normalizedProduct.includes('solvent') && normalizedProduct.includes('tarp');
   const isSintra = normalizedProduct.includes('sintra');
   const requiresDimensions = isSintra || isSolventTarp;
 
-  // Custom hooks
+  // Custom hooks - but override the total calculation for dimension-based products
   const { variants, selectedVariant, setSelectedVariant, productData, fetchCustomer } = useProductData(product);
-  const { total, dimWarning } = useOrderCalculation(selectedVariant, quantity, width, height, hasFile, requiresDimensions, isSolventTarp, eyelets);
+  
+  // Calculate total based on dimensions for Solvent Tarp and Sintraboard
+  const calculateTotal = () => {
+    if (!selectedVariant) return 0;
+    
+    const basePrice = selectedVariant.retail_price || selectedVariant.price || 0;
+    const qty = parseInt(quantity) || 1;
+    
+    console.log('Calculating total:', {
+      selectedVariant,
+      basePrice,
+      qty,
+      requiresDimensions,
+      width,
+      height,
+      isSolventTarp,
+      eyelets
+    });
+    
+    // For Solvent Tarp and Sintraboard: price = (length x width x price per sqft) x quantity
+    if (requiresDimensions && width && height) {
+      const widthNum = parseFloat(width) || 0;
+      const heightNum = parseFloat(height) || 0;
+      const area = widthNum * heightNum; // in square feet
+      let total = area * basePrice * qty;
+      
+      console.log('Dimension calculation:', { widthNum, heightNum, area, basePrice, total });
+      
+      // Add eyelet cost for Solvent Tarp (1 peso per eyelet)
+      if (isSolventTarp) {
+        const eyeletCount = parseInt(eyelets) || 0;
+        total += eyeletCount * 1; // 1 peso per eyelet
+        console.log('After eyelet cost:', { eyeletCount, total });
+      }
+      
+      return total;
+    }
+    
+    // For other products: price x quantity
+    const total = basePrice * qty;
+    console.log('Regular calculation:', { total });
+    return total;
+  };
+  
+  const total = calculateTotal();
+  
+  console.log('Final total:', total);
+  
+  // Get dimWarning from the hook instead of duplicating it here
+  const { dimWarning: hookDimWarning } = useOrderCalculation(
+    selectedVariant, 
+    quantity, 
+    width, 
+    height, 
+    hasFile, 
+    requiresDimensions, 
+    isSolventTarp, 
+    eyelets
+  );
+
   const { isFormValid, dtfWarning } = useFormValidation(
     firstName, lastName, contact, address, variants, selectedVariant, quantity, isDTFPrint, requiresDimensions, height, width, isSolventTarp, eyelets, pickupDate, pickupTime, hasFile, attachedFile
   );
@@ -125,6 +184,13 @@ export default function OrderForm() {
       alert('Please fill out all required fields.');
       return;
     }
+    
+    // Validate dimensions for Solvent Tarp and Sintraboard
+    if (requiresDimensions && (!width || !height)) {
+      alert('Please enter both width and height dimensions.');
+      return;
+    }
+    
     const email = await AsyncStorage.getItem('email');
     const orderData = {
       first_name: firstName,
@@ -134,8 +200,8 @@ export default function OrderForm() {
       has_file: hasFile,
       product_name: (typeof product === 'object' ? product?.name : product) || productData?.name || '',
       variant: selectedVariant?.description || selectedVariant?.size || '',
-      height: requiresDimensions ? (height ? parseFloat(height) : null) : null,
-      width: requiresDimensions ? (width ? parseFloat(width) : null) : null,
+      height: requiresDimensions ? parseFloat(height) : null,
+      width: requiresDimensions ? parseFloat(width) : null,
       quantity: parseInt(quantity) || 1,
       eyelets: isSolventTarp ? (parseInt(eyelets) || 0) : null,
       pickup_date: pickupDate,
@@ -170,11 +236,26 @@ export default function OrderForm() {
       });
 
       if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const fileExtension = uri.split('.').pop().toLowerCase();
+        
+        // Only allow PNG and JPEG/JPG files
+        if (!['png', 'jpg', 'jpeg'].includes(fileExtension)) {
+          alert('Invalid file format. Please upload only PNG or JPEG images.');
+          return;
+        }
+
+        // Determine correct MIME type
+        let mimeType = 'image/jpeg';
+        if (fileExtension === 'png') {
+          mimeType = 'image/png';
+        }
+
         const formData = new FormData();
         formData.append('file', {
-          uri: result.assets[0].uri,
-          type: 'image/jpeg',
-          name: 'upload.jpg'
+          uri: uri,
+          type: mimeType,
+          name: `upload_${Date.now()}.${fileExtension}`
         });
         formData.append('upload_preset', 'proofs');
 
@@ -269,7 +350,7 @@ export default function OrderForm() {
               handleDateChange={handleDateChange}
               handleTimeChange={handleTimeChange}
               pickDocument={pickDocument}
-              dimWarning={dimWarning}
+              dimWarning={hookDimWarning}
               dtfWarning={dtfWarning}
             />
 

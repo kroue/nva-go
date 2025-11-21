@@ -85,10 +85,10 @@ const ValidatePayment = () => {
   const handleValidate = async (orderId) => {
     if (!orderId) return;
 
-    // 1) Update order status to Layout Approval
+    // 1) Update order status to Validation (first step, payment validated)
     const { error: updErr } = await supabase
       .from('orders')
-      .update({ status: 'Layout Approval' })
+      .update({ status: 'Validation' })
       .eq('id', orderId);
 
     if (updErr) {
@@ -131,7 +131,7 @@ const ValidatePayment = () => {
 
     // 4) Update the local state to mark as validated
     setPayments((prev) =>
-      prev.map((p) => (p.id === orderId ? { ...p, status: 'Layout Approval' } : p))
+      prev.map((p) => (p.id === orderId ? { ...p, status: 'Validation' } : p))
     );
   };
 
@@ -191,11 +191,11 @@ const ValidatePayment = () => {
         </div>
         <div className="ValidatePayment-stats">
           <div className="stat-badge">
-            <span className="stat-number">{payments.filter(p => p.status !== 'Layout Approval' && p.status !== 'Declined' && p.status !== 'Printing' && p.status !== 'For Pickup' && p.status !== 'Finished').length}</span>
+            <span className="stat-number">{payments.filter(p => p.status !== 'Validation' && p.status !== 'Layout Approval' && p.status !== 'Declined' && p.status !== 'Printing' && p.status !== 'For Pickup' && p.status !== 'Finished').length}</span>
             <span className="stat-label">Pending</span>
           </div>
           <div className="stat-badge">
-            <span className="stat-number">{payments.filter(p => p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished').length}</span>
+            <span className="stat-number">{payments.filter(p => p.status === 'Validation' || p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished').length}</span>
             <span className="stat-label">Validated</span>
           </div>
         </div>
@@ -222,9 +222,9 @@ const ValidatePayment = () => {
                     </div>
                   </div>
                   <div className={`status-badge ${
-                    p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'success' : p.status === 'Declined' ? 'error' : 'pending'
+                    p.status === 'Validation' || p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'success' : p.status === 'Declined' ? 'error' : 'pending'
                   }`}>
-                    {p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? (
+                    {p.status === 'Validation' || p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? (
                       <>
                         <CheckCircleOutlineOutlinedIcon style={{ fontSize: 14 }} />
                         Validated
@@ -301,15 +301,15 @@ const ValidatePayment = () => {
               <button
                 className="action-btn validate"
                 onClick={() => handleValidate(selectedPayment.id)}
-                disabled={selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
+                disabled={selectedPayment.status === 'Validation' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
               >
                 <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
-                {selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' ? 'Already Validated' : 'Validate Payment'}
+                {selectedPayment.status === 'Validation' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' ? 'Already Validated' : 'Validate Payment'}
               </button>
               <button
                 className="action-btn decline"
                 onClick={() => handleDecline(selectedPayment.id)}
-                disabled={selectedPayment.status === 'Declined' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
+                disabled={selectedPayment.status === 'Declined' || selectedPayment.status === 'Validation' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
               >
                 <CancelOutlinedIcon style={{ fontSize: 18 }} />
                 Decline Payment

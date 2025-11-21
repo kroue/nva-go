@@ -61,6 +61,27 @@ const useEmployee = () => {
 
 const statuses = ['Validation', 'Layout Approval', 'Printing', 'For Pickup', 'Finished'];
 
+// Status hierarchy - defines the order of statuses
+const STATUS_ORDER = ['Validation', 'Layout Approval', 'Printing', 'For Pickup', 'Finished'];
+
+// Helper function to check if status transition is allowed
+const canTransitionTo = (currentStatus, targetStatus) => {
+  const currentIndex = STATUS_ORDER.indexOf(currentStatus);
+  const targetIndex = STATUS_ORDER.indexOf(targetStatus);
+  
+  // Can't go backwards or skip steps (must be exactly next step or same step)
+  return targetIndex <= currentIndex + 1;
+};
+
+// Helper function to get required status message
+const getRequiredStatusMessage = (targetStatus) => {
+  const targetIndex = STATUS_ORDER.indexOf(targetStatus);
+  if (targetIndex > 0) {
+    return `Order must be in "${STATUS_ORDER[targetIndex - 1]}" status first`;
+  }
+  return '';
+};
+
 const ProcessOrders = () => {
   const [orders, setOrders] = useState([]);
   const [updatingId, setUpdatingId] = useState(null);
@@ -91,6 +112,14 @@ const ProcessOrders = () => {
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
+    const order = orders.find(o => o.id === orderId);
+    
+    // Validate status transition
+    if (!canTransitionTo(order.status, newStatus)) {
+      alert(`Cannot update to ${newStatus}. ${getRequiredStatusMessage(newStatus)}`);
+      return;
+    }
+    
     try {
       setUpdatingId(orderId);
       const { error } = await supabase
@@ -104,7 +133,6 @@ const ProcessOrders = () => {
 
       // Send message if status is 'For Pickup'
       if (newStatus === 'For Pickup') {
-        const order = orders.find(o => o.id === orderId);
         if (order && order.email) {
           const messageText = `[ORDER_READY]|${orderId}
 Your order is ready for pickup!
@@ -245,8 +273,10 @@ Please come to our store to pick up your order.`;
                     disabled={
                       updatingId === order.id ||
                       order.status === 'For Pickup' ||
-                      order.status === 'Finished'
+                      order.status === 'Finished' ||
+                      !canTransitionTo(order.status, 'For Pickup')
                     }
+                    title={!canTransitionTo(order.status, 'For Pickup') ? getRequiredStatusMessage('For Pickup') : ''}
                   >
                     <LocalShippingOutlinedIcon style={{ fontSize: 16 }} />
                     Ready for Pickup
@@ -258,7 +288,8 @@ Please come to our store to pick up your order.`;
                       e.stopPropagation();
                       updateOrderStatus(order.id, 'Finished');
                     }}
-                    disabled={updatingId === order.id || order.status === 'Finished'}
+                    disabled={updatingId === order.id || order.status === 'Finished' || !canTransitionTo(order.status, 'Finished')}
+                    title={!canTransitionTo(order.status, 'Finished') ? getRequiredStatusMessage('Finished') : ''}
                   >
                     <CheckCircleOutlineOutlinedIcon style={{ fontSize: 16 }} />
                     Finish Order

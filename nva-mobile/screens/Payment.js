@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, TextInput, Alert, ScrollView, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../SupabaseClient';
@@ -15,6 +15,7 @@ export default function Payment() {
   const order = route.params?.order;
   const [proofUri, setProofUri] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Pick image
   const pickImage = async () => {
@@ -23,10 +24,24 @@ export default function Payment() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.7,
+        allowsMultipleSelection: false,
       });
       
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setProofUri(result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        const fileExtension = uri.split('.').pop().toLowerCase();
+        
+        // Only allow PNG and JPEG/JPG files
+        if (!['png', 'jpg', 'jpeg'].includes(fileExtension)) {
+          Alert.alert(
+            'Invalid File Format',
+            'Please upload only PNG or JPEG images.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        setProofUri(uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -41,13 +56,19 @@ export default function Payment() {
     setUploading(true);
 
     try {
-      const fileExt = proofUri.split('.').pop();
+      const fileExt = proofUri.split('.').pop().toLowerCase();
       const fileName = `proof_${Date.now()}.${fileExt}`;
+
+      // Determine correct MIME type
+      let mimeType = 'image/jpeg';
+      if (fileExt === 'png') {
+        mimeType = 'image/png';
+      }
 
       const formData = new FormData();
       formData.append('file', {
         uri: proofUri,
-        type: `image/${fileExt}`,
+        type: mimeType,
         name: fileName,
       });
       formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -74,6 +95,13 @@ export default function Payment() {
       return;
     }
 
+    // Show custom confirmation modal
+    setShowConfirmModal(true);
+  };
+
+  const confirmPlaceOrder = async () => {
+    setShowConfirmModal(false);
+    
     try {
       let proofUrl = '';
       if (proofUri) {
@@ -130,8 +158,18 @@ export default function Payment() {
       }
 
       console.log('Order inserted successfully:', data);
-      Alert.alert('Order Placed', 'Your order has been placed successfully!');
-      navigation.replace('Home');
+      
+      // Show success modal
+      Alert.alert(
+        'Order Placed Successfully! 🎉', 
+        'Your order has been placed and is now pending validation. You will be notified once it\'s approved.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.replace('Home')
+          }
+        ]
+      );
       
     } catch (error) {
       console.error('Place order error:', error);
@@ -226,7 +264,7 @@ export default function Payment() {
                 <Text style={styles.uploadIconText}>📷</Text>
               </View>
               <Text style={styles.uploadText}>Tap to upload proof</Text>
-              <Text style={styles.uploadSubtext}>JPG, PNG or JPEG</Text>
+              <Text style={styles.uploadSubtext}>PNG or JPEG only</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -272,6 +310,78 @@ export default function Payment() {
           Your order will be validated within 24 hours
         </Text>
       </View>
+
+      {/* Custom Confirmation Modal */}
+      <Modal
+        visible={showConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIconContainer}>
+                <Text style={styles.modalIcon}>✓</Text>
+              </View>
+              <Text style={styles.modalTitle}>Confirm Order Placement</Text>
+            </View>
+
+            {/* Content */}
+            <View style={styles.modalContent}>
+              <Text style={styles.modalSubtitle}>
+                Are you sure you want to place this order?
+              </Text>
+
+              <View style={styles.orderDetailsBox}>
+                <View style={styles.orderDetailRow}>
+                  <Text style={styles.orderDetailLabel}>Product:</Text>
+                  <Text style={styles.orderDetailValue}>{order?.product_name}</Text>
+                </View>
+                <View style={styles.orderDetailRow}>
+                  <Text style={styles.orderDetailLabel}>Quantity:</Text>
+                  <Text style={styles.orderDetailValue}>{order?.quantity}</Text>
+                </View>
+                <View style={styles.orderDetailDivider} />
+                <View style={styles.orderDetailRow}>
+                  <Text style={styles.orderDetailLabelBold}>Total:</Text>
+                  <Text style={styles.orderDetailValueTotal}>₱{order?.total}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.modalNote}>
+                Once confirmed, your order will be sent for validation.
+              </Text>
+            </View>
+
+            {/* Actions */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowConfirmModal(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmPlaceOrder}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#232B55', '#4A5698']}
+                  style={styles.modalConfirmGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.modalConfirmText}>Confirm & Place Order</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -531,5 +641,140 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     textAlign: 'center',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalIcon: {
+    fontSize: 32,
+    color: '#4CAF50',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    textAlign: 'center',
+  },
+  modalContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  orderDetailsBox: {
+    backgroundColor: '#F8F9FD',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
+  orderDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  orderDetailLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  orderDetailValue: {
+    fontSize: 14,
+    color: '#1A1A2E',
+    fontWeight: '600',
+  },
+  orderDetailLabelBold: {
+    fontSize: 16,
+    color: '#1A1A2E',
+    fontWeight: '700',
+  },
+  orderDetailValueTotal: {
+    fontSize: 18,
+    color: '#007AFF',
+    fontWeight: '800',
+  },
+  orderDetailDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
+  modalNote: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    padding: 16,
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalConfirmGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

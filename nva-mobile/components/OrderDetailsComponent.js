@@ -85,23 +85,32 @@ const OrderDetailsComponent = ({
 
       {requiresDimensions && (
         <>
-          <Text style={styles.label}>Size (Height x Width)</Text>
+          <Text style={styles.label}>
+            Dimensions (Length x Width in feet) *
+          </Text>
+          <Text style={styles.helperText}>
+            {isSolventTarp 
+              ? 'Price calculated as: Length × Width × Price per sq.ft × Quantity + (Eyelets × ₱1)'
+              : 'Price calculated as: Length × Width × Price per sq.ft × Quantity'}
+          </Text>
           <View style={styles.row}>
             <TextInput
-              style={styles.inputSmall}
-              placeholder="Height"
+              style={styles.inputHalf}
+              placeholder="Length (ft)"
+              keyboardType="numeric"
               value={height}
               onChangeText={setHeight}
-              keyboardType="numeric"
             />
             <TextInput
-              style={styles.inputSmall}
-              placeholder="Width"
+              style={styles.inputHalf}
+              placeholder="Width (ft)"
+              keyboardType="numeric"
               value={width}
               onChangeText={setWidth}
-              keyboardType="numeric"
             />
           </View>
+          {/* Only show dimWarning once, here at the end of dimensions section */}
+          {dimWarning ? <Text style={styles.errorText}>{dimWarning}</Text> : null}
         </>
       )}
       <Text style={styles.label}>Quantity</Text>
@@ -113,12 +122,14 @@ const OrderDetailsComponent = ({
       />
       {isSolventTarp && (
         <>
-          <Text style={styles.label}>Eyelets</Text>
+          <Text style={styles.label}>Number of Eyelets *</Text>
+          <Text style={styles.helperText}>₱1 per eyelet will be added to the total</Text>
           <TextInput
-            style={styles.inputSmall}
+            style={styles.inputFull}
+            placeholder="Enter number of eyelets"
+            keyboardType="numeric"
             value={eyelets}
             onChangeText={setEyelets}
-            keyboardType="numeric"
           />
         </>
       )}
@@ -167,9 +178,7 @@ const OrderDetailsComponent = ({
         multiline
       />
 
-      {requiresDimensions && !!dimWarning && (
-        <Text style={styles.errorText}>{dimWarning}</Text>
-      )}
+      {/* Make sure dimWarning is NOT displayed again elsewhere in the component */}
       {!!dtfWarning && (
         <Text style={styles.errorText}>{dtfWarning}</Text>
       )}
@@ -192,6 +201,7 @@ const styles = StyleSheet.create({
   plusText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
   inputSmall: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginRight: 8, backgroundColor: '#fff' },
   inputHalf: { flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, marginRight: 8, backgroundColor: '#fff', justifyContent: 'center' },
+  inputFull: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, backgroundColor: '#fff', marginBottom: 8 },
   instructions: { width: '100%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, minHeight: 60, backgroundColor: '#fff', marginBottom: 8 },
   errorText: { color: '#D32F2F', fontSize: 12, marginTop: 4, marginBottom: 8, fontWeight: '600' },
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
@@ -199,6 +209,7 @@ const styles = StyleSheet.create({
   modalImage: { width: 300, height: 300, resizeMode: 'contain' },
   closeBtn: { marginTop: 16, padding: 10, backgroundColor: '#232B55', borderRadius: 8 },
   closeText: { color: '#fff', fontWeight: 'bold' },
+  helperText: { fontSize: 12, color: '#666', marginBottom: 8 },
 });
 
 export default OrderDetailsComponent;
