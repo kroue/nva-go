@@ -140,15 +140,6 @@ const Sidebar = () => {
         
         {profileModalOpen && (
           <div className="Sidebar-dropdown">
-            <button onClick={() => { setProfileModalOpen(false); navigate('/edit-profile'); }}>
-              <PersonOutlineIcon />
-              <span>My Profile</span>
-            </button>
-            <button onClick={() => { setProfileModalOpen(false); navigate('/settings'); }}>
-              <SettingsOutlinedIcon />
-              <span>Settings</span>
-            </button>
-            <div className="dropdown-divider"></div>
             <button className="logout-btn" onClick={handleLogout}>
               <LogoutOutlinedIcon />
               <span>Logout</span>

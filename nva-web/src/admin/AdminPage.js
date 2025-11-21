@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../SupabaseClient';
 import './AdminPage.css';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import WavingHandOutlinedIcon from '@mui/icons-material/WavingHandOutlined';
 
 const peso = (n) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(n || 0));
@@ -43,7 +49,8 @@ const buildCalendar = (d = new Date()) => {
 };
 
 const AdminPage = () => {
-  // ...existing code...
+  const navigate = useNavigate();
+  // ...existing state...
   const [trend, setTrend] = useState([]); // [{key,label,total}]
   const [total7Days, setTotal7Days] = useState(0);
   const [ordersToday, setOrdersToday] = useState(0);
@@ -153,8 +160,8 @@ const AdminPage = () => {
   // Build smooth area chart path and gridlines (existing)
   const chart = useMemo(() => {
     const width = 640;
-    const height = 220;
-    const pad = { top: 16, right: 16, bottom: 28, left: 36 };
+    const height = 280;
+    const pad = { top: 40, right: 40, bottom: 50, left: 60 };
 
     const innerW = width - pad.left - pad.right;
     const innerH = height - pad.top - pad.bottom;
@@ -195,9 +202,12 @@ const AdminPage = () => {
 
     const gridLines = [];
     const ticks = 5;
+    const yLabels = [];
     for (let i = 0; i <= ticks; i++) {
       const y = pad.top + (i * innerH) / ticks;
+      const value = max - (i * max) / ticks;
       gridLines.push({ x1: pad.left, y1: y, x2: pad.left + innerW, y2: y });
+      yLabels.push({ y, value });
     }
 
     return {
@@ -209,6 +219,8 @@ const AdminPage = () => {
       linePath,
       areaPath,
       gridLines,
+      yLabels,
+      pts,
       max,
     };
   }, [trend]);
@@ -233,201 +245,263 @@ const AdminPage = () => {
     return { width, height, pad, barW, bars, max };
   }, [todayBuckets]);
 
+  const handleDateClick = (day) => {
+    if (!day) return;
+    
+    // Get the current month/year from monthText
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    // Create date string in YYYY-MM-DD format
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    // Navigate to sales report with date query parameter
+    navigate(`/admin/sales-report?date=${dateStr}`);
+  };
+
   return (
     <div className="HomePage">
       <div className="HomePage-titlebar">
-        <h2 className="HomePage-titlebar-text">Home</h2>
+        <WavingHandOutlinedIcon className="HomePage-titlebar-icon" />
+        <h2 className="HomePage-titlebar-text">
+          Welcome back! Here's your sales overview.
+        </h2>
       </div>
 
-      {/* Two-column layout: left = Sales Trend, right = Reports Calendar + Today's Sales */}
-      <div
-        className="AdminHome-layout"
-        style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}
-      >
-        {/* Left/main content: Sales Trend */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="Dashboard-section HomePage-recent">
-            <h2 className="Dashboard-section-title dark">Sales Trend</h2>
-            <div className="Card">
-              <div style={{ width: '100%', position: 'relative', marginBottom: 8 }}>
-                <svg
-                  width="100%"
-                  height={chart.height}
-                  viewBox={`0 0 ${chart.width} ${chart.height}`}
-                  role="img"
-                >
-                  <defs>
-                    <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#252b55" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#252b55" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
+      <div className="HomePage-grid" style={{ gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
+        {/* Sales Trend Card */}
+        <div className="Dashboard-section HomePage-sales-trend">
+          <h2 className="Dashboard-section-title dark">
+            <TrendingUpOutlinedIcon className="section-icon" />
+            Sales Trend (7 Days)
+          </h2>
+          <div className="Card">
+            <div style={{ width: '100%', position: 'relative' }}>
+              <svg
+                width="100%"
+                height={chart.height}
+                viewBox={`0 0 ${chart.width} ${chart.height}`}
+                role="img"
+                style={{ overflow: 'visible' }}
+              >
+                <defs>
+                  <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#252b55" stopOpacity="0.2" />
+                    <stop offset="100%" stopColor="#252b55" stopOpacity="0.02" />
+                  </linearGradient>
+                  <filter id="shadow">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodOpacity="0.15"/>
+                  </filter>
+                </defs>
 
-                  {chart.gridLines.map((g, i) => (
-                    <line
-                      key={i}
-                      x1={g.x1}
-                      y1={g.y1}
-                      x2={g.x2}
-                      y2={g.y2}
-                      stroke="#eaeaea"
-                      strokeWidth="1"
-                    />
-                  ))}
+                {/* Grid lines */}
+                {chart.gridLines.map((g, i) => (
+                  <line
+                    key={i}
+                    x1={g.x1}
+                    y1={g.y1}
+                    x2={g.x2}
+                    y2={g.y2}
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
+                  />
+                ))}
 
-                  {trend.length > 0 && (
-                    <>
-                      <path d={chart.areaPath} fill="url(#areaFill)" stroke="none" />
-                      <path d={chart.linePath} fill="none" stroke="#22263f" strokeWidth="2.5" />
-                    </>
-                  )}
-
-                  <text x={chart.pad.left} y={12} fontSize="10" fill="#8a8a8a">
-                    Sales (₱)
-                  </text>
+                {/* Y-axis labels */}
+                {chart.yLabels.map((label, i) => (
                   <text
-                    x={chart.width - chart.pad.right}
-                    y={chart.height - 6}
-                    fontSize="10"
+                    key={i}
+                    x={chart.pad.left - 10}
+                    y={label.y + 4}
+                    fontSize="11"
+                    fill="#6b7280"
                     textAnchor="end"
-                    fill="#8a8a8a"
+                    fontWeight="500"
                   >
-                    Time
+                    {peso(label.value).replace('.00', '')}
                   </text>
-                </svg>
+                ))}
+
+                {/* Chart area and line */}
+                {trend.length > 0 && (
+                  <>
+                    <path d={chart.areaPath} fill="url(#areaFill)" stroke="none" />
+                    <path 
+                      d={chart.linePath} 
+                      fill="none" 
+                      stroke="#252b55" 
+                      strokeWidth="3" 
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    
+                    {/* Data points */}
+                    {chart.pts.map((pt, i) => (
+                      <g key={i}>
+                        <circle
+                          cx={pt[0]}
+                          cy={pt[1]}
+                          r="5"
+                          fill="#fff"
+                          stroke="#252b55"
+                          strokeWidth="2.5"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <title>{trend[i].label}: {peso(trend[i].total)}</title>
+                        </circle>
+                      </g>
+                    ))}
+                  </>
+                )}
+
+                {/* X-axis labels */}
+                {trend.map((t, i) => {
+                  const x = chart.pad.left + i * (chart.innerW / (trend.length - 1 || 1));
+                  return (
+                    <text
+                      key={i}
+                      x={x}
+                      y={chart.height - 20}
+                      fontSize="11"
+                      fill="#6b7280"
+                      textAnchor="middle"
+                      fontWeight="500"
+                    >
+                      {t.label}
+                    </text>
+                  );
+                })}
+
+                {/* Axis labels */}
+                <text 
+                  x={chart.pad.left - 45} 
+                  y={chart.pad.top - 10} 
+                  fontSize="12" 
+                  fill="#374151"
+                  fontWeight="600"
+                >
+                  Sales (₱)
+                </text>
+                <text
+                  x={chart.width / 2}
+                  y={chart.height - 5}
+                  fontSize="12"
+                  textAnchor="middle"
+                  fill="#374151"
+                  fontWeight="600"
+                >
+                  Last 7 Days
+                </text>
+              </svg>
+            </div>
+
+            <div className="AdminHome-statsRow">
+              <div className="stat-card">
+                <AttachMoneyOutlinedIcon className="stat-icon" />
+                <div className="stat-content">
+                  <div className="stat-label">Total Sales (7 days)</div>
+                  <div className="stat-value">{peso(total7Days)}</div>
+                </div>
               </div>
 
-              <div className="AdminHome-metricsRow">
-                <div className="AdminHome-metric">
-                  <div className="label">Total Sales (7 days)</div>
-                  <div className="value">{peso(total7Days)}</div>
-                </div>
-
-                <div className="AdminHome-metric">
-                  <div className="label">New Orders Today</div>
-                  <div className="value">{loading ? '—' : ordersToday}</div>
+              <div className="stat-card">
+                <AssignmentOutlinedIcon className="stat-icon" />
+                <div className="stat-content">
+                  <div className="stat-label">New Orders Today</div>
+                  <div className="stat-value">{loading ? '—' : ordersToday}</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right column: Reports Calendar + Today's Sales */}
-        <aside
-          className="AdminRightPanel"
-          style={{ width: 340, display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          <div
-            style={{
-              background: '#e5e5e5',
-              borderRadius: 12,
-              padding: '12px 24px',
-              fontWeight: 700,
-              fontSize: 28,
-              color: '#252b55',
-              width: '100%',
-              textAlign: 'left',
-            }}
-          >
-            Reports Calendar
-          </div>
-
-          <div
-            style={{
-              background: '#252b55',
-              borderRadius: 12,
-              color: '#fff',
-              padding: 18,
-              minHeight: 180,
-              width: '100%',
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>{monthText}</div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: 4,
-                fontWeight: 600,
-                marginBottom: 8,
-              }}
-            >
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <div key={d + i}>{d}</div>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {cells.map((c) => (
-                <div
-                  key={c.key}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: 28,
-                  }}
-                >
-                  {c.day ? (
-                    <div
-                      style={{
-                        background: c.isToday ? '#fff' : 'transparent',
-                        color: c.isToday ? '#252b55' : '#fff',
-                        borderRadius: '50%',
-                        width: 26,
-                        height: 26,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: c.isToday ? 700 : 400,
-                      }}
-                    >
-                      {c.day}
-                    </div>
-                  ) : (
-                    <div style={{ width: 26, height: 26 }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              border: '1px solid #252b55',
-              padding: 18,
-              width: '100%',
-            }}
-          >
-            <div style={{ fontWeight: 700, fontSize: 18, color: '#252b55', marginBottom: 8 }}>
-              Today's Sales
-            </div>
-            <div style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>
-              Sales Overview • Total {peso(todayTotal)}
-            </div>
-            <div style={{ height: 100, width: '100%', position: 'relative' }}>
-              <svg width="100%" height="100" viewBox={`0 0 ${todayChart.width} ${todayChart.height}`}>
-                {todayChart.bars.map((b, i) => (
-                  <g key={i}>
-                    <rect x={b.x} y={b.y} width={todayChart.barW} height={b.h} fill="#252b55" rx="3" />
-                  </g>
+        {/* Right Column: Calendar + Today's Sales */}
+        <div className="HomePage-right-column">
+          {/* Calendar Card */}
+          <div className="Dashboard-section">
+            <h2 className="Dashboard-section-title dark">
+              <CalendarMonthOutlinedIcon className="section-icon" />
+              Reports Calendar
+            </h2>
+            <div className="Card calendar-card">
+              <div className="calendar-header">{monthText}</div>
+              
+              <div className="calendar-weekdays">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                  <div key={d + i} className="weekday">{d}</div>
                 ))}
-                <text
-                  x={todayChart.width - 8}
-                  y={todayChart.height - 6}
-                  fontSize="12"
-                  fill="#888"
-                  textAnchor="end"
-                >
-                  Hours (3h)
-                </text>
-              </svg>
+              </div>
+
+              <div className="calendar-grid">
+                {cells.map((c) => (
+                  <div key={c.key} className="calendar-cell">
+                    {c.day && (
+                      <div 
+                        className={`calendar-day ${c.isToday ? 'today' : ''}`}
+                        onClick={() => handleDateClick(c.day)}
+                      >
+                        {c.day}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </aside>
+
+          {/* Today's Sales Card */}
+          <div className="Dashboard-section">
+            <h2 className="Dashboard-section-title dark">
+              <AttachMoneyOutlinedIcon className="section-icon" />
+              Today's Sales
+            </h2>
+            <div className="Card today-sales-card">
+              <div className="today-total">
+                <span className="today-label">Total</span>
+                <span className="today-amount">{peso(todayTotal)}</span>
+              </div>
+              
+              <div className="today-chart">
+                <svg width="100%" height="120" viewBox={`0 0 ${todayChart.width} ${todayChart.height + 20}`}>
+                  {todayChart.bars.map((b, i) => (
+                    <g key={i}>
+                      <rect 
+                        x={b.x} 
+                        y={b.y} 
+                        width={todayChart.barW} 
+                        height={b.h} 
+                        fill="#252b55" 
+                        rx="3" 
+                      />
+                      {b.v > 0 && (
+                        <text
+                          x={b.x + todayChart.barW / 2}
+                          y={b.y - 4}
+                          fontSize="9"
+                          fill="#666"
+                          textAnchor="middle"
+                        >
+                          {peso(b.v).replace('₱', '').replace('.00', '')}
+                        </text>
+                      )}
+                    </g>
+                  ))}
+                  <text
+                    x={todayChart.width / 2}
+                    y={todayChart.height + 16}
+                    fontSize="11"
+                    fill="#888"
+                    textAnchor="middle"
+                  >
+                    Sales by 3-Hour Intervals
+                  </text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../SupabaseClient'
 
 export function useAuth() {
@@ -6,60 +6,104 @@ export function useAuth() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Check active session
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+  // Use useCallback to memoize fetchProfile
+  const fetchProfile = useCallback(async (userId) => {
+    try {
+      console.log('Fetching profile for:', userId);
+      const queryPromise = supabase
+        .from('employees')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
       
-      if (session?.user) {
-        setUser(session.user)
-        
-        // Fetch additional profile information
-        await fetchProfile(session.user.id)
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile query timeout')), 3000)
+      );
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+        .catch(err => {
+          console.error('Query timeout/error:', err);
+          return { data: null, error: err };
+        });
+
+      console.log('Profile query result:', { hasData: !!data, error });
+
+      if (error || !data) {
+        console.log('Setting empty profile');
+        setProfile({})
+        return
       }
-      setLoading(false)
+
+      console.log('Setting profile:', data.first_name);
+      setProfile(data)
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+      setProfile({})
+    }
+  }, [])
+
+  useEffect(() => {
+    console.log('useAuth: useEffect mounted');
+    let mounted = true;
+    let profileFetched = false;
+    
+    const fetchProfileOnce = async (userId) => {
+      if (profileFetched) {
+        console.log('Profile already fetched, skipping');
+        return;
+      }
+      profileFetched = true;
+      await fetchProfile(userId);
+    }
+    
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
+        if (!mounted) return;
+        
+        if (session?.user) {
+          setUser(session.user)
+          if (!profileFetched) {
+            await fetchProfileOnce(session.user.id)
+          }
+        } else {
+          setUser(null)
+          setProfile(null)
+          profileFetched = false;
+        }
+        
+        if (mounted) setLoading(false)
+      }
+    )
+    
+    // Check existing session
+    const checkUser = async () => {
+      try {
+        console.log('Checking session...');
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        console.log('Session check result:', !!session?.user);
+        if (!mounted) return;
+        
+        if (session?.user && !profileFetched) {
+          setUser(session.user)
+          await fetchProfileOnce(session.user.id)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+      }
     }
 
     checkUser()
 
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser(session.user)
-          await fetchProfile(session.user.id)
-        } else {
-          setUser(null)
-          setProfile(null)
-        }
-      }
-    )
-
     return () => {
+      console.log('useAuth: Cleanup');
+      mounted = false;
       authListener.subscription.unsubscribe()
     }
-  }, [])
-
-  const fetchProfile = async (userId) => {
-    try {
-      // Fetch profile from profiles table
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          employees(position, department, is_active),
-          customers(company_name, is_corporate_account, is_barred)
-        `)
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-
-      setProfile(data)
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-    }
-  }
+  }, [fetchProfile])
 
   const signUp = async (email, password, additionalData) => {
     try {
@@ -78,38 +122,22 @@ export function useAuth() {
 
       if (authError) throw authError
 
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
+      // Create employee profile
+      const { error: employeeError } = await supabase
+        .from('employees')
         .insert({
           id: authData.user.id,
+          username: additionalData.username,
+          email: email,
           first_name: additionalData.firstName,
           last_name: additionalData.lastName,
-          email: email,
           phone_number: additionalData.phoneNumber,
-          address: additionalData.address
+          address: additionalData.address,
+          position: additionalData.position,
+          is_active: true
         })
 
-      if (profileError) throw profileError
-
-      // Create customer or employee profile based on role
-      if (additionalData.role === 'customer') {
-        await supabase
-          .from('customers')
-          .insert({
-            id: authData.user.id,
-            company_name: additionalData.companyName,
-            is_corporate_account: additionalData.isCorporate || false
-          })
-      } else if (additionalData.role === 'employee') {
-        await supabase
-          .from('employees')
-          .insert({
-            id: authData.user.id,
-            position: additionalData.position,
-            department: additionalData.department
-          })
-      }
+      if (employeeError) throw employeeError
 
       return authData.user
     } catch (error) {
@@ -146,39 +174,19 @@ export function useAuth() {
     try {
       if (!user) throw new Error('No user logged in')
 
-      // Update profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
+      const { error } = await supabase
+        .from('employees')
         .update({
           first_name: updates.firstName,
           last_name: updates.lastName,
           phone_number: updates.phoneNumber,
-          address: updates.address
+          address: updates.address,
+          position: updates.position
         })
         .eq('id', user.id)
 
-      if (profileError) throw profileError
+      if (error) throw error
 
-      // Update role-specific table if needed
-      if (profile.employees) {
-        await supabase
-          .from('employees')
-          .update({
-            position: updates.position,
-            department: updates.department
-          })
-          .eq('id', user.id)
-      } else if (profile.customers) {
-        await supabase
-          .from('customers')
-          .update({
-            company_name: updates.companyName,
-            is_corporate_account: updates.isCorporate
-          })
-          .eq('id', user.id)
-      }
-
-      // Refetch profile to get updated information
       await fetchProfile(user.id)
     } catch (error) {
       console.error('Profile update error:', error)

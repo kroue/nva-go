@@ -40,10 +40,11 @@ body {
   display: flex;
   flex-direction: column;
   background-color: #ffffff;
-  min-height: 0;
-  height: 100%;
+  min-height: 100vh;
+  height: auto;
   box-sizing: border-box;
-  overflow: hidden;
+  padding-bottom: 20px;
+  overflow-y: auto;
 }
 
 /* Stack on smaller screens */
@@ -71,7 +72,7 @@ body {
   background-color: #d9d9d9;
   color: #252b55;
   border-radius: 12px;
-  padding: 20px 18px;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,16 +80,250 @@ body {
   min-width: 0;
   box-sizing: border-box;
   font-size: 15px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .HomePage-titlebar-text {
   margin: 0;
   font-size: 18px;
   font-weight: 800;
-  color: #252b55;
+  color: #ffffff;
   text-align: center;
   width: 100%;
 }
 
-/* ...rest of existing styles remain unchanged... */
+.HomePage-titlebar-icon {
+  font-size: 28px;
+  margin-right: 12px;
+  color: #ffffff;
+}
+
+.HomePage-grid {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+.Dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.Dashboard-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #252b55;
+  margin: 0;
+  padding: 0 4px;
+}
+
+.section-icon {
+  font-size: 20px;
+}
+
+.Card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  padding: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: box-shadow 0.3s ease;
+}
+
+.Card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.AdminHome-statsRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stat-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  transition: all 0.3s ease;
+}
+
+.stat-card.clickable:hover {
+  background: #fff;
+  border-color: #252b55;
+  box-shadow: 0 4px 12px rgba(37, 43, 85, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-card.clickable:active {
+  transform: translateY(0);
+}
+
+.stat-icon {
+  font-size: 28px;
+  color: #252b55;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #252b55;
+}
+
+.stat-link {
+  font-size: 10px;
+  color: #252b55;
+  font-weight: 600;
+  margin-top: 2px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.stat-card.clickable:hover .stat-link {
+  opacity: 1;
+}
+
+.HomePage-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Calendar Card */
+.calendar-card {
+  padding: 14px;
+}
+
+.calendar-header {
+  font-weight: 700;
+  font-size: 14px;
+  color: #252b55;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendar-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-day:hover {
+  background: #f0f0f0;
+}
+
+.calendar-day.today {
+  background: #252b55;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Today's Sales Card */
+.today-sales-card {
+  padding: 14px;
+}
+
+.today-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.today-label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+.today-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #252b55;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .HomePage-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .AdminHome-statsRow {
+    flex-direction: column;
+  }
+}
+
+/* Graph container */
+.HomePage-sales-trend svg {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.05));
+}
+
+/* Data point hover effect */
+.HomePage-sales-trend circle {
+  transition: all 0.2s ease;
+}
+
+.HomePage-sales-trend circle:hover {
+  r: 7;
+  filter: drop-shadow(0 2px 4px rgba(37, 43, 85, 0.3));
+}
+
+/* Ensure everything fits */
+@media (min-width: 1200px) {
+  .HomePage-grid {
+  }
+}

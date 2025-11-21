@@ -1,33 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../SupabaseClient';
-
-const pillBase = {
-  padding: '8px 14px',
-  borderRadius: 999,
-  border: '1.5px solid #252b55',
-  background: '#fff',
-  color: '#252b55',
-  fontWeight: 700,
-  cursor: 'pointer',
-};
-const pillActive = {
-  ...pillBase,
-  background: '#252b55',
-  color: '#fff',
-};
-const rowStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr auto',
-  alignItems: 'center',
-  gap: 12,
-  padding: '12px 6px',
-  borderBottom: '1px solid #f1f1f4',
-};
-const nameStyle = { fontSize: 20, fontWeight: 800, color: '#22263f' };
+import './AdminProducts.css';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import ProductModal from './ProductModal';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [updatingId, setUpdatingId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -54,62 +36,89 @@ const AdminProducts = () => {
     setUpdatingId(null);
   };
 
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'available': return 'status-available';
+      case 'limited': return 'status-limited';
+      case 'unavailable': return 'status-unavailable';
+      default: return '';
+    }
+  };
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setModalOpen(true);
+  };
+
   return (
-    <div style={{ padding: 12 }}>
-      <div
-        style={{
-          background: '#e5e5e5',
-          color: '#252b55',
-          fontWeight: 800,
-          fontSize: 22,
-          padding: '12px 18px',
-          borderRadius: 8,
-          marginBottom: 14,
-        }}
-      >
+    <div className="AdminProducts">
+      <div className="AdminProducts-title">
+        <Inventory2OutlinedIcon style={{ fontSize: 28 }} />
         Manage Products
       </div>
 
-      <div
-        style={{
-          background: '#fff',
-          border: '1px solid #eef0f4',
-          borderRadius: 12,
-          padding: 12,
-        }}
-      >
-        {products.map((p) => (
-          <div key={p.product_id} style={rowStyle}>
-            <div style={nameStyle}>{p.name}</div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                style={p.status === 'available' ? pillActive : pillBase}
-                onClick={() => updateStatus(p.product_id, 'available')}
-                disabled={!!updatingId}
-              >
-                Available
-              </button>
-              <button
-                style={p.status === 'limited' ? pillActive : pillBase}
-                onClick={() => updateStatus(p.product_id, 'limited')}
-                disabled={!!updatingId}
-              >
-                Limited Stocks
-              </button>
-              <button
-                style={p.status === 'unavailable' ? pillActive : pillBase}
-                onClick={() => updateStatus(p.product_id, 'unavailable')}
-                disabled={!!updatingId}
-              >
-                Unavailable
-              </button>
+      <div className="AdminProducts-card">
+        <div className="AdminProducts-list">
+          {products.map((p) => (
+            <div key={p.product_id} className="product-row">
+              <div className="product-info" onClick={() => handleProductClick(p)} style={{ cursor: 'pointer' }}>
+                <div className="product-name-wrapper">
+                  <div className="product-name">{p.name}</div>
+                  <SettingsOutlinedIcon className="product-settings-icon" />
+                </div>
+              </div>
+              <div className={`product-status-badge ${getStatusColor(p.status)}`}>
+                {p.status || 'unknown'}
+              </div>
+              <div className="product-actions">
+                <button
+                  className={`status-btn ${p.status === 'available' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateStatus(p.product_id, 'available');
+                  }}
+                  disabled={!!updatingId}
+                >
+                  Available
+                </button>
+                <button
+                  className={`status-btn ${p.status === 'limited' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateStatus(p.product_id, 'limited');
+                  }}
+                  disabled={!!updatingId}
+                >
+                  Limited
+                </button>
+                <button
+                  className={`status-btn ${p.status === 'unavailable' ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateStatus(p.product_id, 'unavailable');
+                  }}
+                  disabled={!!updatingId}
+                >
+                  Unavailable
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-        {products.length === 0 && (
-          <div style={{ padding: 16, color: '#667085' }}>No products found.</div>
-        )}
+          ))}
+          {products.length === 0 && (
+            <div className="products-empty">
+              <Inventory2OutlinedIcon style={{ fontSize: 48, opacity: 0.3 }} />
+              <p>No products found</p>
+            </div>
+          )}
+        </div>
       </div>
+
+      <ProductModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        productId={selectedProduct?.product_id}
+        productName={selectedProduct?.name}
+      />
     </div>
   );
 };

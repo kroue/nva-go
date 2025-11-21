@@ -52,7 +52,7 @@ const Header = () => {
   return (
     <header className="Header">
       <div className="Header-left">
-        <div className="Header-logo">
+        <div className="Header-logo" onClick={() => navigate('/homepage')} style={{ cursor: 'pointer' }}>
           <img src={nvagologo} alt="NVA Go Logo" />
         </div>
         <div className="Header-title">

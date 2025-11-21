@@ -57,11 +57,15 @@ const Messages = () => {
 
   const fetchChats = async (userEmail) => {
     try {
+      console.log('Fetching chats for:', userEmail);
+      
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
         .order('created_at', { ascending: false });
+
+      console.log('Chats query result:', { dataCount: data?.length, error });
 
       if (error) {
         console.error('Error fetching chats:', error);
@@ -125,11 +129,15 @@ const Messages = () => {
 
   const fetchMessages = async (chatId) => {
     try {
+      console.log('Fetching messages for chat:', chatId);
+      
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
+
+      console.log('Messages query result:', { dataCount: data?.length, error });
 
       if (error) {
         console.error('Error fetching messages:', error);

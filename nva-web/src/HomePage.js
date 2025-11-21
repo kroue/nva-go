@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from './SupabaseClient';
+import { useAuth } from './hooks/useAuth';
 import './HomePage.css';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
@@ -35,6 +36,7 @@ const startOfTomorrowISO = () => {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
 
   const [recentOrder, setRecentOrder] = useState(null);
   const [pickupOrder, setPickupOrder] = useState(null);
@@ -51,119 +53,71 @@ const HomePage = () => {
     let mounted = true;
 
     const load = async () => {
+      if (!user) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
+      if (!profile) {
+        return;
+      }
+
       setLoading(true);
 
-      // Get logged-in user's name
-      try {
-        // Check localStorage for name
-        const firstName = localStorage.getItem('firstName');
-        const userFirstName = localStorage.getItem('userFirstName');
-        const employeeFirstName = localStorage.getItem('employeeFirstName');
-        const userEmail = localStorage.getItem('userEmail');
+      // Get name from profile - check if profile has first_name property
+      if (profile?.first_name) {
+        if (mounted) setUserName(profile.first_name);
+      } else {
+        // Profile is empty object, check localStorage as fallback
+        const storedFirstName = localStorage.getItem('firstName') || 
+                               localStorage.getItem('userFirstName') || 
+                               localStorage.getItem('employeeFirstName');
         
-        console.log('Available localStorage data:');
-        console.log('firstName:', firstName);
-        console.log('userFirstName:', userFirstName);
-        console.log('employeeFirstName:', employeeFirstName);
-        console.log('userEmail:', userEmail);
-        
-        // Try localStorage first
-        let foundName = firstName || userFirstName || employeeFirstName;
-        
-        if (foundName) {
-          console.log('Found name in localStorage:', foundName);
-          if (mounted) setUserName(foundName);
-        } else {
-          console.log('No name in localStorage, trying database...');
-          
-          // Get current session
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          console.log('Current session:', session);
-          console.log('Session error:', sessionError);
-          
-          const emailToSearch = session?.user?.email || userEmail;
-          console.log('Email to search:', emailToSearch);
-          
-          if (emailToSearch) {
-            // Try to get employee info from employees table (not customers)
-            const { data: employee, error: employeeError } = await supabase
-              .from('employees')
-              .select('first_name, last_name, email')
-              .eq('email', emailToSearch)
-              .maybeSingle();
-            
-            console.log('Employee query result:', employee);
-            console.log('Employee error details:', employeeError);
-            
-            if (employee?.first_name && mounted) {
-              console.log('Setting userName from employees table:', employee.first_name);
-              setUserName(employee.first_name);
-            } else {
-              // Fallback: try customers table in case it's a customer accessing admin
-              const { data: customer, error: customerError } = await supabase
-                .from('customers')
-                .select('first_name, last_name, email')
-                .eq('email', emailToSearch)
-                .maybeSingle();
-              
-              console.log('Customer fallback query result:', customer);
-              console.log('Customer fallback error details:', customerError);
-              
-              if (customer?.first_name && mounted) {
-                console.log('Setting userName from customers table:', customer.first_name);
-                setUserName(customer.first_name);
-              } else if (emailToSearch && mounted) {
-                // Final fallback: use part of email as name
-                const emailName = emailToSearch.split('@')[0];
-                const capitalizedName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
-                console.log('Using email-based name:', capitalizedName);
-                setUserName(capitalizedName);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user name:', error);
-        // Try to use email as fallback even in error case
-        const userEmail = localStorage.getItem('userEmail');
-        if (userEmail && mounted) {
-          const emailName = userEmail.split('@')[0];
+        if (storedFirstName && mounted) {
+          setUserName(storedFirstName);
+        } else if (user?.email && mounted) {
+          // Last resort: use email username
+          const emailName = user.email.split('@')[0];
           const capitalizedName = emailName.charAt(0).toUpperCase() + emailName.slice(1);
           setUserName(capitalizedName);
         }
       }
 
       // Recent order
-      const { data: recent } = await supabase
+      const { data: recent, error: recentError } = await supabase
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1);
+      if (recentError) console.error('Error fetching recent order:', recentError);
 
       // To be picked up: status = 'For Pickup'
-      const { data: pickup } = await supabase
+      const { data: pickup, error: pickupError } = await supabase
         .from('orders')
         .select('*')
         .eq('status', 'For Pickup')
         .order('created_at', { ascending: false })
         .limit(1);
+      if (pickupError) console.error('Error fetching pickup order:', pickupError);
 
       // Latest sale
-      const { data: latest } = await supabase
+      const { data: latest, error: latestError } = await supabase
         .from('sales')
         .select('*')
         .order('sale_date', { ascending: false })
         .limit(1);
+      if (latestError) console.error('Error fetching latest sale:', latestError);
 
       // Sales today summary
-      const { data: todaySales } = await supabase
+      const { data: todaySales, error: todaySalesError } = await supabase
         .from('sales')
         .select('id,total_amount,sale_date')
         .gte('sale_date', startOfTodayISO())
         .lt('sale_date', startOfTomorrowISO());
+      if (todaySalesError) console.error('Error fetching today sales:', todaySalesError);
 
       // Needs payment validation (has proof, not declined, not yet Layout Approval)
-      const { data: toValidate } = await supabase
+      const { data: toValidate, error: toValidateError } = await supabase
         .from('orders')
         .select('*')
         .not('payment_proof', 'is', null)
@@ -171,6 +125,7 @@ const HomePage = () => {
         .neq('status', 'Layout Approval')
         .order('created_at', { ascending: false })
         .limit(1);
+      if (toValidateError) console.error('Error fetching orders to validate:', toValidateError);
 
       if (!mounted) return;
 
@@ -189,7 +144,7 @@ const HomePage = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user, profile]);
 
   const onOpenOrder = (id) => navigate(`/orders/${id}`);
   const onOpenPickupList = () =>

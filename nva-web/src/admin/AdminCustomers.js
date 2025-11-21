@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../SupabaseClient';
-import './AdminEmployees.css'; // Reuse employee styles
-import { FaUserPlus } from 'react-icons/fa';
+import './AdminCustomers.css';
+import { FaUserPlus, FaUsers, FaSearch } from 'react-icons/fa';
 
 const emptyForm = {
   email: '',
@@ -20,12 +20,21 @@ const AdminCustomers = () => {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch all customers
+  const filteredCustomers = customers.filter((customer) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      searchTerm === '' ||
+      customer.email?.toLowerCase().includes(searchLower) ||
+      customer.username?.toLowerCase().includes(searchLower) ||
+      customer.first_name?.toLowerCase().includes(searchLower) ||
+      customer.last_name?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const fetchCustomers = async () => {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*');
+    const { data, error } = await supabase.from('customers').select('*');
     if (!error) setCustomers(data);
   };
 
@@ -33,17 +42,14 @@ const AdminCustomers = () => {
     fetchCustomers();
   }, []);
 
-  // Handle form input
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
   };
 
-  // Add new customer
   const handleAdd = async (e) => {
     e.preventDefault();
     setError('');
-    // 1. Create user in Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -66,7 +72,6 @@ const AdminCustomers = () => {
       return;
     }
     const userId = authData.user.id;
-    // Now insert into customers table
     const { error: dbError } = await supabase.from('customers').insert({
       id: userId,
       username: form.username,
@@ -86,7 +91,6 @@ const AdminCustomers = () => {
     fetchCustomers();
   };
 
-  // Edit customer (load into form)
   const handleEdit = (cust) => {
     setEditingId(cust.id);
     setForm({
@@ -97,12 +101,11 @@ const AdminCustomers = () => {
       phone_number: cust.phone_number,
       address: cust.address,
       is_barred: cust.is_barred,
-      password: '', // leave blank
+      password: '',
     });
     setModalOpen(true);
   };
 
-  // Update customer
   const handleUpdate = async (e) => {
     e.preventDefault();
     setError('');
@@ -125,13 +128,13 @@ const AdminCustomers = () => {
     fetchCustomers();
   };
 
-  // Delete customer
   const handleDelete = async (id) => {
-    await supabase.from('customers').delete().eq('id', id);
-    fetchCustomers();
+    if (window.confirm('Are you sure you want to delete this customer?')) {
+      await supabase.from('customers').delete().eq('id', id);
+      fetchCustomers();
+    }
   };
 
-  // Modal close
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingId(null);
@@ -140,78 +143,193 @@ const AdminCustomers = () => {
   };
 
   return (
-    <div className="AdminEmployees-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="AdminEmployees-title">Customers</h2>
-        <button
-          className="AdminEmployees-add-btn"
-          onClick={() => { setModalOpen(true); setEditingId(null); setForm(emptyForm); }}
-        >
-          <FaUserPlus style={{ marginRight: 8 }} />
-          Add Customer
-        </button>
-      </div>
-      <table className="AdminEmployees-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Username</th>
-            <th>Name</th>
-            <th>Phone</th>
-            <th>Address</th>
-            <th>Barred?</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {customers.map(cust => (
-            <tr key={cust.id}>
-              <td>{cust.email}</td>
-              <td>{cust.username}</td>
-              <td>{cust.first_name} {cust.last_name}</td>
-              <td>{cust.phone_number}</td>
-              <td>{cust.address}</td>
-              <td>{cust.is_barred ? 'Yes' : 'No'}</td>
-              <td>
-                <button onClick={() => handleEdit(cust)}>Edit</button>
-                <button onClick={() => handleDelete(cust.id)}>Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="AdminCustomers">
+      <div className="AdminCustomers-title">Customers</div>
 
-      {/* Modal */}
+      <div className="AdminCustomers-toolbar">
+        <div className="toolbar-left">
+          <div className="search-box">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search customers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div className="customers-count">
+            {filteredCustomers.length} {filteredCustomers.length === 1 ? 'Customer' : 'Customers'}
+          </div>
+          <button
+            className="add-customer-btn"
+            onClick={() => { setModalOpen(true); setEditingId(null); setForm(emptyForm); }}
+          >
+            <FaUserPlus />
+            Add Customer
+          </button>
+        </div>
+      </div>
+
+      <div className="AdminCustomers-card">
+        <div className="table-wrapper">
+          <table className="AdminCustomers-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="table-empty">
+                    <FaUsers className="empty-icon" />
+                    <p>No customers found</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredCustomers.map(cust => (
+                  <tr key={cust.id}>
+                    <td>{cust.email}</td>
+                    <td>{cust.username}</td>
+                    <td>
+                      <div className="customer-name-cell">
+                        <div className="customer-avatar">
+                          {(cust.first_name?.[0] || 'C').toUpperCase()}
+                        </div>
+                        <span className="customer-name">
+                          {cust.first_name} {cust.last_name}
+                        </span>
+                      </div>
+                    </td>
+                    <td>{cust.phone_number}</td>
+                    <td>{cust.address}</td>
+                    <td>
+                      <span className={`barred-badge ${cust.is_barred ? 'yes' : 'no'}`}>
+                        {cust.is_barred ? 'Barred' : 'Active'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="action-btn edit" onClick={() => handleEdit(cust)}>Edit</button>
+                        <button className="action-btn delete" onClick={() => handleDelete(cust.id)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {modalOpen && (
-        <div className="AdminEmployees-modal-backdrop" onClick={handleCloseModal}>
-          <div className="AdminEmployees-modal" onClick={e => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 18 }}>{editingId ? 'Edit Customer' : 'Add Customer'}</h3>
-            <form
-              className="AdminEmployees-form"
-              onSubmit={editingId ? handleUpdate : handleAdd}
-              style={{ marginBottom: 0 }}
-            >
-              <input name="email" placeholder="Email" value={form.email} onChange={handleChange} required disabled={!!editingId} />
-              {!editingId && <input name="password" placeholder="Password" type="password" value={form.password} onChange={handleChange} required />}
-              <input name="username" placeholder="Username" value={form.username} onChange={handleChange} required />
-              <input name="first_name" placeholder="First Name" value={form.first_name} onChange={handleChange} required />
-              <input name="last_name" placeholder="Last Name" value={form.last_name} onChange={handleChange} required />
-              <input name="phone_number" placeholder="Phone Number" value={form.phone_number} onChange={handleChange} />
-              <input name="address" placeholder="Address" value={form.address} onChange={handleChange} />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="modal-backdrop" onClick={handleCloseModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-header">{editingId ? 'Edit Customer' : 'Add Customer'}</h3>
+            <form className="modal-form" onSubmit={editingId ? handleUpdate : handleAdd}>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  className="form-input"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  disabled={!!editingId}
+                />
+              </div>
+              {!editingId && (
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    className="form-input"
+                    name="password"
+                    type="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              )}
+              <div className="form-group">
+                <label className="form-label">Username</label>
+                <input
+                  className="form-input"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">First Name</label>
+                  <input
+                    className="form-input"
+                    name="first_name"
+                    value={form.first_name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Last Name</label>
+                  <input
+                    className="form-input"
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Phone Number</label>
+                <input
+                  className="form-input"
+                  name="phone_number"
+                  value={form.phone_number}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Address</label>
+                <input
+                  className="form-input"
+                  name="address"
+                  value={form.address}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="checkbox-group">
                 <input
                   type="checkbox"
+                  id="is_barred"
                   name="is_barred"
                   checked={form.is_barred}
                   onChange={handleChange}
                 />
-                Barred
-              </label>
-              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <button type="submit">{editingId ? 'Update' : 'Add'} Customer</button>
-                <button type="button" onClick={handleCloseModal}>Cancel</button>
+                <label htmlFor="is_barred" className="checkbox-label">Bar this customer</label>
               </div>
-              {error && <div className="AdminEmployees-error">{error}</div>}
+              {error && <div className="error-message">{error}</div>}
+              <div className="modal-actions">
+                <button type="submit" className="modal-btn primary">
+                  {editingId ? 'Update' : 'Add'} Customer
+                </button>
+                <button type="button" className="modal-btn secondary" onClick={handleCloseModal}>
+                  Cancel
+                </button>
+              </div>
             </form>
           </div>
         </div>

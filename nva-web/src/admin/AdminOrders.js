@@ -33,6 +33,21 @@ const AdminOrders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  // Filter orders based on search and status
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      searchTerm === '' ||
+      order.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = filterStatus === 'all' || order.status?.toLowerCase() === filterStatus.toLowerCase();
+
+    return matchesSearch && matchesStatus;
+  });
 
   const load = async () => {
     setLoading(true);
@@ -99,7 +114,7 @@ const AdminOrders = () => {
                 <th>Customer</th>
                 <th>Date</th>
                 <th>Status</th>
-                <th>Total</th>
+                <th style={{ textAlign: 'right' }}>Total</th>
               </tr>
             </thead>
             <tbody>
@@ -147,7 +162,9 @@ const AdminOrders = () => {
                     <td>
                       <span className={statusClass(o.status)}>{o.status || '—'}</span>
                     </td>
-                    <td className="amount-cell">{peso(o.total)}</td>
+                    <td className="amount-cell">
+                      {peso(o.total)}
+                    </td>
                   </tr>
                 ))
               )}

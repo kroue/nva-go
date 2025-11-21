@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../SupabaseClient';
 import './SalesReport.css';
 
@@ -9,7 +10,11 @@ const startOfDayISO = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()
 const endOfDayISO = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).toISOString();
 
 export default function SalesReport() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [date, setDate] = useState(() => {
+    const urlDate = searchParams.get('date');
+    return urlDate || new Date().toISOString().slice(0, 10);
+  });
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +34,17 @@ export default function SalesReport() {
 
   useEffect(() => {
     load(date);
-  }, [date]);
+    // Update URL when date changes
+    setSearchParams({ date });
+  }, [date, setSearchParams]);
+
+  // Update date when URL parameter changes
+  useEffect(() => {
+    const urlDate = searchParams.get('date');
+    if (urlDate && urlDate !== date) {
+      setDate(urlDate);
+    }
+  }, [searchParams]);
 
   const totals = useMemo(() => {
     const totalQty = rows.reduce((s, r) => s + Number(r.quantity || 0), 0);
@@ -98,7 +113,7 @@ export default function SalesReport() {
           />
         </div>
         <button className="SalesReport-printBtn" onClick={handlePrint} type="button">
-          🖨️ Print
+          🖨️ Print Report
         </button>
       </div>
 
@@ -106,76 +121,87 @@ export default function SalesReport() {
         <div className="SalesReport-header">
           <div className="SalesReport-company">
             <div className="name">NVA PRINTING SERVICES</div>
-            <div className="addr">Pabayo - Chavez St. Plaza Divisoria CDO • 0917 717 4889</div>
+            <div className="addr">Pabayo - Chavez St. Plaza Divisoria CDO<br/>📞 0917 717 4889</div>
           </div>
           <div className="SalesReport-meta">
             <div className="report">Daily Sales Report</div>
-            <div className="date">{new Date(date + 'T00:00:00').toLocaleDateString()}</div>
+            <div className="date">{new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
           </div>
         </div>
 
         <div className="SalesReport-summary">
-          <div>Transactions: <b>{rows.length}</b></div>
-          <div>Total Qty: <b>{totals.totalQty}</b></div>
-          <div>Grand Total: <b>{peso(totals.grand)}</b></div>
+          <div className="summary-item">
+            <div className="summary-label">Transactions</div>
+            <div className="summary-value">{rows.length}</div>
+          </div>
+          <div className="summary-item">
+            <div className="summary-label">Total Quantity</div>
+            <div className="summary-value">{totals.totalQty}</div>
+          </div>
+          <div className="summary-item">
+            <div className="summary-label">Grand Total</div>
+            <div className="summary-value">{peso(totals.grand)}</div>
+          </div>
         </div>
 
-        <table className="SalesReport-table">
-          <thead>
-            <tr>
-              <th style={{ width: 110 }}>Time</th>
-              <th style={{ width: 110 }}>Order ID</th>
-              <th>Customer</th>
-              <th>Product</th>
-              <th>Variant</th>
-              <th className="num">Qty</th>
-              <th className="num">Unit</th>
-              <th className="num">Subtotal</th>
-              <th className="num">Layout</th>
-              <th className="num">Total</th>
-              <th>Source</th>
-              <th>Employee</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td className="muted" colSpan={12}>Loading…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td className="muted" colSpan={12}>No sales found for this date.</td></tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={r.id}>
-                  <td>{new Date(r.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                  <td>{r.order_id ? String(r.order_id).slice(0, 8) : '—'}</td>
-                  <td>{r.customer_name}</td>
-                  <td>{r.product_name}</td>
-                  <td>{r.variant || '—'}</td>
-                  <td className="num">{r.quantity}</td>
-                  <td className="num">{peso(r.unit_price)}</td>
-                  <td className="num">{peso(r.subtotal)}</td>
-                  <td className="num">{peso(r.layout_fee)}</td>
-                  <td className="num total">{peso(r.total_amount)}</td>
-                  <td>{r.order_source || 'web'}</td>
-                  <td>{r.employee_name || (r.employee_email ? r.employee_email.split('@')[0] : '—')}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={5} className="right"><b>Totals</b></td>
-              <td className="num"><b>{totals.totalQty}</b></td>
-              <td className="num">—</td>
-              <td className="num"><b>{peso(totals.subtotal)}</b></td>
-              <td className="num"><b>{peso(totals.layout)}</b></td>
-              <td className="num"><b>{peso(totals.grand)}</b></td>
-              <td colSpan={2}></td>
-            </tr>
-          </tfoot>
-        </table>
+        <div className="table-container">
+          <table className="SalesReport-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Variant</th>
+                <th className="num">Qty</th>
+                <th className="num">Unit</th>
+                <th className="num">Subtotal</th>
+                <th className="num">Layout</th>
+                <th className="num">Total</th>
+                <th>Source</th>
+                <th>Employee</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td className="muted" colSpan={12}>Loading sales data...</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td className="muted" colSpan={12}>No sales found for this date.</td></tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id}>
+                    <td><span className="time-cell">{new Date(r.sale_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></td>
+                    <td><span className="order-id-cell">{r.order_id ? String(r.order_id).slice(0, 8) : '—'}</span></td>
+                    <td>{r.customer_name}</td>
+                    <td>{r.product_name}</td>
+                    <td>{r.variant || '—'}</td>
+                    <td className="num">{r.quantity}</td>
+                    <td className="num">{peso(r.unit_price)}</td>
+                    <td className="num">{peso(r.subtotal)}</td>
+                    <td className="num">{peso(r.layout_fee)}</td>
+                    <td className="num total">{peso(r.total_amount)}</td>
+                    <td><span className="source-badge">{r.order_source || 'web'}</span></td>
+                    <td>{r.employee_name || (r.employee_email ? r.employee_email.split('@')[0] : '—')}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={5} className="right">TOTALS</td>
+                <td className="num total">{totals.totalQty}</td>
+                <td className="num">—</td>
+                <td className="num total">{peso(totals.subtotal)}</td>
+                <td className="num total">{peso(totals.layout)}</td>
+                <td className="num total">{peso(totals.grand)}</td>
+                <td colSpan={2}></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
         <div className="SalesReport-footer">
-          Generated by NVAGo • {new Date().toLocaleString()}
+          Generated by NVAGo System • {new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
         </div>
       </div>
     </div>
