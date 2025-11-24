@@ -179,7 +179,7 @@
 .ValidatePayment-card.active .card-customer strong,
 .ValidatePayment-card.active .card-order-id,
 .ValidatePayment-card.active .detail-item span {
-  color: #ffffff;
+  color: #1e293b;
 }
 
 .ValidatePayment-card.active .card-icon,
@@ -190,7 +190,7 @@
 .ValidatePayment-card.active .status-badge {
   background: rgba(255, 255, 255, 0.2);
   border-color: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+  color: #28a745;
 }
 
 .ValidatePayment-card.validated {
@@ -207,7 +207,6 @@
 /* Card Header */
 .card-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 12px;
   padding-bottom: 12px;
@@ -614,7 +613,6 @@
   z-index: 10000;
   max-width: 95%;
   max-height: 95%;
-  display: flex;
   align-items: center;
   justify-content: center;
   animation: zoomIn 0.3s ease;

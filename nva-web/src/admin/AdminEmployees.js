@@ -269,7 +269,7 @@ const AdminEmployees = () => {
                       </div>
                     </td>
                     <td>{emp.phone_number}</td>
-                    <td>{emp.address}</td>
+                    <td>{}</td>
                     <td>
                       <span className={`position-badge ${!emp.is_active ? 'inactive' : ''}`}>
                         {emp.position}
@@ -360,15 +360,7 @@ const AdminEmployees = () => {
                   onChange={handleChange}
                 />
               </div>
-              <div className="form-group">
-                <label className="form-label">Address</label>
-                <input
-                  className="form-input"
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                />
-              </div>
+
               <div className="form-group">
                 <label className="form-label">Position</label>
                 <input
