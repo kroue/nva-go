@@ -121,7 +121,7 @@ export default function About() {
                   <div className="member-avatar">
                     <PeopleOutlineOutlinedIcon style={{ fontSize: 24 }} />
                   </div>
-                  <span>Ariana Marie Orrf. Palle</span>
+                  <span>Ariana Marie O. Palle</span>
                 </div>
                 <div className="team-member">
                   <div className="member-avatar">

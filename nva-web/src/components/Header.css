@@ -66,13 +66,16 @@ header {
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.5px;
+  text-align: left;
+
 }
 
 .Header-title p {
   margin: 2px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
+  text-align: left;
 }
 
 /* Center Section - Search */

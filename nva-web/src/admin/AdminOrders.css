@@ -195,7 +195,7 @@
   color: #1a1f36;
   vertical-align: middle;
   border: none;
-  text-align: left;
+  text-align: center;
 }
 
 .AdminOrders-table td:nth-child(5) {
@@ -312,6 +312,7 @@
   color: #dfe4ea;
   margin-bottom: 16px;
   opacity: 0.5;
+  align-items: center;
 }
 
 .table-empty p {

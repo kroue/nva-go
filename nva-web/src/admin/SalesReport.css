@@ -115,6 +115,7 @@
   color: #ffffff;
   margin-bottom: 8px;
   letter-spacing: -0.5px;
+  text-align: left;
 }
 
 .SalesReport-company .addr {
@@ -122,6 +123,7 @@
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   line-height: 1.6;
+  text-align: left;
 }
 
 .SalesReport-meta {
@@ -236,6 +238,7 @@
   color: #1a1f36;
   border: none;
   vertical-align: middle;
+  text-align: left;
 }
 
 .SalesReport-table tfoot {
