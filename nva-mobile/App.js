@@ -19,7 +19,7 @@ import Payment from './screens/Payment';
 import Profile from './screens/Profile';
 import TrackOrder from './screens/TrackOrder';
 import Messaging from './screens/Messaging';
-import ForgotPassword from './screens/ForgotPassword';
+import ForgotPassword from './screens/ForgetPassword';
 import ResetPassword from './screens/ResetPassword';
 import Verification from './screens/Verification';
 
@@ -471,7 +471,7 @@ export default function App() {
             component={SignUp}
           />
           <Stack.Screen 
-            name="ForgotPassword" 
+            name="ForgetPassword" 
             component={ForgotPassword}
           />
           <Stack.Screen 

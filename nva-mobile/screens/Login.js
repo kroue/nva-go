@@ -84,7 +84,7 @@ export default function Login() {
   };
 
   const handleForgotPasswordClick = () => {
-    navigation.navigate('ForgotPassword');
+    navigation.navigate('ForgetPassword');
   };
 
   return (

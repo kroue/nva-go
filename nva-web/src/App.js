@@ -24,6 +24,7 @@ import AdminCustomers from './admin/AdminCustomers';
 // Removed: import AdminRightPanel from './admin/components/AdminRightPanel';
 import ResetPassword from './ResetPassword';
 import RequestPasswordReset from './RequestPasswordReset';
+import ForgotPassword from './ForgotPassword';
 import AdminProducts from './admin/AdminProducts';
 import ProtectedRoute from './admin/ProtectedRoute';
 import OrderDetails from './OrderDetails';
@@ -368,11 +369,11 @@ const App = () => {
           />
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/verification" element={<Verification />} />
           <Route path="/adminlogin" element={<AdminLogin />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/forgot-password" element={<RequestPasswordReset />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/order-form" element={<OrderForm />} />
         </Routes>
