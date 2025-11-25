@@ -136,7 +136,59 @@ const ValidatePayment = () => {
   };
 
   const handleDecline = async (orderId) => {
-    await supabase.from('orders').update({ status: 'Declined' }).eq('id', orderId);
+    // First, get the order details to find the customer email
+    const { data: order, error: fetchError } = await supabase
+      .from('orders')
+      .select('email, first_name, last_name, id')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError || !order) {
+      console.error('Error fetching order for decline:', fetchError);
+      return;
+    }
+
+    // Update order status to Declined
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({ status: 'Declined' })
+      .eq('id', orderId);
+
+    if (updateError) {
+      console.error('Error updating order status:', updateError);
+      return;
+    }
+
+    // Send automatic decline message to customer
+    try {
+      // Get current user (admin/employee) session
+      const { data: { session } } = await supabase.auth.getSession();
+      const adminEmail = session?.user?.email;
+
+      if (adminEmail && order.email) {
+        // Create a chat_id for this conversation
+        const chatId = [adminEmail, order.email].sort().join('_');
+
+        const declineMessage = {
+          chat_id: chatId,
+          sender: adminEmail,
+          receiver: order.email,
+          text: `Your payment for order #${String(orderId).slice(0, 8)} has been declined. Please submit a valid payment proof and try again. If you have any questions, feel free to contact us.`,
+          created_at: new Date().toISOString(),
+          read: false
+        };
+
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert(declineMessage);
+
+        if (messageError) {
+          console.error('Error sending decline message:', messageError);
+        }
+      }
+    } catch (err) {
+      console.error('Exception sending decline message:', err);
+    }
     
     // Update the local state to mark as declined
     setPayments((prev) =>

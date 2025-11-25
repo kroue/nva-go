@@ -70,7 +70,8 @@ export default function OrderForm() {
       width,
       height,
       isSolventTarp,
-      eyelets
+      eyelets,
+      hasFile
     });
     
     // For Solvent Tarp and Sintraboard: price = (length x width x price per sqft) x quantity
@@ -89,12 +90,25 @@ export default function OrderForm() {
         console.log('After eyelet cost:', { eyeletCount, total });
       }
       
+      // Add layout approval fee if no file
+      if (!hasFile) {
+        total += 150;
+        console.log('After layout approval fee:', { total });
+      }
+      
       return total;
     }
     
     // For other products: price x quantity
-    const total = basePrice * qty;
+    let total = basePrice * qty;
     console.log('Regular calculation:', { total });
+    
+    // Add layout approval fee if no file
+    if (!hasFile) {
+      total += 150;
+      console.log('After layout approval fee:', { total });
+    }
+    
     return total;
   };
   
