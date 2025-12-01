@@ -37,7 +37,8 @@ export default function OrderHistory() {
       .from('orders')
       .select('*')
       .eq('email', email)
-      .eq('status', 'Finished')
+      // include Finished, Cancelled and Denied in history
+      .in('status', ['Finished', 'Cancelled', 'Denied'])
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -203,9 +204,17 @@ export default function OrderHistory() {
                   <View style={styles.orderMainInfo}>
                     <View style={styles.titleRow}>
                       {hasTitle && <Text style={styles.productTitle}>{productTitle}</Text>}
-                      <View style={styles.statusBadge}>
-                        <FontAwesome name="check" size={10} color="#10B981" />
-                        <Text style={styles.statusText}>Finished</Text>
+                      <View style={[
+                        styles.statusBadge,
+                        order.status === 'Cancelled' ? styles.statusBadgeCancelled : null
+                      ]}>
+                        <FontAwesome name={order.status === 'Cancelled' ? "times" : "check"} size={10} color={order.status === 'Cancelled' ? "#DC2626" : "#10B981"} />
+                        <Text style={[
+                          styles.statusText,
+                          order.status === 'Cancelled' && styles.statusTextCancelled
+                        ]}>
+                          {order.status === 'Cancelled' ? 'Cancelled' : order.status === 'Denied' ? 'Denied' : 'Finished'}
+                        </Text>
                       </View>
                     </View>
                     
@@ -491,11 +500,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
+  statusBadgeCancelled: {
+    backgroundColor: '#FEE2E2',
+  },
   statusText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#10B981',
     marginLeft: 4,
+  },
+  statusTextCancelled: {
+    color: '#DC2626',
+    marginLeft: 4,
+    fontWeight: '700',
+    fontSize: 11,
   },
   totalText: {
     fontSize: 20,

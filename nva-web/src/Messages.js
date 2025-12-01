@@ -55,6 +55,46 @@ const Messages = () => {
     initializeMessages();
   }, []);
 
+  // NEW: Subscription for real-time updates
+  useEffect(() => {
+    if (!currentUserEmail) return;
+
+    const channel = supabase
+      .channel(`messages-${currentUserEmail}`)
+      .on(
+        'postgres_changes',
+        // removed server-side filter; handle filtering client-side to avoid silent filter mismatches
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages'
+        },
+        async payload => {
+          console.log('Realtime payload received:', payload);
+          const newMsg = payload?.new;
+          if (!newMsg) return;
+
+          // Only react when the new message involves the current user
+          if (newMsg.receiver === currentUserEmail || newMsg.sender === currentUserEmail) {
+            try {
+              // Refresh chat list and, if open, the selected conversation
+              await fetchChats(currentUserEmail);
+              if (selectedChat && selectedChat.id === newMsg.chat_id) {
+                await fetchMessages(selectedChat.id);
+              }
+            } catch (err) {
+              console.error('Error handling realtime payload:', err);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserEmail, selectedChat]);
+
   const fetchChats = async (userEmail) => {
     try {
       console.log('Fetching chats for:', userEmail);
@@ -175,7 +215,7 @@ const Messages = () => {
         sender: currentUserEmail,
         receiver: selectedChat.participant,
         text: newMessage.trim(),
-        created_at: new Date().toISOString(),
+        // let the DB set timestamps if it has defaults; avoid client-side created_at skew
         read: false
       };
 
@@ -183,15 +223,24 @@ const Messages = () => {
       setMessages(prev => [...prev, messageData]);
       setNewMessage('');
 
-      const { error } = await supabase.from('messages').insert(messageData);
+      // Insert and return DB row
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(messageData)
+        .select()
+        .single();
+
       if (error) {
-        console.error('Error sending message:', error);
-        // Rollback
+        console.error('Error sending message (insert):', error);
+        // Rollback optimistic add
         setMessages(prev => prev.filter(m => m !== messageData));
         return;
       }
 
-      fetchChats(currentUserEmail);
+      // Refresh messages and chats from DB to ensure authoritative state
+      await fetchMessages(selectedChat.id);
+      await fetchChats(currentUserEmail);
+      console.log('Message sent and refreshed:', data);
     } catch (error) {
       console.error('Exception sending message:', error);
     }
@@ -231,20 +280,28 @@ const Messages = () => {
         sender: currentUserEmail,
         receiver: selectedChat.participant,
         text,
-        created_at: new Date().toISOString(),
         read: false
       };
 
       // Optimistic add
       setMessages(prev => [...prev, messageData]);
 
-      const { error } = await supabase.from('messages').insert(messageData);
+      // Insert and get DB row
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(messageData)
+        .select()
+        .single();
+
       if (error) {
-        console.error('Error sending image message:', error);
-        // Rollback
+        console.error('Error sending image message (insert):', error);
+        // Rollback optimistic add
         setMessages(prev => prev.filter(m => m !== messageData));
       } else {
+        // Refresh authoritative state
+        await fetchMessages(selectedChat.id);
         fetchChats(currentUserEmail);
+        console.log('Image message sent and refreshed:', data);
       }
     } catch (err) {
       console.error('Attach image error:', err);

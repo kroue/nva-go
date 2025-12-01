@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
-  Animated
+  Animated,
+  AppState
 } from 'react-native';
 import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,7 +38,10 @@ export default function Messaging() {
   const [uploading, setUploading] = useState(false);
   const scrollViewRef = useRef();
   const [fadeAnim] = useState(new Animated.Value(0));
-
+  const appState = useRef(AppState.currentState);
+  const pollingRef = useRef(null);
+  const [realtimeHealthy, setRealtimeHealthy] = useState(false);
+  
   // Upload image to Cloudinary
   const uploadImageToCloudinary = async (imageUri) => {
     try {
@@ -102,36 +106,91 @@ export default function Messaging() {
     }
   };
 
-  // Send image message
-  const sendImageMessage = async (imageUrl) => {
-    if (!userEmail || allowedEmails.length === 0) return;
-    
-    const receiver = allowedEmails[0];
+  // Determine conversation partner (employee/customer) from current messages
+  const getConversationPartner = () => {
+    // Prefer the most recent message participant that is not the current user.
+    if (messages && messages.length > 0) {
+      // messages are ordered ascending by created_at in fetchMessages
+      const last = messages[messages.length - 1];
+      if (last) {
+        if (last.sender && last.sender !== userEmail) return last.sender;
+        if (last.receiver && last.receiver !== userEmail) return last.receiver;
+      }
+    }
+    // Fallback to allowedEmails[0] (existing behavior)
+    return allowedEmails[0] || null;
+  };
 
-    const newMessage = {
-      chat_id: [userEmail, receiver].sort().join('-'),
-      sender: userEmail,
-      receiver,
-      text: `[IMAGE]${imageUrl}`,
-      read: false,
-      created_at: new Date().toISOString(),
-    };
-    
-    const { error } = await supabase.from('messages').insert(newMessage);
-    if (error) {
-      console.error('Error sending image:', error);
-      Alert.alert('Error', 'Failed to send image');
+  // Helper: get authenticated user's email from Supabase session
+  const getAuthEmail = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      return data?.session?.user?.email || null;
+    } catch (err) {
+      console.error('Error getting auth session:', err);
+      return null;
     }
   };
 
-  // Fetch messages
-  const fetchMessages = async () => {
+  // Send image message
+  const sendImageMessage = async (imageUrl) => {
+    if (!userEmail) return;
+    
+    const partner = getConversationPartner();
+    if (!partner) return;
+    const receiver = partner;
+
+    const authEmail = await getAuthEmail();
+    if (!authEmail) {
+      Alert.alert('Authentication required', 'You must be signed in to send messages.');
+      return;
+    }
+
+    // do NOT set created_at client-side; let DB provide authoritative timestamp
+    const payload = {
+      chat_id: [authEmail, receiver].sort().join('-'),
+      sender: authEmail,
+      receiver,
+      text: `[IMAGE]${imageUrl}`,
+      read: false
+    };
+    
+    const { data, error } = await supabase.from('messages').insert(payload).select().single();
+    if (error) {
+      console.error('Error sending image:', error);
+      if (error.code === '42501') {
+        Alert.alert('Permission denied', 'Insert blocked by DB row-level security.');
+      } else {
+        Alert.alert('Error', 'Failed to send image');
+      }
+      return;
+    }
+
+    // append DB row and scroll
+    appendIncomingMessage(data);
+  };
+
+  // helper: scroll to bottom (small delay to allow layout)
+  const scrollToBottom = (delay = 120) => {
+    setTimeout(() => {
+      try { scrollViewRef.current?.scrollToEnd({ animated: true }); } catch(e){/* ignore */ }
+    }, delay);
+  };
+
+  // helper: stable sort ascending by created_at
+  const sortAsc = (arr) => {
+    return (arr || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  };
+
+  // fetchMessages supports a silent option so polling/app-state refreshes don't show loader
+  const fetchMessages = async (opts = {}) => {
+    const { silent = false } = opts;
     if (!userEmail) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     
-    setLoading(true);
+    if (!silent) setLoading(true);
     
     try {
       const { data: userMessages, error } = await supabase
@@ -144,39 +203,53 @@ export default function Messaging() {
         console.error('Error fetching messages:', error);
         setMessages([]);
       } else {
-        setMessages(userMessages || []);
-        
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-
-        // Animate in
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
+        // ensure ascending order
+        setMessages(sortAsc(userMessages || []));
+        if (!silent) {
+          // Animate in only when not silent (initial load)
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }).start();
+        }
+        // always scroll but with a small delay to avoid jumpy UI
+        scrollToBottom(100);
       }
     } catch (error) {
       console.error('Exception fetching messages:', error);
       setMessages([]);
+    } finally {
+      if (!silent) setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   // Initialize user and fetch data
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const email = await AsyncStorage.getItem('email');
-        
+        // Prefer authenticated Supabase session email
+        let email = null;
+        try {
+          const { data } = await supabase.auth.getSession();
+          email = data?.session?.user?.email || null;
+        } catch (err) {
+          console.warn('Supabase session check failed', err);
+        }
+
+        // Fallback to AsyncStorage if no session email
+        if (!email) {
+          email = await AsyncStorage.getItem('email');
+        }
+
         if (!email) {
           setLoading(false);
           return;
         }
-        
+
+        // Keep userEmail consistent with the auth session (and store it for fallback)
         setUserEmail(email);
+        try { await AsyncStorage.setItem('email', email); } catch(e) {}
 
         const [employeesResult, customersResult] = await Promise.all([
           supabase.from('employees').select('email,first_name,last_name'),
@@ -222,57 +295,142 @@ export default function Messaging() {
     }
   }, [userEmail]);
 
-  // Subscription for realtime updates
+  // helper: safely append incoming message if it's relevant and not already present
+  const appendIncomingMessage = (incoming) => {
+    if (!incoming) return;
+    setMessages(prev => {
+      const exists = incoming.id ? prev.some(m => m.id === incoming.id) :
+        prev.some(m => m.text === incoming.text && m.created_at === incoming.created_at && m.sender === incoming.sender);
+      if (exists) return prev;
+      const next = sortAsc([...prev, incoming]);
+      return next;
+    });
+    scrollToBottom(120);
+  };
+
+  // Subscription for realtime updates (listen globally, filter client-side, append)
   useEffect(() => {
     if (!userEmail) return;
 
-    const channel = supabase
-      .channel('public:messages')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        async payload => {
-          if (payload.new.receiver === userEmail) {
-            await fetchMessages();
+    const channel = supabase.channel(`messages-${userEmail}`);
+    channel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages' },
+      async payload => {
+        try {
+          console.log('Realtime payload:', payload);
+          const newMsg = payload?.new;
+          if (!newMsg) return;
+
+          if (newMsg.receiver === userEmail || newMsg.sender === userEmail) {
+            appendIncomingMessage(newMsg);
+
             Notifications.scheduleNotificationAsync({
               content: {
                 title: 'New Message',
-                body: `You have a new message from ${userLookup[payload.new.sender] || payload.new.sender}`,
+                body: `You have a new message from ${userLookup[newMsg.sender] || newMsg.sender}`,
               },
               trigger: null,
             });
           }
+        } catch (err) {
+          console.error('Error handling realtime payload:', err);
         }
-      )
-      .subscribe();
+      }
+    );
+
+    // subscribe and update health flag for polling control
+    channel.subscribe((status) => {
+      console.log('Realtime channel subscribe status:', status);
+      // mark healthy when subscribed, otherwise unhealthy
+      setRealtimeHealthy(status === 'SUBSCRIBED');
+    });
+
+    // AppState: refetch when app comes to foreground
+    const onAppStateChange = (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('App came to foreground — refreshing messages');
+        // silent refresh to avoid showing loader
+        fetchMessages({ silent: true }).catch(e => console.debug('AppState fetchMessages error', e));
+      }
+      appState.current = nextAppState;
+    };
+    const subscription = AppState.addEventListener('change', onAppStateChange);
 
     return () => {
-      supabase.removeChannel(channel);
+      // cleanup realtime channel and polling and AppState listener
+      try { supabase.removeChannel(channel); } catch (e) { console.warn('removeChannel error', e); }
+      subscription.remove();
     };
   }, [userEmail, userLookup]);
 
+  // Polling effect: only poll when realtime is not healthy
+  useEffect(() => {
+    if (!userEmail) return;
+ 
+    if (!realtimeHealthy) {
+      // start polling if not already started
+      if (!pollingRef.current) {
+        pollingRef.current = setInterval(() => {
+          // silent polling so UI doesn't flash the loader
+          fetchMessages({ silent: true }).catch(e => console.debug('Polling fetchMessages error', e));
+        }, 5000);
+        console.log('Started polling fallback (realtime unhealthy)');
+      }
+    } else {
+      // stop polling when realtime becomes healthy
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        console.log('Stopped polling fallback (realtime healthy)');
+      }
+    }
+ 
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [userEmail, realtimeHealthy]);
+
   // Send text message
   const sendMessage = async () => {
-    if (!input.trim() || !userEmail || allowedEmails.length === 0) return;
+    if (!input.trim() || !userEmail) return;
     
-    const receiver = allowedEmails[0];
+    const partner = getConversationPartner();
+    if (!partner) return;
+    const receiver = partner;
 
-    const newMessage = {
-      chat_id: [userEmail, receiver].sort().join('-'),
-      sender: userEmail,
+    const authEmail = await getAuthEmail();
+    if (!authEmail) {
+      Alert.alert('Authentication required', 'You must be signed in to send messages.');
+      return;
+    }
+
+    const payload = {
+      chat_id: [authEmail, receiver].sort().join('-'),
+      sender: authEmail,
       receiver,
       text: input.trim(),
-      read: false,
-      created_at: new Date().toISOString(),
+      read: false
     };
     
     setInput('');
     
-    const { error } = await supabase.from('messages').insert(newMessage);
+    const { data, error } = await supabase.from('messages').insert(payload).select().single();
     if (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message: ' + error.message);
+      if (error.code === '42501') {
+        Alert.alert('Permission denied', 'Insert blocked by DB row-level security.');
+      } else {
+        Alert.alert('Error', 'Failed to send message: ' + error.message);
+      }
+      return;
     }
+
+    // append DB row and scroll
+    appendIncomingMessage(data);
   };
 
   // Extract Order ID
@@ -299,38 +457,144 @@ export default function Messaging() {
   };
 
   const handleApprove = async (orderId, employeeSenderEmail) => {
-    try {
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'Printing',
-          approved: 'yes'
-        })
-        .eq('id', orderId);
+    Alert.alert(
+      'Approve Order',
+      'Are you sure you want to approve this order?',
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Approve', 
+          style: 'default',
+          onPress: async () => {
+            try {
+              const { error: updateError } = await supabase
+                .from('orders')
+                .update({ 
+                  status: 'Printing',
+                  approved: 'yes'
+                })
+                .eq('id', orderId);
 
-      if (updateError) throw updateError;
+              if (updateError) throw updateError;
 
-      const receiver = employeeSenderEmail || (allowedEmails[0] || null);
-      if (receiver) {
-        const confirmMessage = {
-          chat_id: [userEmail, receiver].sort().join('-'),
-          sender: userEmail,
-          receiver,
-          text: `✅ Order #${orderId.slice(0, 8)} approved by customer. Status set to Printing.`,
-          read: false,
-          created_at: new Date().toISOString(),
-        };
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert(confirmMessage);
-        if (messageError) throw messageError;
-      }
+              const receiver = employeeSenderEmail || (allowedEmails[0] || null);
+              if (receiver) {
+                // ensure sender is authenticated user for RLS
+                const authEmail = await getAuthEmail();
+                if (!authEmail) {
+                  Alert.alert('Authentication required', 'You must be signed in to send messages.');
+                  return;
+                }
 
-      Alert.alert('Success', 'Order approved and moved to printing!');
-    } catch (error) {
-      console.error('Error approving order:', error);
-      Alert.alert('Error', 'Failed to approve order: ' + error.message);
-    }
+                const confirmMessage = {
+                  chat_id: [authEmail, receiver].sort().join('-'),
+                  sender: authEmail,
+                  receiver,
+                  text: `✅ Order #${orderId.slice(0, 8)} approved by customer. Status set to Printing.`,
+                  read: false,
+                  created_at: new Date().toISOString(),
+                };
+                const { error: messageError } = await supabase
+                  .from('messages')
+                  .insert(confirmMessage);
+                if (messageError) {
+                  console.error('Error inserting confirm message:', messageError);
+                  if (messageError.code === '42501') {
+                    Alert.alert(
+                      'Permission denied',
+                      'Insert blocked by database row-level security. Ensure the authenticated user matches the messages RLS policy.'
+                    );
+                  } else {
+                    throw messageError;
+                  }
+                } else {
+                  // Update local messages state immediately
+                  setMessages(prevMessages => [...prevMessages, confirmMessage]);
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 100);
+                }
+              }
+
+              Alert.alert('Success', 'Order approved and moved to printing!');
+            } catch (error) {
+              console.error('Error approving order:', error);
+              Alert.alert('Error', 'Failed to approve order: ' + error.message);
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleCancelOrder = async (orderId, employeeSenderEmail) => {
+    Alert.alert(
+      'Cancel Order',
+      `Are you sure that you want to cancel your order?\n\nYou need to go to the shop and talk to Mr. Nicholson Anora for any payment and order disputes.`,
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel Order', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error: updateError } = await supabase
+                .from('orders')
+                .update({ status: 'Cancelled', approved: 'no' })
+                .eq('id', orderId);
+
+              if (updateError) throw updateError;
+
+              const receiver = employeeSenderEmail || (allowedEmails[0] || null);
+              if (receiver) {
+                // ensure sender is authenticated user for RLS
+                const authEmail = await getAuthEmail();
+                if (!authEmail) {
+                  Alert.alert('Authentication required', 'You must be signed in to send messages.');
+                  return;
+                }
+
+                const confirmMessage = {
+                  chat_id: [authEmail, receiver].sort().join('-'),
+                  sender: authEmail,
+                  receiver,
+                  text: `❌ Order #${orderId.slice(0, 8)} cancelled by customer.`,
+                  read: false,
+                  created_at: new Date().toISOString(),
+                };
+                const { error: messageError } = await supabase
+                  .from('messages')
+                  .insert(confirmMessage);
+                if (messageError) {
+                  console.error('Error inserting cancel message:', messageError);
+                  if (messageError.code === '42501') {
+                    Alert.alert(
+                      'Permission denied',
+                      'Insert blocked by database row-level security. Ensure the authenticated user matches the messages RLS policy.'
+                    );
+                  } else {
+                    throw messageError;
+                  }
+                } else {
+                  // Update local messages state immediately
+                  setMessages(prevMessages => [...prevMessages, confirmMessage]);
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 100);
+                }
+              }
+
+              Alert.alert('Cancelled', 'Your order was cancelled and moved to Order History.');
+            } catch (error) {
+              console.error('Error cancelling order:', error);
+              Alert.alert('Error', 'Failed to cancel order: ' + error.message);
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
   // Extract image URL
@@ -465,16 +729,26 @@ export default function Messaging() {
             </TouchableOpacity>
           )}
           
-          {/* Approval Button */}
+          {/* Approval Buttons */}
           {isApproval && !isMe && orderId && (
-            <TouchableOpacity 
-              style={styles.approveButton}
-              onPress={() => handleApprove(orderId, msg.sender)}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="check-circle" size={16} color="#fff" />
-              <Text style={styles.approveButtonText}>Approve Order</Text>
-            </TouchableOpacity>
+            <View style={styles.approvalButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.approveButton}
+                onPress={() => handleApprove(orderId, msg.sender)}
+                activeOpacity={0.8}
+              >
+                <FontAwesome name="check-circle" size={16} color="#fff" />
+                <Text style={styles.approveButtonText}>Approve Order</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.cancelOrderButton}
+                onPress={() => handleCancelOrder(orderId, msg.sender)}
+                activeOpacity={0.8}
+              >
+                <FontAwesome name="times-circle" size={16} color="#fff" />
+                <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
+              </TouchableOpacity>
+            </View>
           )}
           
           {/* Timestamp */}
@@ -799,15 +1073,21 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   
-  // Approve Button
+  // Approval Buttons
+  approvalButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
   approveButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
     borderRadius: 10,
     padding: 12,
-    marginTop: 10,
+    marginRight: 8,
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -815,6 +1095,27 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   approveButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  cancelOrderButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    padding: 12,
+    marginLeft: 8,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cancelOrderButtonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,

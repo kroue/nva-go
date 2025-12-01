@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Animated, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator, Animated, TouchableOpacity, Modal, Alert } from 'react-native';
 import { supabase } from '../SupabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -16,6 +15,8 @@ export default function TrackOrder() {
   const [slideAnim] = useState(new Animated.Value(20));
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [allowedEmails, setAllowedEmails] = useState([]);
+  const [userEmail, setUserEmail] = useState(null);
 
   const isStepActive = (step) => {
     const currentIndex = statuses.indexOf(order?.status);
@@ -54,61 +55,179 @@ export default function TrackOrder() {
 
   // Fetch the logged-in user's order (latest)
   useEffect(() => {
-    let subscription;
-    let userEmail = '';
+    let channel = null;
 
     const setup = async () => {
       setLoading(true);
-      userEmail = await AsyncStorage.getItem('email');
-      if (!userEmail) {
+
+      // Prefer Supabase session user email, fallback to AsyncStorage keys 'email' and 'userEmail'
+      let email = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        email = data?.user?.email || null;
+      } catch (err) {
+        console.warn('getUser failed', err);
+      }
+      if (!email) {
+        email = await AsyncStorage.getItem('email') || await AsyncStorage.getItem('userEmail');
+      }
+
+      if (!email) {
+        console.warn('No user email found for TrackOrder');
+        setUserEmail(null);
+        setOrder(null);
         setLoading(false);
         return;
       }
-      
+
+      setUserEmail(email);
+      console.log('TrackOrder using email:', email);
+
+      // Fetch employees for messaging
+      const { data: employees } = await supabase.from('employees').select('email');
+      setAllowedEmails(employees?.map(e => e.email) || []);
+
+      // Primary query: latest active order excluding finished/cancelled/denied
       const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('email', userEmail)
-        .neq('status', 'Finished')
+        .eq('email', email)
+        .not('status', 'in', ['Finished', 'Cancelled', 'Denied'])
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
 
-      if (data) setOrder(data);
-      else setOrder(null);
+      console.log('TrackOrder primary fetch result:', { data, error });
+
+      if (data) {
+        setOrder(data);
+      } else {
+        // fallback: try without status filter to see if an order exists but got excluded
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('email', email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          console.log('TrackOrder fallback fetch result:', { fallbackData, fallbackError });
+          if (fallbackData && !['Finished', 'Cancelled', 'Denied'].includes(fallbackData.status)) {
+            setOrder(fallbackData);
+          } else {
+            // if fallback found an order but it's in excluded status, clear tracked view
+            setOrder(null);
+          }
+        } catch (e) {
+          console.warn('TrackOrder fallback fetch failed', e);
+          setOrder(null);
+        }
+      }
+
       setLoading(false);
 
-      subscription = supabase
-        .channel(`order-status-${userEmail}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'orders',
-            filter: `email=eq.${userEmail}`,
-          },
-          payload => {
-            console.log('Realtime payload:', payload);
+      // subscribe to INSERT and UPDATE events for this user's orders
+      channel = supabase.channel(`order-status-${email}`);
+      channel.on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: `email=eq.${email}` },
+        payload => {
+          console.log('Realtime INSERT payload:', payload);
+          // show newly created active order
+          if (payload?.new && !['Finished', 'Cancelled', 'Denied'].includes(payload.new.status)) {
             setOrder(payload.new);
             Notifications.scheduleNotificationAsync({
-              content: {
-                title: 'Order Status Updated',
-                body: `Your order status changed to "${payload.new.status}"`,
-              },
+              content: { title: 'Order Created', body: 'Your order was created and is now tracked.' },
               trigger: null,
             });
           }
-        )
-        .subscribe();
+        }
+      );
+      channel.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `email=eq.${email}` },
+        payload => {
+          console.log('Realtime UPDATE payload:', payload);
+          if (['Finished', 'Cancelled', 'Denied'].includes(payload.new?.status)) {
+            setOrder(null);
+          } else {
+            setOrder(payload.new);
+          }
+          Notifications.scheduleNotificationAsync({
+            content: { title: 'Order Status Updated', body: `Your order status changed to "${payload.new.status}"` },
+            trigger: null,
+          });
+        }
+      );
+      channel.subscribe();
     };
 
     setup();
 
     return () => {
-      if (subscription) supabase.removeChannel(subscription);
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch (e) { console.warn('removeChannel error', e); }
+      }
     };
   }, []);
+
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Cancel Order',
+      `Are you sure that you want to cancel your order?\n\nYou need to go to the shop and talk to Mr. Nicholson Anora for any payment and order disputes.`,
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel Order', 
+          style: 'destructive',
+          onPress: async () => {
+            if (!order?.id) return;
+            try {
+              const { error } = await supabase
+                .from('orders')
+                .update({ status: 'Cancelled', approved: 'no' })
+                .eq('id', order.id);
+              if (error) throw error;
+              
+              // Send message to employee
+              // use state userEmail (set during setup) as sender; fallback to AsyncStorage
+              const senderEmail = userEmail || await AsyncStorage.getItem('email') || await AsyncStorage.getItem('userEmail');
+              if (allowedEmails.length > 0 && senderEmail) {
+                const receiver = allowedEmails[0];
+                const cancelMessage = {
+                  chat_id: [senderEmail, receiver].sort().join('-'),
+                  sender: senderEmail,
+                  receiver,
+                  text: `❌ Order #${order.id.slice(0, 8)} cancelled by customer.`,
+                  read: false,
+                  created_at: new Date().toISOString(),
+                };
+                const { error: messageError } = await supabase
+                  .from('messages')
+                  .insert(cancelMessage);
+                if (messageError) console.error('Failed to send cancel message:', messageError);
+              }
+              
+              // Remove tracked order from view
+              setOrder(null);
+              Notifications.scheduleNotificationAsync({
+                content: {
+                  title: 'Order Cancelled',
+                  body: 'Your order has been cancelled and moved to order history.',
+                },
+                trigger: null,
+              });
+              Alert.alert('Cancelled', 'Your order was cancelled and moved to Order History.');
+            } catch (err) {
+              console.error('Failed to cancel order:', err);
+              Alert.alert('Error', 'Failed to cancel order: ' + (err.message || 'Unknown error'));
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
 
   if (loading) {
     return (
@@ -335,6 +454,17 @@ export default function TrackOrder() {
           <View style={styles.totalSection}>
             <Text style={styles.totalLabel}>Total Amount</Text>
             <Text style={styles.totalValue}>₱ {order.total}</Text>
+          </View>
+
+          {/* Cancel Button */}
+          <View style={{ marginTop: 12 }}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelOrder}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelButtonText}>Cancel Order</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -682,5 +812,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 10,
+  },
+  cancelButton: {
+    marginTop: 8,
+    backgroundColor: '#EF4444',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

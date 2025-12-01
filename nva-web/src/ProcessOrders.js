@@ -108,18 +108,26 @@ const ProcessOrders = () => {
   }, []);
 
   const handleCardClick = (order) => {
+    // do not allow opening cancelled or denied orders
+    if (order?.status === 'Cancelled' || order?.status === 'Denied') return;
     navigate(`/orders/${order.id}`);
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
     const order = orders.find(o => o.id === orderId);
     
+    // do not allow any processing on cancelled or denied orders
+    if (order?.status === 'Cancelled' || order?.status === 'Denied') {
+      alert('This order is cancelled/denied and cannot be processed.');
+      return;
+    }
+
     // Validate status transition
     if (!canTransitionTo(order.status, newStatus)) {
       alert(`Cannot update to ${newStatus}. ${getRequiredStatusMessage(newStatus)}`);
       return;
     }
-    
+
     try {
       setUpdatingId(orderId);
       const { error } = await supabase
@@ -202,10 +210,17 @@ Please come to our store to pick up your order.`;
           <div className="ProcessOrders-grid">
             {orders.map((order) => (
               <div
-                className={`ProcessOrders-card ${order.status === 'Finished' ? 'finished' : ''}`}
+                className={`ProcessOrders-card ${order.status === 'Finished' ? 'finished' : ''} ${order.status === 'Cancelled' ? 'cancelled' : ''} ${order.status === 'Denied' ? 'denied' : ''}`}
                 key={order.id}
-                onClick={() => handleCardClick(order)}
+                onClick={() => (order.status === 'Cancelled' || order.status === 'Denied') ? null : handleCardClick(order)}
               >
+                {/* Cancel / Denied tag */}
+                {order.status === 'Cancelled' && (
+                  <div className="cancel-tag">Cancelled</div>
+                )}
+                {order.status === 'Denied' && (
+                  <div className="deny-tag">Denied</div>
+                )}
                 <div className="ProcessOrders-card-header">
                   <div className="card-header-left">
                     <PersonOutlineOutlinedIcon className="card-icon" />
@@ -261,6 +276,14 @@ Please come to our store to pick up your order.`;
                       )}
                     </div>
                   ))}
+                  {/* Denied indicator */}
+                  {order.status === 'Denied' && (
+                    <div className="status-pill denied" title="Denied">Denied</div>
+                  )}
+                  {/* Cancelled indicator (orders outside standard flow) */}
+                  {order.status === 'Cancelled' && (
+                    <div className="status-pill cancelled" title="Cancelled">Cancelled</div>
+                  )}
                 </div>
 
                 <div className="ProcessOrders-card-actions">
@@ -268,12 +291,14 @@ Please come to our store to pick up your order.`;
                     className="action-btn secondary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateOrderStatus(order.id, 'For Pickup');
+                      if (order.status !== 'Cancelled' && order.status !== 'Denied') updateOrderStatus(order.id, 'For Pickup');
                     }}
                     disabled={
                       updatingId === order.id ||
                       order.status === 'For Pickup' ||
                       order.status === 'Finished' ||
+                      order.status === 'Cancelled' ||
+                      order.status === 'Denied' ||
                       !canTransitionTo(order.status, 'For Pickup')
                     }
                     title={!canTransitionTo(order.status, 'For Pickup') ? getRequiredStatusMessage('For Pickup') : ''}
@@ -286,9 +311,9 @@ Please come to our store to pick up your order.`;
                     className="action-btn primary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      updateOrderStatus(order.id, 'Finished');
+                      if (order.status !== 'Cancelled' && order.status !== 'Denied') updateOrderStatus(order.id, 'Finished');
                     }}
-                    disabled={updatingId === order.id || order.status === 'Finished' || !canTransitionTo(order.status, 'Finished')}
+                    disabled={updatingId === order.id || order.status === 'Finished' || order.status === 'Cancelled' || order.status === 'Denied' || !canTransitionTo(order.status, 'Finished')}
                     title={!canTransitionTo(order.status, 'Finished') ? getRequiredStatusMessage('Finished') : ''}
                   >
                     <CheckCircleOutlineOutlinedIcon style={{ fontSize: 16 }} />

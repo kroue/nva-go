@@ -148,10 +148,10 @@ const ValidatePayment = () => {
       return;
     }
 
-    // Update order status to Declined
+    // Update order status to Denied (was Cancelled/Declined)
     const { error: updateError } = await supabase
       .from('orders')
-      .update({ status: 'Declined' })
+      .update({ status: 'Denied' })
       .eq('id', orderId);
 
     if (updateError) {
@@ -159,7 +159,7 @@ const ValidatePayment = () => {
       return;
     }
 
-    // Send automatic decline message to customer
+    // Send automatic denial message to customer
     try {
       // Get current user (admin/employee) session
       const { data: { session } } = await supabase.auth.getSession();
@@ -173,7 +173,7 @@ const ValidatePayment = () => {
           chat_id: chatId,
           sender: adminEmail,
           receiver: order.email,
-          text: `Your payment for order #${String(orderId).slice(0, 8)} has been declined. Please submit a valid payment proof and try again. If you have any questions, feel free to contact us.`,
+          text: `⚠️ Your payment for order #${String(orderId).slice(0, 8)} has been denied. Please order again and upload the correct payment receipt.`,
           created_at: new Date().toISOString(),
           read: false
         };
@@ -190,9 +190,9 @@ const ValidatePayment = () => {
       console.error('Exception sending decline message:', err);
     }
     
-    // Update the local state to mark as declined
+    // Update the local state to mark as denied
     setPayments((prev) =>
-      prev.map((p) => (p.id === orderId ? { ...p, status: 'Declined' } : p))
+      prev.map((p) => (p.id === orderId ? { ...p, status: 'Denied' } : p))
     );
   };
 
@@ -243,7 +243,7 @@ const ValidatePayment = () => {
         </div>
         <div className="ValidatePayment-stats">
           <div className="stat-badge">
-            <span className="stat-number">{payments.filter(p => p.status !== 'Layout Approval' && p.status !== 'Declined' && p.status !== 'Printing' && p.status !== 'For Pickup' && p.status !== 'Finished').length}</span>
+            <span className="stat-number">{payments.filter(p => p.status !== 'Layout Approval' && p.status !== 'Denied' && p.status !== 'Printing' && p.status !== 'For Pickup' && p.status !== 'Finished').length}</span>
             <span className="stat-label">Pending</span>
           </div>
           <div className="stat-badge">
@@ -260,11 +260,15 @@ const ValidatePayment = () => {
             {payments.map((p, idx) => (
               <div
                 className={`ValidatePayment-card${selected === idx ? ' active' : ''} ${
-                  p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'validated' : p.status === 'Declined' ? 'declined' : ''
+                  p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'validated' : p.status === 'Denied' ? 'denied' : ''
                 }`}
                 key={p.id}
                 onClick={() => setSelected(idx)}
               >
+                {/* Denied tag */}
+                {p.status === 'Denied' && (
+                  <div className="deny-tag">Denied</div>
+                )}
                 <div className="card-header">
                   <div className="card-customer">
                     <PersonOutlineOutlinedIcon className="card-icon" />
@@ -274,21 +278,21 @@ const ValidatePayment = () => {
                     </div>
                   </div>
                   <div className={`status-badge ${
-                    p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'success' : p.status === 'Declined' ? 'error' : 'pending'
+                    p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? 'success' : p.status === 'Denied' ? 'error' : 'pending'
                   }`}>
                     {p.status === 'Layout Approval' || p.status === 'Printing' || p.status === 'For Pickup' || p.status === 'Finished' ? (
                       <>
                         <CheckCircleOutlineOutlinedIcon style={{ fontSize: 14 }} />
                         Validated
                       </>
-                    ) : p.status === 'Declined' ? (
+                    ) : p.status === 'Denied' ? (
                       <>
                         <CancelOutlinedIcon style={{ fontSize: 14 }} />
-                        Declined
+                        Denied
                       </>
-                    ) : (
-                      'Pending'
-                    )}
+                     ) : (
+                       'Pending'
+                     )}
                   </div>
                 </div>
                 <div className="card-details">
@@ -353,7 +357,7 @@ const ValidatePayment = () => {
               <button
                 className="action-btn validate"
                 onClick={() => handleValidate(selectedPayment.id)}
-                disabled={selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
+                disabled={selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' || selectedPayment.status === 'Cancelled' || selectedPayment.status === 'Denied'}
               >
                 <CheckCircleOutlineOutlinedIcon style={{ fontSize: 18 }} />
                 {selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' ? 'Already Validated' : 'Validate Payment'}
@@ -361,7 +365,7 @@ const ValidatePayment = () => {
               <button
                 className="action-btn decline"
                 onClick={() => handleDecline(selectedPayment.id)}
-                disabled={selectedPayment.status === 'Declined' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished'}
+                disabled={selectedPayment.status === 'Denied' || selectedPayment.status === 'Layout Approval' || selectedPayment.status === 'Printing' || selectedPayment.status === 'For Pickup' || selectedPayment.status === 'Finished' || selectedPayment.status === 'Cancelled'}
               >
                 <CancelOutlinedIcon style={{ fontSize: 18 }} />
                 Decline Payment
