@@ -42,6 +42,20 @@ export default function Messaging() {
   const pollingRef = useRef(null);
   const [realtimeHealthy, setRealtimeHealthy] = useState(false);
   
+  // Approval confirmation modal state
+  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const [approvalOrderId, setApprovalOrderId] = useState(null);
+  const [approvalEmployeeEmail, setApprovalEmployeeEmail] = useState(null);
+  const [approvalLayoutImage, setApprovalLayoutImage] = useState(null);
+  
+  // Track which orders have been acted upon (approved/cancelled)
+  const [actedOrderIds, setActedOrderIds] = useState(new Set());
+  
+  // Dispute conversation state
+  const [isDisputeMode, setIsDisputeMode] = useState(false);
+  const [disputeOrderId, setDisputeOrderId] = useState(null);
+  const [hasOngoingDispute, setHasOngoingDispute] = useState(false);
+  
   // Upload image to Cloudinary
   const uploadImageToCloudinary = async (imageUri) => {
     try {
@@ -108,6 +122,11 @@ export default function Messaging() {
 
   // Determine conversation partner (employee/customer) from current messages
   const getConversationPartner = () => {
+    // If in dispute mode, always return admin email
+    if (isDisputeMode) {
+      return 'admin@nvago.com';
+    }
+    
     // Prefer the most recent message participant that is not the current user.
     if (messages && messages.length > 0) {
       // messages are ordered ascending by created_at in fetchMessages
@@ -203,8 +222,46 @@ export default function Messaging() {
         console.error('Error fetching messages:', error);
         setMessages([]);
       } else {
+        // Check for ongoing disputes (messages with admin@nvago.com)
+        const disputeMessages = (userMessages || []).filter(msg => 
+          msg.sender === 'admin@nvago.com' || msg.receiver === 'admin@nvago.com'
+        );
+        
+        // Check if the dispute has been resolved
+        const hasResolutionMessage = disputeMessages.some(msg => 
+          msg.text && msg.text.includes('✅ DISPUTE RESOLVED:')
+        );
+        
+        // Check if there are any recent dispute messages (within last 24 hours)
+        // but exclude if there's a resolution message
+        let recentDisputes = [];
+        if (!hasResolutionMessage) {
+          recentDisputes = disputeMessages.filter(msg => {
+            const msgDate = new Date(msg.created_at);
+            const now = new Date();
+            const hoursDiff = (now - msgDate) / (1000 * 60 * 60);
+            return hoursDiff < 24;
+          });
+        }
+        
+        setHasOngoingDispute(recentDisputes.length > 0);
+        
+        // Filter messages based on dispute mode
+        let filteredMessages = userMessages || [];
+        if (isDisputeMode) {
+          // Show only messages with admin@nvago.com
+          filteredMessages = filteredMessages.filter(msg => 
+            msg.sender === 'admin@nvago.com' || msg.receiver === 'admin@nvago.com'
+          );
+        } else {
+          // Show messages excluding admin@nvago.com (regular conversations)
+          filteredMessages = filteredMessages.filter(msg => 
+            msg.sender !== 'admin@nvago.com' && msg.receiver !== 'admin@nvago.com'
+          );
+        }
+        
         // ensure ascending order
-        setMessages(sortAsc(userMessages || []));
+        setMessages(sortAsc(filteredMessages));
         if (!silent) {
           // Animate in only when not silent (initial load)
           Animated.timing(fadeAnim, {
@@ -266,6 +323,9 @@ export default function Messaging() {
           lookup[u.email] = `${u.first_name} ${u.last_name}`.trim();
         });
         
+        // Add admin email to lookup
+        lookup['admin@nvago.com'] = 'Mr. Nicholson Anora (Business Owner)';
+        
         setUserLookup(lookup);
 
         const isEmployee = employeesResult.data?.some(emp => emp.email === email);
@@ -288,12 +348,12 @@ export default function Messaging() {
     initializeApp();
   }, []);
 
-  // Fetch messages when userEmail is set
+  // Fetch messages when userEmail is set or dispute mode changes
   useEffect(() => {
     if (userEmail) {
       fetchMessages();
     }
-  }, [userEmail]);
+  }, [userEmail, isDisputeMode]);
 
   // helper: safely append incoming message if it's relevant and not already present
   const appendIncomingMessage = (incoming) => {
@@ -457,86 +517,130 @@ export default function Messaging() {
   };
 
   const handleApprove = async (orderId, employeeSenderEmail) => {
-    Alert.alert(
-      'Approve Order',
-      'Are you sure you want to approve this order?',
-      [
-        { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Approve', 
-          style: 'default',
-          onPress: async () => {
-            try {
-              const { error: updateError } = await supabase
-                .from('orders')
-                .update({ 
-                  status: 'Printing',
-                  approved: 'yes'
-                })
-                .eq('id', orderId);
+    // Extract the layout image from the SPECIFIC approval request message for this order
+    // Search through messages in reverse order to get the most recent one
+    let approvalMessage = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.text && msg.text.startsWith('[APPROVAL_REQUEST]')) {
+        const msgOrderId = extractOrderId(msg.text);
+        if (msgOrderId === orderId) {
+          approvalMessage = msg;
+          break;
+        }
+      } 
+    }
+    
+    const layoutImage = approvalMessage ? extractImageUrl(approvalMessage.text) : null;
+    
+    console.log('Approval Details:', {
+      orderId,
+      foundMessage: !!approvalMessage,
+      layoutImage,
+      messageText: approvalMessage?.text?.substring(0, 100)
+    });
+    
+    // Show confirmation modal with the layout image
+    setApprovalOrderId(orderId);
+    setApprovalEmployeeEmail(employeeSenderEmail);
+    setApprovalLayoutImage(layoutImage);
+    setApprovalModalVisible(true);
+  };
 
-              if (updateError) throw updateError;
+  const confirmApproval = async () => {
+    const orderId = approvalOrderId;
+    const employeeSenderEmail = approvalEmployeeEmail;
+    const layoutImage = approvalLayoutImage;
+    
+    // Close the modal
+    setApprovalModalVisible(false);
+    
+    try {
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'Printing',
+          approved: 'yes'
+        })
+        .eq('id', orderId);
 
-              const receiver = employeeSenderEmail || (allowedEmails[0] || null);
-              if (receiver) {
-                // ensure sender is authenticated user for RLS
-                const authEmail = await getAuthEmail();
-                if (!authEmail) {
-                  Alert.alert('Authentication required', 'You must be signed in to send messages.');
-                  return;
-                }
+      if (updateError) throw updateError;
 
-                const confirmMessage = {
-                  chat_id: [authEmail, receiver].sort().join('-'),
-                  sender: authEmail,
-                  receiver,
-                  text: `✅ Order #${orderId.slice(0, 8)} approved by customer. Status set to Printing.`,
-                  read: false,
-                  created_at: new Date().toISOString(),
-                };
-                const { error: messageError } = await supabase
-                  .from('messages')
-                  .insert(confirmMessage);
-                if (messageError) {
-                  console.error('Error inserting confirm message:', messageError);
-                  if (messageError.code === '42501') {
-                    Alert.alert(
-                      'Permission denied',
-                      'Insert blocked by database row-level security. Ensure the authenticated user matches the messages RLS policy.'
-                    );
-                  } else {
-                    throw messageError;
-                  }
-                } else {
-                  // Update local messages state immediately
-                  setMessages(prevMessages => [...prevMessages, confirmMessage]);
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 100);
-                }
-              }
+      const receiver = employeeSenderEmail || (allowedEmails[0] || null);
+      if (receiver) {
+        // ensure sender is authenticated user for RLS
+        const authEmail = await getAuthEmail();
+        if (!authEmail) {
+          Alert.alert('Authentication required', 'You must be signed in to send messages.');
+          return;
+        }
 
-              Alert.alert('Success', 'Order approved and moved to printing!');
-            } catch (error) {
-              console.error('Error approving order:', error);
-              Alert.alert('Error', 'Failed to approve order: ' + error.message);
-            }
+        // First, send the layout image back to the employee
+        if (layoutImage) {
+          const imageMessage = {
+            chat_id: [authEmail, receiver].sort().join('-'),
+            sender: authEmail,
+            receiver,
+            text: `[IMAGE]${layoutImage}`,
+            read: false,
+          };
+          const { error: imageMessageError } = await supabase
+            .from('messages')
+            .insert(imageMessage);
+          if (imageMessageError) {
+            console.error('Error sending layout image:', imageMessageError);
           }
         }
-      ],
-      { cancelable: true }
-    );
+
+        // Then send the approval confirmation message
+        const confirmMessage = {
+          chat_id: [authEmail, receiver].sort().join('-'),
+          sender: authEmail,
+          receiver,
+          text: `✅ Order #${orderId.slice(0, 8)} approved by customer. Status set to Printing.`,
+          read: false,
+        };
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert(confirmMessage);
+        if (messageError) {
+          console.error('Error inserting confirm message:', messageError);
+          if (messageError.code === '42501') {
+            Alert.alert(
+              'Permission denied',
+              'Insert blocked by database row-level security. Ensure the authenticated user matches the messages RLS policy.'
+            );
+          } else {
+            throw messageError;
+          }
+        } else {
+          // Refresh messages to show the new ones
+          fetchMessages({ silent: true });
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
+      }
+
+      // Mark this order as acted upon
+      setActedOrderIds(prev => new Set([...prev, orderId]));
+      
+      Alert.alert('Success', 'Order approved and moved to printing!');
+    } catch (error) {
+      console.error('Error approving order:', error);
+      Alert.alert('Error', 'Failed to approve order: ' + error.message);
+    }
   };
 
   const handleCancelOrder = async (orderId, employeeSenderEmail) => {
     Alert.alert(
       'Cancel Order',
-      `Are you sure that you want to cancel your order?\n\nYou need to go to the shop and talk to Mr. Nicholson Anora for any payment and order disputes.`,
+      'Are you sure you want to cancel your order?\n\nAny order and payment disputes will be handled by Mr. Nicholson Anora (Business Owner).',
       [
         { text: 'No', style: 'cancel' },
         { 
-          text: 'Yes, Cancel Order', 
-          style: 'destructive',
+          text: 'Contact Owner', 
+          style: 'default',
           onPress: async () => {
             try {
               const { error: updateError } = await supabase
@@ -568,24 +672,33 @@ export default function Messaging() {
                   .insert(confirmMessage);
                 if (messageError) {
                   console.error('Error inserting cancel message:', messageError);
-                  if (messageError.code === '42501') {
-                    Alert.alert(
-                      'Permission denied',
-                      'Insert blocked by database row-level security. Ensure the authenticated user matches the messages RLS policy.'
-                    );
-                  } else {
-                    throw messageError;
-                  }
-                } else {
-                  // Update local messages state immediately
-                  setMessages(prevMessages => [...prevMessages, confirmMessage]);
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 100);
                 }
               }
 
-              Alert.alert('Cancelled', 'Your order was cancelled and moved to Order History.');
+              // Mark this order as acted upon
+              setActedOrderIds(prev => new Set([...prev, orderId]));
+              
+              // Switch to dispute mode and set the order ID
+              setDisputeOrderId(orderId);
+              setIsDisputeMode(true);
+              setHasOngoingDispute(true);
+              
+              // Prepare initial dispute message
+              const authEmail = await getAuthEmail();
+              if (authEmail) {
+                const disputeMessage = {
+                  chat_id: [authEmail, 'admin@nvago.com'].sort().join('-'),
+                  sender: authEmail,
+                  receiver: 'admin@nvago.com',
+                  text: `🚨 DISPUTE: Order #${orderId.slice(0, 8)} has been cancelled. Customer requesting assistance from business owner.`,
+                  read: false,
+                };
+                await supabase.from('messages').insert(disputeMessage);
+              }
+              
+              // Fetch messages to show the dispute conversation
+              await fetchMessages({ silent: false });
+              
             } catch (error) {
               console.error('Error cancelling order:', error);
               Alert.alert('Error', 'Failed to cancel order: ' + error.message);
@@ -720,7 +833,7 @@ export default function Messaging() {
               <Image
                 source={{ uri: imageUrl }}
                 style={styles.messageImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
               <View style={styles.imageOverlay}>
                 <FontAwesome name="search-plus" size={16} color="#fff" />
@@ -731,24 +844,31 @@ export default function Messaging() {
           
           {/* Approval Buttons */}
           {isApproval && !isMe && orderId && (
-            <View style={styles.approvalButtonsContainer}>
-              <TouchableOpacity 
-                style={styles.approveButton}
-                onPress={() => handleApprove(orderId, msg.sender)}
-                activeOpacity={0.8}
-              >
-                <FontAwesome name="check-circle" size={16} color="#fff" />
-                <Text style={styles.approveButtonText}>Approve Order</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.cancelOrderButton}
-                onPress={() => handleCancelOrder(orderId, msg.sender)}
-                activeOpacity={0.8}
-              >
-                <FontAwesome name="times-circle" size={16} color="#fff" />
-                <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
-              </TouchableOpacity>
-            </View>
+            actedOrderIds.has(orderId) ? (
+              <View style={styles.actedNoticeContainer}>
+                <FontAwesome name="info-circle" size={14} color="#6B7280" />
+                <Text style={styles.actedNoticeText}>You have already responded to this request</Text>
+              </View>
+            ) : (
+              <View style={styles.approvalButtonsContainer}>
+                <TouchableOpacity 
+                  style={styles.approveButton}
+                  onPress={() => handleApprove(orderId, msg.sender)}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome name="check-circle" size={16} color="#fff" />
+                  <Text style={styles.approveButtonText}>Approve Order</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.cancelOrderButton}
+                  onPress={() => handleCancelOrder(orderId, msg.sender)}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome name="times-circle" size={16} color="#fff" />
+                  <Text style={styles.cancelOrderButtonText}>Cancel Order</Text>
+                </TouchableOpacity>
+              </View>
+            )
           )}
           
           {/* Timestamp */}
@@ -778,12 +898,40 @@ export default function Messaging() {
             <FontAwesome name="comments" size={22} color="#fff" />
           </View>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Messages</Text>
+            <Text style={styles.headerTitle}>
+              {isDisputeMode ? 'Dispute with Owner' : 'Messages'}
+            </Text>
             <Text style={styles.headerSubtitle}>
-              {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+              {isDisputeMode 
+                ? 'Mr. Nicholson Anora (Business Owner)'
+                : `${messages.length} ${messages.length === 1 ? 'message' : 'messages'}`
+              }
             </Text>
           </View>
+          {isDisputeMode && (
+            <TouchableOpacity
+              style={styles.backToNormalButton}
+              onPress={() => setIsDisputeMode(false)}
+              activeOpacity={0.8}
+            >
+              <FontAwesome name="arrow-left" size={16} color="#fff" />
+              <Text style={styles.backToNormalText}>Back</Text>
+            </TouchableOpacity>
+          )}
         </View>
+        
+        {/* Ongoing Dispute Banner */}
+        {!isDisputeMode && hasOngoingDispute && (
+          <TouchableOpacity
+            style={styles.disputeBanner}
+            onPress={() => setIsDisputeMode(true)}
+            activeOpacity={0.8}
+          >
+            <FontAwesome name="exclamation-triangle" size={16} color="#FFA500" />
+            <Text style={styles.disputeBannerText}>ONGOING DISPUTE</Text>
+            <FontAwesome name="chevron-right" size={14} color="#FFA500" />
+          </TouchableOpacity>
+        )}
       </LinearGradient>
 
       {/* Messages */}
@@ -883,6 +1031,72 @@ export default function Messaging() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Approval Confirmation Modal */}
+      <Modal
+        visible={approvalModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setApprovalModalVisible(false)}
+      >
+        <View style={styles.approvalModalContainer}>
+          <View style={styles.approvalModalContent}>
+            <View style={styles.approvalModalHeader}>
+              <Text style={styles.approvalModalTitle}>Approve Layout?</Text>
+              <TouchableOpacity
+                style={styles.approvalModalCloseButton}
+                onPress={() => setApprovalModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <FontAwesome name="times" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.approvalModalText}>
+              Are you sure you want to approve this layout?
+            </Text>
+
+            {approvalLayoutImage && (
+              <View style={styles.approvalImageContainer}>
+                <Image
+                  source={{ uri: approvalLayoutImage }}
+                  style={styles.approvalImage}
+                  resizeMode="contain"
+                />
+                <TouchableOpacity
+                  style={styles.viewFullImageButton}
+                  onPress={() => {
+                    setSelectedImage(approvalLayoutImage);
+                    setModalVisible(true);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome name="search-plus" size={16} color="#232B55" />
+                  <Text style={styles.viewFullImageText}>View Full Size</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.approvalModalButtons}>
+              <TouchableOpacity
+                style={styles.approvalModalCancelButton}
+                onPress={() => setApprovalModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.approvalModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.approvalModalConfirmButton}
+                onPress={confirmApproval}
+                activeOpacity={0.8}
+              >
+                <FontAwesome name="check" size={16} color="#fff" />
+                <Text style={styles.approvalModalConfirmText}>Yes, Approve</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -930,6 +1144,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '500',
+  },
+  backToNormalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  backToNormalText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  disputeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFA500',
+  },
+  disputeBannerText: {
+    color: '#FFA500',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 8,
+    marginRight: 8,
   },
   
   // Messages
@@ -1049,10 +1297,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
+    width: '100%',
   },
   messageImage: {
     width: '100%',
-    height: 200,
+    aspectRatio: 1,
+    minHeight: 200,
+    maxHeight: 300,
     backgroundColor: '#F3F4F6',
   },
   imageOverlay: {
@@ -1119,6 +1370,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
+    marginLeft: 8,
+  },
+  
+  // Acted Notice
+  actedNoticeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+  },
+  actedNoticeText: {
+    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '600',
     marginLeft: 8,
   },
   
@@ -1198,5 +1466,113 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height * 0.8,
+  },
+  
+  // Approval Confirmation Modal
+  approvalModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  approvalModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  approvalModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  approvalModalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#232B55',
+  },
+  approvalModalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  approvalModalText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  approvalImageContainer: {
+    marginBottom: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  approvalImage: {
+    width: '100%',
+    height: 250,
+    backgroundColor: '#F3F4F6',
+  },
+  viewFullImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0F2FF',
+    padding: 12,
+  },
+  viewFullImageText: {
+    color: '#232B55',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  approvalModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  approvalModalCancelButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  approvalModalCancelText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  approvalModalConfirmButton: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  approvalModalConfirmText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginLeft: 8,
   },
 });

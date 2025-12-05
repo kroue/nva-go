@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Header.css';
 import nvagologo from '../../assets/nvalogomini.png';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import ChatBubbleOutlineOutlinedIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 
 const AdminHeader = () => {
   const navigate = useNavigate();
@@ -23,6 +24,13 @@ const AdminHeader = () => {
       </div>
 
       <div className="Header-right">
+        <button 
+          className="Header-action-btn" 
+          title="Admin Messages"
+          onClick={() => navigate('/admin/messages')}
+        >
+          <ChatBubbleOutlineOutlinedIcon />
+        </button>
         <button 
           className="Header-action-btn" 
           title="Notifications"

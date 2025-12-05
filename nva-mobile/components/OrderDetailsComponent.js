@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform, Modal, Image } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import * as ImagePicker from 'expo-image-picker';
-
-// Helper function to format 24-hour time to 12-hour format
-const formatTime12Hour = (time24) => {
-  if (!time24) return '';
-  const [hours, minutes] = time24.split(':');
-  let hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  hour = hour % 12;
-  hour = hour ? hour : 12;
-  return `${hour}:${minutes} ${ampm}`;
-};
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, Image } from 'react-native';
 
 const OrderDetailsComponent = ({
   hasFile,
@@ -29,18 +16,10 @@ const OrderDetailsComponent = ({
   isSolventTarp,
   eyelets,
   setEyelets,
-  pickupDate,
-  setPickupDate,
-  pickupTime,
-  setPickupTime,
+  eyeletInstructions,
+  setEyeletInstructions,
   instructions,
   setInstructions,
-  showDatePicker,
-  setShowDatePicker,
-  showTimePicker,
-  setShowTimePicker,
-  handleDateChange,
-  handleTimeChange,
   pickDocument,
   dimWarning,
   dtfWarning
@@ -131,43 +110,16 @@ const OrderDetailsComponent = ({
             value={eyelets}
             onChangeText={setEyelets}
           />
+          <Text style={styles.label}>Eyelet Placement Instructions</Text>
+          <Text style={styles.helperText}>Describe where eyelets should be placed (e.g., "4 corners", "every 2 feet along edges")</Text>
+          <TextInput
+            style={styles.instructions}
+            placeholder="Example: Place eyelets on all 4 corners"
+            value={eyeletInstructions}
+            onChangeText={setEyeletInstructions}
+            multiline
+          />
         </>
-      )}
-
-      <View style={styles.row}>
-        <View style={styles.halfContainer}>
-          <Text style={styles.label}>Pickup Date</Text>
-          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowDatePicker(true)}>
-            <Text style={{ color: pickupDate ? '#222' : '#888' }}>
-              {pickupDate ? pickupDate : 'Select Date'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.halfContainer}>
-          <Text style={styles.label}>Pickup Time</Text>
-          <TouchableOpacity style={styles.inputHalf} onPress={() => setShowTimePicker(true)}>
-            <Text style={{ color: pickupTime ? '#222' : '#888' }}>
-              {pickupTime ? formatTime12Hour(pickupTime) : 'Select Time'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      {showDatePicker && (
-        <DateTimePicker
-          value={pickupDate ? new Date(pickupDate) : new Date()}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-          minimumDate={new Date()}
-        />
-      )}
-      {showTimePicker && (
-        <DateTimePicker
-          value={pickupTime ? new Date(`1970-01-01T${pickupTime}:00`) : new Date()}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleTimeChange}
-        />
       )}
 
       <Text style={styles.label}>Instructions</Text>

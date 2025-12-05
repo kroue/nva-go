@@ -129,6 +129,7 @@ export default function Payment() {
         width: order.width,
         quantity: order.quantity,
         eyelets: order.eyelets,
+        eyelet_instructions: order.eyelet_instructions,
         pickup_date: order.pickup_date,
         pickup_time: order.pickup_time,
         instructions: order.instructions,

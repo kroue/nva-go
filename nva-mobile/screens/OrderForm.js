@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Animated, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
@@ -34,14 +33,9 @@ export default function OrderForm() {
   const [width, setWidth] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [eyelets, setEyelets] = useState('4');
-  const [pickupDate, setPickupDate] = useState('');
-  const [pickupTime, setPickupTime] = useState('');
+  const [eyeletInstructions, setEyeletInstructions] = useState('');
   const [instructions, setInstructions] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
-
-  // Date/Time picker states
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Normalization + product flags
   const normalize = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -129,7 +123,7 @@ export default function OrderForm() {
   );
 
   const { isFormValid, dtfWarning } = useFormValidation(
-    firstName, lastName, contact, address, variants, selectedVariant, quantity, isDTFPrint, requiresDimensions, height, width, isSolventTarp, eyelets, pickupDate, pickupTime, hasFile, attachedFile
+    firstName, lastName, contact, address, variants, selectedVariant, quantity, isDTFPrint, requiresDimensions, height, width, isSolventTarp, eyelets, hasFile, attachedFile
   );
 
   // Animation on mount
@@ -162,37 +156,6 @@ export default function OrderForm() {
     loadCustomer();
   }, [fetchCustomer]);
 
-  // Date/time picker handlers
-  const handleDateChange = (event, selectedDate) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      if (selectedDate.getDay() === 0) {
-        alert('Sundays are not available for pickup.');
-        return;
-      }
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      setPickupDate(dateStr);
-    }
-  };
-
-  const handleTimeChange = (event, selectedTime) => {
-    setShowTimePicker(false);
-    if (selectedTime) {
-      const dayOfWeek = pickupDate ? new Date(pickupDate).getDay() : 1;
-      const isSunday = dayOfWeek === 0;
-      const minHour = isSunday ? 8 : 9;
-      const maxHour = isSunday ? 16 : 19;
-      const selectedHour = selectedTime.getHours();
-      if (selectedHour < minHour || selectedHour > maxHour) {
-        alert(`Pickup time must be between ${minHour}am and ${maxHour > 12 ? maxHour - 12 : maxHour}pm.`);
-        return;
-      }
-      const hours = selectedTime.getHours().toString().padStart(2, '0');
-      const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
-      setPickupTime(`${hours}:${minutes}`);
-    }
-  };
-
   const handleCheckout = async () => {
     if (!isFormValid()) {
       alert('Please fill out all required fields.');
@@ -218,8 +181,7 @@ export default function OrderForm() {
       width: requiresDimensions ? parseFloat(width) : null,
       quantity: parseInt(quantity) || 1,
       eyelets: isSolventTarp ? (parseInt(eyelets) || 0) : null,
-      pickup_date: pickupDate,
-      pickup_time: pickupTime,
+      eyelet_instructions: isSolventTarp ? (eyeletInstructions || null) : null,
       instructions,
       total,
       status: 'Validation',
@@ -356,13 +318,8 @@ export default function OrderForm() {
               quantity={quantity} setQuantity={setQuantity}
               isSolventTarp={isSolventTarp}
               eyelets={eyelets} setEyelets={setEyelets}
-              pickupDate={pickupDate} setPickupDate={setPickupDate}
-              pickupTime={pickupTime} setPickupTime={setPickupTime}
+              eyeletInstructions={eyeletInstructions} setEyeletInstructions={setEyeletInstructions}
               instructions={instructions} setInstructions={setInstructions}
-              showDatePicker={showDatePicker} setShowDatePicker={setShowDatePicker}
-              showTimePicker={showTimePicker} setShowTimePicker={setShowTimePicker}
-              handleDateChange={handleDateChange}
-              handleTimeChange={handleTimeChange}
               pickDocument={pickDocument}
               dimWarning={hookDimWarning}
               dtfWarning={dtfWarning}

@@ -92,7 +92,7 @@ export default function TrackOrder() {
         .from('orders')
         .select('*')
         .eq('email', email)
-        .not('status', 'in', ['Finished', 'Cancelled', 'Denied'])
+        .not('status', 'in', '(Finished,Cancelled,Denied)')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -100,6 +100,10 @@ export default function TrackOrder() {
       console.log('TrackOrder primary fetch result:', { data, error });
 
       if (data) {
+        console.log('Order eyelet data:', { 
+          eyelets: data.eyelets, 
+          eyelet_instructions: data.eyelet_instructions 
+        });
         setOrder(data);
       } else {
         // fallback: try without status filter to see if an order exists but got excluded
@@ -412,27 +416,38 @@ export default function TrackOrder() {
             </View>
           )}
 
+          {/* Eyelet Instructions */}
+          {order.eyelet_instructions && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconContainer}>
+                <FontAwesome name="map-pin" size={16} color="#232B55" />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Eyelet Placement</Text>
+                <Text style={styles.infoValue}>{order.eyelet_instructions}</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.divider} />
 
-          {/* Pickup Date */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <FontAwesome name="calendar" size={16} color="#232B55" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Pickup Date</Text>
-              <Text style={styles.infoValue}>{order.pickup_date}</Text>
-            </View>
-          </View>
-
-          {/* Pickup Time */}
+          {/* Estimated Pickup Time */}
           <View style={styles.infoRow}>
             <View style={styles.infoIconContainer}>
               <FontAwesome name="clock-o" size={16} color="#232B55" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Pickup Time</Text>
-              <Text style={styles.infoValue}>{order.pickup_time}</Text>
+              <Text style={styles.infoLabel}>Estimated Ready Time</Text>
+              <Text style={styles.infoValue}>
+                {order.quantity >= 10 
+                  ? '3 business days' 
+                  : '1 hour (9am - 7pm)'}
+              </Text>
+              <Text style={styles.infoSubtext}>
+                {order.quantity >= 10 
+                  ? 'Bulk order processing time' 
+                  : 'Ready for same-day pickup'}
+              </Text>
             </View>
           </View>
 
@@ -737,6 +752,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+  infoSubtext: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   instructionsSection: {
     marginTop: 4,

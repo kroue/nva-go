@@ -19,8 +19,6 @@ const useFormValidation = (
   width,
   isSolventTarp,
   eyelets,
-  pickupDate,
-  pickupTime,
   hasFile,
   attachedFile
 ) => {
@@ -52,7 +50,6 @@ const useFormValidation = (
       if (w < 3 && h < 3) return false;               // at least one side must be >= 3
     }
     if (isSolventTarp && (!eyelets || isNaN(eyelets) || parseInt(eyelets) < 0)) return false;
-    if (!pickupDate || !pickupTime) return false;
     // If yes (already have file), require attached file
     if (hasFile && !attachedFile) return false;
     return true;
