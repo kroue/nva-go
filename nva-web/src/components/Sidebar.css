@@ -27,6 +27,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   border-right: 1px solid var(--border-color);
+  z-index: 1000;
 }
 
 .Sidebar::-webkit-scrollbar {
@@ -212,7 +213,7 @@
   padding: 8px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
-  z-index: 100;
+  z-index: 10000;
   animation: slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

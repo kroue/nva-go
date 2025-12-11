@@ -53,52 +53,95 @@ const AdminMessages = () => {
 
   // Subscription for real-time updates
   useEffect(() => {
+    console.log('Setting up admin realtime subscription...');
+    
     const channel = supabase
-      .channel(`admin-messages`)
+      .channel(`admin-messages-${Date.now()}`) // Unique channel name to avoid conflicts
       .on(
         'postgres_changes',
         { 
           event: 'INSERT', 
           schema: 'public', 
-          table: 'messages'
+          table: 'adminmessages'
         },
         async payload => {
-          console.log('Admin realtime payload received:', payload);
+          console.log('🔥 Admin realtime INSERT payload received:', payload);
           const newMsg = payload?.new;
-          if (!newMsg) return;
+          if (!newMsg) {
+            console.log('No message in payload');
+            return;
+          }
+
+          console.log('New message:', newMsg, 'Admin email:', ADMIN_EMAIL);
 
           // Only react when the new message involves admin
           if (newMsg.receiver === ADMIN_EMAIL || newMsg.sender === ADMIN_EMAIL) {
+            console.log('Message involves admin, fetching chats...');
             try {
               await fetchChats();
               if (selectedChat && selectedChat.id === newMsg.chat_id) {
+                console.log('Message is for selected chat, fetching messages...');
                 await fetchMessages(selectedChat.id);
               }
             } catch (err) {
-              console.error('Error handling realtime payload:', err);
+              console.error('Error handling realtime INSERT payload:', err);
+            }
+          } else {
+            console.log('Message does not involve admin, ignoring');
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'adminmessages'
+        },
+        async payload => {
+          console.log('🔥 Admin realtime UPDATE payload received:', payload);
+          const updatedMsg = payload?.new;
+          if (!updatedMsg) return;
+
+          // Refetch when messages are updated (like marking as resolved)
+          if (updatedMsg.receiver === ADMIN_EMAIL || updatedMsg.sender === ADMIN_EMAIL) {
+            try {
+              await fetchChats();
+              if (selectedChat && selectedChat.id === updatedMsg.chat_id) {
+                await fetchMessages(selectedChat.id);
+              }
+            } catch (err) {
+              console.error('Error handling realtime UPDATE payload:', err);
             }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Admin realtime subscribe status:', status, 'Listening to adminmessages table');
+      });
 
     return () => {
+      console.log('Unsubscribing from admin-messages channel');
       supabase.removeChannel(channel);
     };
   }, [selectedChat]);
 
   const fetchChats = async () => {
     try {
-      console.log('Fetching admin chats');
+      console.log('Fetching admin chats from adminmessages table');
       
-      // Fetch all messages where admin is sender or receiver
+      // Fetch all messages from adminmessages table where admin is sender or receiver
       const { data, error } = await supabase
-        .from('messages')
+        .from('adminmessages')
         .select('*')
         .or(`sender.eq.${ADMIN_EMAIL},receiver.eq.${ADMIN_EMAIL}`)
         .order('created_at', { ascending: false });
 
-      console.log('Admin chats query result:', { dataCount: data?.length, error });
+      console.log('Admin chats query result:', { 
+        dataCount: data?.length, 
+        error, 
+        allMessages: data 
+      });
 
       if (error) {
         console.error('Error fetching admin chats:', error);
@@ -111,16 +154,16 @@ const AdminMessages = () => {
         chatGroups[message.chat_id].push(message);
       });
 
+      console.log('Chat groups:', Object.keys(chatGroups).length, chatGroups);
+
       const chatList = Object.keys(chatGroups).map(chatId => {
         const chatMessages = chatGroups[chatId];
         const latestMessage = chatMessages[0];
         const otherParticipant =
           latestMessage.sender === ADMIN_EMAIL ? latestMessage.receiver : latestMessage.sender;
         
-        // Check if this is a dispute conversation (has dispute message)
-        const hasDispute = chatMessages.some(m => 
-          m.text && (m.text.includes('🚨 DISPUTE:') || m.text.includes('DISPUTE'))
-        );
+        // Check if dispute is resolved (all messages in this chat have is_resolved = true)
+        const hasUnresolvedMessages = chatMessages.some(m => !m.is_resolved);
 
         return {
           id: chatId,
@@ -128,7 +171,8 @@ const AdminMessages = () => {
           latestMessage: latestMessage.text || '',
           timestamp: latestMessage.created_at,
           unreadCount: chatMessages.filter(m => !m.read && m.receiver === ADMIN_EMAIL).length,
-          isDispute: hasDispute
+          isDispute: hasUnresolvedMessages,
+          isResolved: !hasUnresolvedMessages
         };
       });
 
@@ -139,6 +183,7 @@ const AdminMessages = () => {
         return new Date(b.timestamp) - new Date(a.timestamp);
       });
 
+      console.log('Final chat list:', chatList);
       setChats(chatList);
 
       // Load display names for all participants
@@ -175,12 +220,16 @@ const AdminMessages = () => {
       console.log('Fetching messages for chat:', chatId);
       
       const { data, error } = await supabase
-        .from('messages')
+        .from('adminmessages')
         .select('*')
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
 
-      console.log('Messages query result:', { dataCount: data?.length, error });
+      console.log('Messages query result:', { 
+        dataCount: data?.length, 
+        error,
+        allMessages: data 
+      });
 
       if (error) {
         console.error('Error fetching messages:', error);
@@ -191,7 +240,7 @@ const AdminMessages = () => {
 
       // Mark messages as read
       await supabase
-        .from('messages')
+        .from('adminmessages')
         .update({ read: true })
         .eq('chat_id', chatId)
         .eq('receiver', ADMIN_EMAIL);
@@ -216,7 +265,8 @@ const AdminMessages = () => {
         sender: ADMIN_EMAIL,
         receiver: selectedChat.participant,
         text: newMessage.trim(),
-        read: false
+        read: false,
+        is_resolved: false
       };
 
       // Optimistic add
@@ -225,7 +275,7 @@ const AdminMessages = () => {
 
       // Insert and return DB row
       const { data, error } = await supabase
-        .from('messages')
+        .from('adminmessages')
         .insert(messageData)
         .select()
         .single();
@@ -329,13 +379,14 @@ const AdminMessages = () => {
         chat_id: selectedChat.id,
         sender: ADMIN_EMAIL,
         receiver: selectedChat.participant,
-        text: '✅ DISPUTE RESOLVED: This dispute has been resolved by the business owner. Thank you for your patience.',
-        read: false
+        text: '[DISPUTE_RESOLVED]\n✅ DISPUTE RESOLVED: This dispute has been resolved by the business owner. Thank you for your patience.',
+        read: false,
+        is_resolved: true
       };
 
       // Send resolution message
-      const { data, error } = await supabase
-        .from('messages')
+      const { data, error} = await supabase
+        .from('adminmessages')
         .insert(messageData)
         .select()
         .single();
@@ -345,6 +396,12 @@ const AdminMessages = () => {
         alert('Failed to resolve dispute: ' + error.message);
         return;
       }
+
+      // Mark all messages in this chat as resolved
+      await supabase
+        .from('adminmessages')
+        .update({ is_resolved: true })
+        .eq('chat_id', selectedChat.id);
 
       // Refresh messages and chats
       await fetchMessages(selectedChat.id);
@@ -478,10 +535,15 @@ const AdminMessages = () => {
                   <button
                     className="resolve-dispute-btn"
                     onClick={handleResolveDispute}
-                    title="Resolve Dispute"
+                    disabled={selectedChat.isResolved}
+                    title={selectedChat.isResolved ? "Dispute Already Resolved" : "Resolve Dispute"}
+                    style={{
+                      opacity: selectedChat.isResolved ? 0.5 : 1,
+                      cursor: selectedChat.isResolved ? 'not-allowed' : 'pointer'
+                    }}
                   >
                     <CheckCircleOutlinedIcon style={{ fontSize: 18, marginRight: 6 }} />
-                    RESOLVE DISPUTE
+                    {selectedChat.isResolved ? 'DISPUTE RESOLVED' : 'RESOLVE DISPUTE'}
                   </button>
                 )}
               </div>

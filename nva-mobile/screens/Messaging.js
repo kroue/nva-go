@@ -42,6 +42,10 @@ export default function Messaging() {
   const pollingRef = useRef(null);
   const [realtimeHealthy, setRealtimeHealthy] = useState(false);
   
+  // Stable refs for archive state to prevent recalculation
+  const orderEmployeeMapRef = useRef(new Map());
+  const orderTimeRangesRef = useRef(new Map());
+  
   // Approval confirmation modal state
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
   const [approvalOrderId, setApprovalOrderId] = useState(null);
@@ -55,6 +59,11 @@ export default function Messaging() {
   const [isDisputeMode, setIsDisputeMode] = useState(false);
   const [disputeOrderId, setDisputeOrderId] = useState(null);
   const [hasOngoingDispute, setHasOngoingDispute] = useState(false);
+  
+  // Archive state
+  const [archivedConversations, setArchivedConversations] = useState(new Set());
+  const [showArchived, setShowArchived] = useState(false);
+  const [hasArchivedMessages, setHasArchivedMessages] = useState(false);
   
   // Upload image to Cloudinary
   const uploadImageToCloudinary = async (imageUri) => {
@@ -212,66 +221,76 @@ export default function Messaging() {
     if (!silent) setLoading(true);
     
     try {
-      const { data: userMessages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
-        .order('created_at', { ascending: true });
-    
-      if (error) {
-        console.error('Error fetching messages:', error);
-        setMessages([]);
-      } else {
-        // Check for ongoing disputes (messages with admin@nvago.com)
-        const disputeMessages = (userMessages || []).filter(msg => 
-          msg.sender === 'admin@nvago.com' || msg.receiver === 'admin@nvago.com'
-        );
+      // If in dispute mode, fetch from adminmessages table
+      if (isDisputeMode) {
+        const { data: adminMessages, error } = await supabase
+          .from('adminmessages')
+          .select('*')
+          .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
+          .eq('is_resolved', false)
+          .order('created_at', { ascending: true });
         
-        // Check if the dispute has been resolved
-        const hasResolutionMessage = disputeMessages.some(msg => 
-          msg.text && msg.text.includes('✅ DISPUTE RESOLVED:')
-        );
-        
-        // Check if there are any recent dispute messages (within last 24 hours)
-        // but exclude if there's a resolution message
-        let recentDisputes = [];
-        if (!hasResolutionMessage) {
-          recentDisputes = disputeMessages.filter(msg => {
-            const msgDate = new Date(msg.created_at);
-            const now = new Date();
-            const hoursDiff = (now - msgDate) / (1000 * 60 * 60);
-            return hoursDiff < 24;
-          });
-        }
-        
-        setHasOngoingDispute(recentDisputes.length > 0);
-        
-        // Filter messages based on dispute mode
-        let filteredMessages = userMessages || [];
-        if (isDisputeMode) {
-          // Show only messages with admin@nvago.com
-          filteredMessages = filteredMessages.filter(msg => 
-            msg.sender === 'admin@nvago.com' || msg.receiver === 'admin@nvago.com'
-          );
+        if (error) {
+          console.error('Error fetching admin messages:', error);
+          setMessages([]);
         } else {
-          // Show messages excluding admin@nvago.com (regular conversations)
-          filteredMessages = filteredMessages.filter(msg => 
-            msg.sender !== 'admin@nvago.com' && msg.receiver !== 'admin@nvago.com'
-          );
+          setMessages(adminMessages || []);
+          if (!silent) {
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 500,
+              useNativeDriver: true,
+            }).start();
+          }
+          scrollToBottom(100);
         }
+      } else {
+        // Build query for regular messages based on archive view
+        let query = supabase
+          .from('messages')
+          .select('*')
+          .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
+          .eq('is_archived', showArchived ? 'true' : 'false');
         
-        // ensure ascending order
-        setMessages(sortAsc(filteredMessages));
-        if (!silent) {
-          // Animate in only when not silent (initial load)
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }).start();
+        const { data: userMessages, error } = await query.order('created_at', { ascending: true });
+      
+        if (error) {
+          console.error('Error fetching messages:', error);
+          setMessages([]);
+        } else {
+          setMessages(userMessages || []);
+          
+          // Check if there are any archived messages for this user
+          if (!showArchived) {
+            const { data: archivedCheck } = await supabase
+              .from('messages')
+              .select('id')
+              .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
+              .eq('is_archived', 'true')
+              .limit(1);
+            
+            setHasArchivedMessages(archivedCheck && archivedCheck.length > 0);
+            
+            // Check for ongoing disputes in adminmessages table
+            const { data: disputeCheck } = await supabase
+              .from('adminmessages')
+              .select('id')
+              .or(`sender.eq.${userEmail},receiver.eq.${userEmail}`)
+              .eq('is_resolved', false)
+              .limit(1);
+            
+            setHasOngoingDispute(disputeCheck && disputeCheck.length > 0);
+          }
+          
+          if (!silent) {
+            Animated.timing(fadeAnim, {
+              toValue: 1,
+              duration: 500,
+              useNativeDriver: true,
+            }).start();
+          }
+          scrollToBottom(100);
         }
-        // always scroll but with a small delay to avoid jumpy UI
-        scrollToBottom(100);
       }
     } catch (error) {
       console.error('Exception fetching messages:', error);
@@ -280,6 +299,22 @@ export default function Messaging() {
       if (!silent) setLoading(false);
     }
   };
+
+  // Load acted order IDs from AsyncStorage
+  useEffect(() => {
+    const loadStoredData = async () => {
+      try {
+        const storedActed = await AsyncStorage.getItem('actedOrderIds');
+        
+        if (storedActed) {
+          setActedOrderIds(new Set(JSON.parse(storedActed)));
+        }
+      } catch (error) {
+        console.error('Error loading stored data:', error);
+      }
+    };
+    loadStoredData();
+  }, []);
 
   // Initialize user and fetch data
   useEffect(() => {
@@ -348,16 +383,23 @@ export default function Messaging() {
     initializeApp();
   }, []);
 
-  // Fetch messages when userEmail is set or dispute mode changes
+  // Fetch messages when userEmail is set or dispute mode changes or archive view changes
   useEffect(() => {
     if (userEmail) {
       fetchMessages();
     }
-  }, [userEmail, isDisputeMode]);
+  }, [userEmail, isDisputeMode, showArchived]);
 
   // helper: safely append incoming message if it's relevant and not already present
   const appendIncomingMessage = (incoming) => {
     if (!incoming) return;
+    
+    // If viewing archived messages, refetch instead of appending to maintain proper filtering
+    if (showArchived) {
+      fetchMessages({ silent: true });
+      return;
+    }
+    
     setMessages(prev => {
       const exists = incoming.id ? prev.some(m => m.id === incoming.id) :
         prev.some(m => m.text === incoming.text && m.created_at === incoming.created_at && m.sender === incoming.sender);
@@ -369,20 +411,31 @@ export default function Messaging() {
   };
 
   // Subscription for realtime updates (listen globally, filter client-side, append)
+  // Only subscribe when viewing active messages, not archived
   useEffect(() => {
-    if (!userEmail) return;
+    if (!userEmail || showArchived) return;
 
-    const channel = supabase.channel(`messages-${userEmail}`);
+    // Subscribe to the appropriate table based on dispute mode
+    const tableName = isDisputeMode ? 'adminmessages' : 'messages';
+    const channel = supabase.channel(`${tableName}-${userEmail}`);
+    
+    // Listen for INSERT events
     channel.on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'messages' },
+      { event: 'INSERT', schema: 'public', table: tableName },
       async payload => {
         try {
-          console.log('Realtime payload:', payload);
+          console.log('Realtime INSERT payload:', payload);
           const newMsg = payload?.new;
           if (!newMsg) return;
 
-          if (newMsg.receiver === userEmail || newMsg.sender === userEmail) {
+          // For messages table, only append non-archived messages
+          // For adminmessages table, only append non-resolved messages
+          const shouldAppend = isDisputeMode 
+            ? ((newMsg.receiver === userEmail || newMsg.sender === userEmail) && !newMsg.is_resolved)
+            : ((newMsg.receiver === userEmail || newMsg.sender === userEmail) && newMsg.is_archived !== 'true');
+
+          if (shouldAppend) {
             appendIncomingMessage(newMsg);
 
             Notifications.scheduleNotificationAsync({
@@ -394,14 +447,33 @@ export default function Messaging() {
             });
           }
         } catch (err) {
-          console.error('Error handling realtime payload:', err);
+          console.error('Error handling realtime INSERT payload:', err);
         }
       }
     );
+    
+    // Listen for UPDATE events (for dispute resolution)
+    if (isDisputeMode) {
+      channel.on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'adminmessages' },
+        async payload => {
+          try {
+            console.log('Realtime UPDATE payload:', payload);
+            // Refetch messages when dispute is resolved
+            if (payload?.new?.is_resolved) {
+              await fetchMessages({ silent: true });
+            }
+          } catch (err) {
+            console.error('Error handling realtime UPDATE payload:', err);
+          }
+        }
+      );
+    }
 
     // subscribe and update health flag for polling control
     channel.subscribe((status) => {
-      console.log('Realtime channel subscribe status:', status);
+      console.log('Realtime channel subscribe status:', status, 'Table:', tableName, 'User:', userEmail, 'DisputeMode:', isDisputeMode);
       // mark healthy when subscribed, otherwise unhealthy
       setRealtimeHealthy(status === 'SUBSCRIBED');
     });
@@ -422,7 +494,7 @@ export default function Messaging() {
       try { supabase.removeChannel(channel); } catch (e) { console.warn('removeChannel error', e); }
       subscription.remove();
     };
-  }, [userEmail, userLookup]);
+  }, [userEmail, userLookup, showArchived, isDisputeMode]);
 
   // Polling effect: only poll when realtime is not healthy
   useEffect(() => {
@@ -476,9 +548,17 @@ export default function Messaging() {
       read: false
     };
     
+    // If in dispute mode, send to adminmessages table, otherwise to messages table
+    const tableName = isDisputeMode ? 'adminmessages' : 'messages';
+    
+    // Add is_resolved field for adminmessages
+    if (isDisputeMode) {
+      payload.is_resolved = false;
+    }
+    
     setInput('');
     
-    const { data, error } = await supabase.from('messages').insert(payload).select().single();
+    const { data, error } = await supabase.from(tableName).insert(payload).select().single();
     if (error) {
       console.error('Error sending message:', error);
       if (error.code === '42501') {
@@ -516,28 +596,10 @@ export default function Messaging() {
     return null;
   };
 
-  const handleApprove = async (orderId, employeeSenderEmail) => {
-    // Extract the layout image from the SPECIFIC approval request message for this order
-    // Search through messages in reverse order to get the most recent one
-    let approvalMessage = null;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
-      if (msg.text && msg.text.startsWith('[APPROVAL_REQUEST]')) {
-        const msgOrderId = extractOrderId(msg.text);
-        if (msgOrderId === orderId) {
-          approvalMessage = msg;
-          break;
-        }
-      } 
-    }
-    
-    const layoutImage = approvalMessage ? extractImageUrl(approvalMessage.text) : null;
-    
+  const handleApprove = async (orderId, employeeSenderEmail, layoutImage) => {
     console.log('Approval Details:', {
       orderId,
-      foundMessage: !!approvalMessage,
-      layoutImage,
-      messageText: approvalMessage?.text?.substring(0, 100)
+      layoutImage
     });
     
     // Show confirmation modal with the layout image
@@ -623,7 +685,15 @@ export default function Messaging() {
       }
 
       // Mark this order as acted upon
-      setActedOrderIds(prev => new Set([...prev, orderId]));
+      const newActedOrderIds = new Set([...actedOrderIds, orderId]);
+      setActedOrderIds(newActedOrderIds);
+      
+      // Persist to AsyncStorage
+      try {
+        await AsyncStorage.setItem('actedOrderIds', JSON.stringify([...newActedOrderIds]));
+      } catch (error) {
+        console.error('Error saving acted order IDs:', error);
+      }
       
       Alert.alert('Success', 'Order approved and moved to printing!');
     } catch (error) {
@@ -650,20 +720,23 @@ export default function Messaging() {
 
               if (updateError) throw updateError;
 
+              // Get authenticated email
+              const authEmail = await getAuthEmail();
+              if (!authEmail) {
+                Alert.alert('Authentication required', 'You must be signed in to send messages.');
+                return;
+              }
+
               const receiver = employeeSenderEmail || (allowedEmails[0] || null);
               if (receiver) {
-                // ensure sender is authenticated user for RLS
-                const authEmail = await getAuthEmail();
-                if (!authEmail) {
-                  Alert.alert('Authentication required', 'You must be signed in to send messages.');
-                  return;
-                }
-
+                const chatId = [authEmail, receiver].sort().join('-');
+                
+                // Send cancel message to regular messages
                 const confirmMessage = {
-                  chat_id: [authEmail, receiver].sort().join('-'),
+                  chat_id: chatId,
                   sender: authEmail,
                   receiver,
-                  text: `❌ Order #${orderId.slice(0, 8)} cancelled by customer.`,
+                  text: `[ORDER_CANCELLED]|${orderId}\n❌ Order #${orderId.slice(0, 8)} cancelled by customer.`,
                   read: false,
                   created_at: new Date().toISOString(),
                 };
@@ -673,30 +746,53 @@ export default function Messaging() {
                 if (messageError) {
                   console.error('Error inserting cancel message:', messageError);
                 }
+                
+                // Archive all messages in this chat
+                const { error: archiveErr } = await supabase
+                  .from('messages')
+                  .update({ is_archived: 'true' })
+                  .eq('chat_id', chatId);
+                
+                if (archiveErr) {
+                  console.error('Error archiving messages:', archiveErr);
+                }
               }
 
               // Mark this order as acted upon
-              setActedOrderIds(prev => new Set([...prev, orderId]));
+              const newActedOrderIds = new Set([...actedOrderIds, orderId]);
+              setActedOrderIds(newActedOrderIds);
               
-              // Switch to dispute mode and set the order ID
+              // Persist to AsyncStorage
+              try {
+                await AsyncStorage.setItem('actedOrderIds', JSON.stringify([...newActedOrderIds]));
+              } catch (error) {
+                console.error('Error saving acted order IDs:', error);
+              }
+              
+              // Create dispute in adminmessages table
+              const adminChatId = [authEmail, 'admin@nvago.com'].sort().join('-');
+              const disputeMessage = {
+                chat_id: adminChatId,
+                sender: authEmail,
+                receiver: 'admin@nvago.com',
+                text: `🚨 DISPUTE: Order #${orderId.slice(0, 8)} has been cancelled. Customer requesting assistance from business owner.`,
+                read: false,
+                is_resolved: false,
+              };
+              const { error: disputeErr } = await supabase
+                .from('adminmessages')
+                .insert(disputeMessage);
+              
+              if (disputeErr) {
+                console.error('Error creating dispute:', disputeErr);
+              }
+              
+              // Switch to dispute mode
               setDisputeOrderId(orderId);
               setIsDisputeMode(true);
               setHasOngoingDispute(true);
               
-              // Prepare initial dispute message
-              const authEmail = await getAuthEmail();
-              if (authEmail) {
-                const disputeMessage = {
-                  chat_id: [authEmail, 'admin@nvago.com'].sort().join('-'),
-                  sender: authEmail,
-                  receiver: 'admin@nvago.com',
-                  text: `🚨 DISPUTE: Order #${orderId.slice(0, 8)} has been cancelled. Customer requesting assistance from business owner.`,
-                  read: false,
-                };
-                await supabase.from('messages').insert(disputeMessage);
-              }
-              
-              // Fetch messages to show the dispute conversation
+              // Fetch admin messages
               await fetchMessages({ silent: false });
               
             } catch (error) {
@@ -853,7 +949,7 @@ export default function Messaging() {
               <View style={styles.approvalButtonsContainer}>
                 <TouchableOpacity 
                   style={styles.approveButton}
-                  onPress={() => handleApprove(orderId, msg.sender)}
+                  onPress={() => handleApprove(orderId, msg.sender, imageUrl)}
                   activeOpacity={0.8}
                 >
                   <FontAwesome name="check-circle" size={16} color="#fff" />
@@ -904,11 +1000,13 @@ export default function Messaging() {
             <Text style={styles.headerSubtitle}>
               {isDisputeMode 
                 ? 'Mr. Nicholson Anora (Business Owner)'
-                : `${messages.length} ${messages.length === 1 ? 'message' : 'messages'}`
+                : showArchived
+                  ? `${messages.length} archived ${messages.length === 1 ? 'message' : 'messages'}`
+                  : `${messages.length} ${messages.length === 1 ? 'message' : 'messages'}`
               }
             </Text>
           </View>
-          {isDisputeMode && (
+          {isDisputeMode ? (
             <TouchableOpacity
               style={styles.backToNormalButton}
               onPress={() => setIsDisputeMode(false)}
@@ -917,21 +1015,33 @@ export default function Messaging() {
               <FontAwesome name="arrow-left" size={16} color="#fff" />
               <Text style={styles.backToNormalText}>Back</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {hasOngoingDispute && (
+                <TouchableOpacity
+                  style={[styles.disputeChatButton, isDisputeMode && styles.disputeChatButtonActive]}
+                  onPress={() => setIsDisputeMode(true)}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome name="exclamation-triangle" size={16} color="#fff" />
+                  <Text style={styles.disputeChatButtonText}>Dispute Chat</Text>
+                </TouchableOpacity>
+              )}
+              {hasArchivedMessages && (
+                <TouchableOpacity
+                  style={[styles.archiveButton, showArchived && styles.archiveButtonActive]}
+                  onPress={() => setShowArchived(!showArchived)}
+                  activeOpacity={0.8}
+                >
+                  <FontAwesome name="archive" size={16} color="#fff" />
+                  <Text style={styles.archiveButtonText}>
+                    {showArchived ? 'Active' : 'Archive'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
-        
-        {/* Ongoing Dispute Banner */}
-        {!isDisputeMode && hasOngoingDispute && (
-          <TouchableOpacity
-            style={styles.disputeBanner}
-            onPress={() => setIsDisputeMode(true)}
-            activeOpacity={0.8}
-          >
-            <FontAwesome name="exclamation-triangle" size={16} color="#FFA500" />
-            <Text style={styles.disputeBannerText}>ONGOING DISPUTE</Text>
-            <FontAwesome name="chevron-right" size={14} color="#FFA500" />
-          </TouchableOpacity>
-        )}
       </LinearGradient>
 
       {/* Messages */}
@@ -966,41 +1076,51 @@ export default function Messaging() {
         )}
       </ScrollView>
 
-      {/* Input Bar */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity 
-          style={styles.attachButton} 
-          onPress={pickImage}
-          disabled={uploading}
-          activeOpacity={0.7}
-        >
-          {uploading ? (
-            <ActivityIndicator size="small" color="#232B55" />
-          ) : (
-            <FontAwesome name="camera" size={20} color="#232B55" />
-          )}
-        </TouchableOpacity>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#9CA3AF"
-          value={input}
-          onChangeText={setInput}
-          onSubmitEditing={sendMessage}
-          multiline
-          maxLength={500}
-        />
-        
-        <TouchableOpacity 
-          style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]} 
-          onPress={sendMessage}
-          disabled={!input.trim()}
-          activeOpacity={0.8}
-        >
-          <FontAwesome name="send" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {/* Input Bar - Hidden when viewing archived messages */}
+      {!showArchived && (
+        <View style={styles.inputContainer}>
+          <TouchableOpacity 
+            style={styles.attachButton} 
+            onPress={pickImage}
+            disabled={uploading}
+            activeOpacity={0.7}
+          >
+            {uploading ? (
+              <ActivityIndicator size="small" color="#232B55" />
+            ) : (
+              <FontAwesome name="camera" size={20} color="#232B55" />
+            )}
+          </TouchableOpacity>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Type a message..."
+            placeholderTextColor="#9CA3AF"
+            value={input}
+            onChangeText={setInput}
+            onSubmitEditing={sendMessage}
+            multiline
+            maxLength={500}
+          />
+          
+          <TouchableOpacity 
+            style={[styles.sendButton, !input.trim() && styles.sendButtonDisabled]} 
+            onPress={sendMessage}
+            disabled={!input.trim()}
+            activeOpacity={0.8}
+          >
+            <FontAwesome name="send" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+      
+      {/* Archive View Notice */}
+      {showArchived && (
+        <View style={styles.archiveNotice}>
+          <FontAwesome name="info-circle" size={16} color="#6B7280" />
+          <Text style={styles.archiveNoticeText}>Viewing archived messages (read-only)</Text>
+        </View>
+      )}
 
       {/* Full Screen Image Modal */}
       <Modal
@@ -1160,24 +1280,42 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  disputeBanner: {
+  disputeChatButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 165, 0, 0.2)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginTop: 12,
+    backgroundColor: 'rgba(255, 165, 0, 0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
+    borderColor: 'rgba(255, 165, 0, 0.5)',
+  },
+  disputeChatButtonActive: {
+    backgroundColor: 'rgba(255, 165, 0, 0.5)',
     borderColor: '#FFA500',
   },
-  disputeBannerText: {
-    color: '#FFA500',
+  disputeChatButtonText: {
+    color: '#fff',
     fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 8,
-    marginRight: 8,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  archiveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  archiveButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  archiveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   
   // Messages
@@ -1439,6 +1577,24 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: '#9CA3AF',
     opacity: 0.5,
+  },
+  
+  // Archive Notice
+  archiveNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  archiveNoticeText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   
   // Modal

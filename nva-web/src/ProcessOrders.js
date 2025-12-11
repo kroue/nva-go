@@ -149,8 +149,6 @@ Order ID: ${orderId}
 Product: ${order.product_name || order.variant}
 Size: ${order.height && order.width ? `${order.height} × ${order.width}` : 'Custom size'}
 Quantity: ${order.quantity} pcs
-Pickup Date: ${order.pickup_date}
-Pickup Time: ${order.pickup_time}
 
 Please come to our store to pick up your order.`;
 
@@ -166,6 +164,46 @@ Please come to our store to pick up your order.`;
           const { error: msgErr } = await supabase.from('messages').insert(messageData);
           if (msgErr) {
             console.error('Error sending ready for pickup message:', msgErr);
+          }
+        }
+      }
+
+      // Send message if status is 'Finished'
+      if (newStatus === 'Finished') {
+        if (order && order.email) {
+          const messageText = `[PICKUP_READY]|${orderId}
+Your order has been completed and picked up. Thank you for your business!
+
+Order ID: ${orderId}
+Product: ${order.product_name || order.variant}
+
+This conversation will now be archived.`;
+
+          const chatId = [employee.email, order.email].sort().join('-');
+          const messageData = {
+            sender: employee.email,
+            receiver: order.email,
+            text: messageText,
+            chat_id: chatId,
+            created_at: new Date().toISOString(),
+            read: false
+          };
+
+          const { error: msgErr } = await supabase.from('messages').insert(messageData);
+          if (!msgErr) {
+            // Mark all messages in this chat as archived
+            const { error: archiveErr } = await supabase
+              .from('messages')
+              .update({ is_archived: 'true' })
+              .eq('chat_id', chatId);
+            
+            if (archiveErr) {
+              console.error('Error archiving messages:', archiveErr);
+            } else {
+              console.log('Successfully archived messages for chat:', chatId);
+            }
+          } else {
+            console.error('Error sending finished order message:', msgErr);
           }
         }
       }
@@ -243,14 +281,6 @@ Please come to our store to pick up your order.`;
                   <div className="detail-item">
                     <AspectRatioOutlinedIcon className="detail-icon" />
                     <span>Size: {order.height && order.width ? `${order.height} × ${order.width}` : 'Custom'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <CalendarTodayOutlinedIcon className="detail-icon" />
-                    <span>{order.pickup_date}</span>
-                  </div>
-                  <div className="detail-item">
-                    <AccessTimeOutlinedIcon className="detail-icon" />
-                    <span>{order.pickup_time}</span>
                   </div>
                 </div>
 
